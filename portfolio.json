@@ -1,0 +1,29 @@
+﻿{
+  "holdings": [
+    { "code": "VOO",    "name": "Vanguard S&P 500 ETF",  "market": "US", "quantity": 110.0,  "cost": 480.0  },
+    { "code": "QQQ",    "name": "Invesco QQQ Trust",       "market": "US", "quantity": 60.0,   "cost": 460.0  },
+    { "code": "NVDA",   "name": "NVIDIA Corp",             "market": "US", "quantity": 100.0,  "cost": 120.0  },
+    { "code": "META",   "name": "Meta Platforms",          "market": "US", "quantity": 50.0,   "cost": 500.0  },
+    { "code": "TSM",    "name": "Taiwan Semiconductor",    "market": "US", "quantity": 100.0,  "cost": 150.0  },
+    { "code": "AMD",    "name": "AMD Inc",                 "market": "US", "quantity": 80.0,   "cost": 160.0  },
+    { "code": "SPXL",   "name": "3x S&P 500 Leverage",    "market": "US", "quantity": 50.0,   "cost": 700.0  },
+    { "code": "SOXL",   "name": "3x Semiconductor Lvg",  "market": "US", "quantity": 30.0,   "cost": 450.0  },
+    { "code": "TQQQ",   "name": "3x Nasdaq 100 Leverage","market": "US", "quantity": 40.0,   "cost": 380.0  },
+    { "code": "510300", "name": "沪深300 ETF",              "market": "CN", "quantity": 15000, "cost": 4.05  },
+    { "code": "510500", "name": "中证500 ETF",              "market": "CN", "quantity": 10000, "cost": 6.20  },
+    { "code": "159915", "name": "创业板 ETF易方达",         "market": "CN", "quantity": 20000, "cost": 2.10  }
+  ],
+  "watchlist": [
+    { "code": "AAPL",  "name": "Apple Inc",      "market": "US"  },
+    { "code": "TSLA",  "name": "Tesla Inc",      "market": "US"  },
+    { "code": "MSFT",  "name": "Microsoft",      "market": "US"  },
+    { "code": "00700", "name": "Tencent",        "market": "HK"  },
+    { "code": "600519","name": "贵州茅台",         "market": "CN"  }
+  ],
+  "fx_pairs": [
+    { "from": "USD", "to": "CNY" },
+    { "from": "USD", "to": "HKD" },
+    { "from": "EUR", "to": "CNY" },
+    { "from": "HKD", "to": "CNY" }
+  ]
+}

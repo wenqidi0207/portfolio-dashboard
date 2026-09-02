@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portfolio Monitor</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#fafafa;--card:#fff;--border:#e5e5e5;--text:#1a1a1a;--text-dim:#888;--up:#22c55e;--down:#ef4444;--neutral:#888;--tag-us:#3b82f6;--tag-cn:#ef4444;--tag-hk:#f59e0b;--radius:8px;--shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04)}
+    body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
+    .container{max-width:1400px;margin:0 auto;padding:24px 24px 48px}
+    .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border)}
+    .header h1{font-size:20px;font-weight:600;letter-spacing:-.3px}
+    .header-right{display:flex;align-items:center;gap:16px}
+    .last-update{font-size:12px;color:var(--text-dim)}
+    .refresh-btn{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-size:13px;cursor:pointer;color:var(--text);font-family:inherit}
+    .refresh-btn:hover{border-color:#999}
+    .status-dot{width:7px;height:7px;border-radius:50%;background:var(--neutral);display:inline-block}
+    .status-dot.live{background:var(--up);animation:pulse 2s infinite}
+    .status-dot.error{background:var(--down)}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    .summary-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:24px}
+    .summary-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;box-shadow:var(--shadow)}
+    .summary-card .label{font-size:11px;font-weight:500;color:var(--text-dim);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+    .summary-card .value{font-size:26px;font-weight:700;letter-spacing:-.5px}
+    .summary-card .sub{font-size:12px;color:var(--text-dim);margin-top:4px}
+    .summary-card .sub.up,.summary-card .value.up{color:var(--up)}
+    .summary-card .sub.down,.summary-card .value.down{color:var(--down)}
+    .section-title{font-size:13px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;padding-left:2px}
+    .holdings-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-bottom:28px}
+    .holdings-grid-narrow{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+    .stock-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);transition:box-shadow .2s}
+    .stock-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.08)}
+    .stock-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+    .stock-name{font-size:14px;font-weight:600}
+    .stock-code{font-size:11px;color:var(--text-dim);font-family:monospace;margin-top:2px}
+    .market-tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;color:#fff;margin-bottom:4px;display:inline-block}
+    .market-tag.us{background:var(--tag-us)}
+    .market-tag.cn{background:var(--tag-cn)}
+    .market-tag.hk{background:var(--tag-hk)}
+    .stock-price-wrap{text-align:right}
+    .stock-price{font-size:18px;font-weight:700}
+    .stock-change{font-size:12px;font-weight:500}
+    .stock-change.up{color:var(--up)}
+    .stock-change.down{color:var(--down)}
+    .stock-change.neutral{color:var(--neutral)}
+    .stock-divider{height:1px;background:var(--border);margin:10px 0}
+    .stock-metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .metric{display:flex;flex-direction:column;gap:2px}
+    .metric-label{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px}
+    .metric-value{font-size:13px;font-weight:600}
+    .metric-value.up{color:var(--up)}
+    .metric-value.down{color:var(--down)}
+    .fx-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:28px}
+    .fx-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow)}
+    .fx-pair{font-size:13px;font-weight:600;margin-bottom:4px;font-family:monospace}
+    .fx-rate{font-size:22px;font-weight:700}
+    .fx-change{font-size:12px;font-weight:500;margin-top:2px}
+    .fx-change.up{color:var(--up)}
+    .fx-change.down{color:var(--down)}
+    .skeleton{background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:4px}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    .skeleton-price{height:22px;width:70%}
+    .error-banner{background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:10px 14px;font-size:12px;color:var(--down);margin-bottom:16px;display:none}
+    @media(max-width:768px){.container{padding:16px}.summary-card .value{font-size:20px}.holdings-grid{grid-template-columns:1fr}.header{flex-direction:column;align-items:flex-start;gap:12px}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Portfolio Monitor</h1>
+      <div class="header-right">
+        <span class="last-update" id="lastUpdate">--</span>
+        <span class="status-dot" id="statusDot"></span>
+        <button class="refresh-btn" id="refreshBtn">Refresh</button>
+      </div>
+    </div>
+    <div class="error-banner" id="errorBanner"></div>
+    <div class="summary-row">
+      <div class="summary-card"><div class="label">Total Value</div><div class="value" id="totalValue">--</div><div class="sub" id="totalPL">--</div></div>
+      <div class="summary-card"><div class="label">Total P/L</div><div class="value" id="totalPLValue">--</div><div class="sub" id="totalPLPct">--</div></div>
+      <div class="summary-card"><div class="label">Day P/L</div><div class="value" id="dayPL">--</div><div class="sub" id="dayPLPct">--</div></div>
+      <div class="summary-card"><div class="label">Best Today</div><div class="value" id="bestStock">--</div><div class="sub up" id="bestPct">--</div></div>
+    </div>
+    <div class="section-title">Holdings</div>
+    <div class="holdings-grid" id="holdingsGrid"></div>
+    <div class="section-title">Watchlist</div>
+    <div class="holdings-grid holdings-grid-narrow" id="watchlistGrid"></div>
+    <div class="section-title">FX Rates</div>
+    <div class="fx-grid" id="fxGrid"></div>
+  </div>
+  <script>
+    var PORTFOLIO_FILE = 'portfolio.json';
+    var REFRESH_INTERVAL = 45000;
+    var portfolio = null;
+    var priceCache = {};
+    var fetchErrors = [];
+
+    function logError(msg) { fetchErrors.push(msg); }
+
+    async function loadPortfolio() {
+      var res = await fetch(PORTFOLIO_FILE + '?t=' + Date.now());
+      if (!res.ok) throw new Error('Failed to load portfolio.json');
+      portfolio = await res.json();
+    }
+
+    // Yahoo Finance chart API
+    async function fetchYahooChart(symbol) {
+      try {
+        var url = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(symbol) + '?interval=1d&range=2d';
+        var res = await fetch(url);
+        var data = await res.json();
+        var result = data.chart && data.chart.result && data.chart.result[0];
+        if (!result) return null;
+        var meta = result.meta;
+        var closes = result.indicators && result.indicators.quote && result.indicators.quote[0] && result.indicators.quote[0].close || [];
+        var currPrice = meta.regularMarketPrice;
+        var prevClose = meta.previousClose;
+        if (!prevClose && closes.length >= 2) {
+          for (var i = closes.length - 1; i >= 0; i--) {
+            if (closes[i] != null) { prevClose = i === closes.length - 1 ? currPrice : closes[i + 1]; break; }
+          }
+        }
+        var change = prevClose != null ? currPrice - prevClose : 0;
+        var changePct = prevClose != null && prevClose !== 0 ? (change / prevClose) * 100 : 0;
+        return { price: currPrice, change: change, changePct: changePct };
+      } catch(e) { return null; }
+    }
+
+    // 新浪财经 A股
+    async function fetchSinaAStock(codes) {
+      try {
+        var url = 'https://hq.sinajs.cn/list=' + codes.join(',');
+        var res = await fetch(url, { headers: { 'Referer': 'https://finance.sina.com.cn', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } });
+        if (!res.ok) throw new Error('sina failed');
+        var text = await res.text();
+        var results = {};
+        var lines = text.split('\n');
+        for (var i = 0; i < lines.length; i++) {
+          var line = lines[i].trim();
+          if (!line || line.indexOf('hq_str') === -1) continue;
+          var m = line.match(/hq_str_(\w+)="([^"]+)"/);
+          if (!m) continue;
+          var code = m[1];
+          var fields = m[2].split(',');
+          if (fields.length < 10) continue;
+          var price = parseFloat(fields[3]);
+          var prevClose = parseFloat(fields[2]);
+          var change = price - prevClose;
+          var changePct = prevClose !== 0 ? (change / prevClose) * 100 : 0;
+          results[code] = { price: price, change: change, changePct: changePct };
+        }
+        return results;
+      } catch(e) { return null; }
+    }
+
+    async function fetchAllPrices(symbols) {
+      var usSymbols = [], cnSymbols = [], hkSymbols = [];
+      for (var i = 0; i < symbols.length; i++) {
+        var sym = symbols[i];
+        if (sym.market === 'CN') cnSymbols.push(sym);
+        else if (sym.market === 'HK') hkSymbols.push(sym);
+        else usSymbols.push(sym);
+      }
+
+      // US: Yahoo chart API
+      for (var j = 0; j < usSymbols.length; j++) {
+        var usSym = usSymbols[j];
+        var yCode = usSym.code;
+        var d = await fetchYahooChart(yCode);
+        if (d) priceCache[usSym.code] = d;
+        else logError('No data: ' + usSym.code);
+      }
+
+      // HK: Yahoo chart API
+      for (var k = 0; k < hkSymbols.length; k++) {
+        var hkSym = hkSymbols[k];
+        var hkCode = hkSym.code + '.HK';
+        var hkD = await fetchYahooChart(hkCode);
+        if (hkD) priceCache[hkSym.code] = hkD;
+        else logError('No data: ' + hkSym.code);
+      }
+
+      // CN: 新浪 -> Yahoo fallback
+      if (cnSymbols.length > 0) {
+        var sinaCodes = cnSymbols.map(function(s) {
+          var c = s.code;
+          if (c.match(/^\d{6}$/)) c = c.charAt(0) === '6' ? 'sh' + c : 'sz' + c;
+          return c;
+        });
+        var sinaResults = await fetchSinaAStock(sinaCodes);
+        if (sinaResults) {
+          for (var l = 0; l < cnSymbols.length; l++) {
+            var cnSym = cnSymbols[l];
+            var sc = cnSym.code;
+            var scKey = sc.charAt(0) === '6' ? 'sh' + sc : 'sz' + sc;
+            if (sinaResults[scKey]) priceCache[cnSym.code] = sinaResults[scKey];
+          }
+        } else {
+          logError('Sina A-share API failed, using Yahoo fallback');
+          for (var m = 0; m < cnSymbols.length; m++) {
+            var cnSymM = cnSymbols[m];
+            var yCodeM = cnSymM.code.charAt(0) === '6' ? cnSymM.code + '.SS' : cnSymM.code + '.SZ';
+            var dM = await fetchYahooChart(yCodeM);
+            if (dM) priceCache[cnSymM.code] = dM;
+          }
+        }
+      }
+    }
+
+    async function fetchAll() {
+      setStatus('loading');
+      fetchErrors = [];
+      try {
+        await loadPortfolio();
+        var all = (portfolio.holdings || []).concat(portfolio.watchlist || []);
+        await fetchAllPrices(all);
+        await render();
+        setStatus('live');
+        document.getElementById('lastUpdate').textContent = 'Updated ' + new Date().toLocaleTimeString();
+        var banner = document.getElementById('errorBanner');
+        if (fetchErrors.length > 0) {
+          banner.style.display = 'block';
+          banner.textContent = fetchErrors.join(' | ');
+        } else {
+          banner.style.display = 'none';
+        }
+      } catch(e) {
+        setStatus('error');
+        var banner = document.getElementById('errorBanner');
+        banner.style.display = 'block';
+        banner.textContent = 'Failed: ' + e.message;
+      }
+    }
+
+    async function getFXRates() {
+      var pairs = portfolio.fx_pairs || [];
+      var rates = {};
+      var fxSymbols = pairs.map(function(p) { return p.from + p.to + '=X'; });
+      try {
+        var res = await fetch('https://query1.finance.yahoo.com/v7/finance/quote?symbols=' + encodeURIComponent(fxSymbols.join(',')));
+        var data = await res.json();
+        if (data.chart && data.chart.result) {
+          data.chart.result.forEach(function(r) {
+            var pair = r.meta.symbol.replace('=X', '');
+            rates[pair] = { rate: r.meta.regularMarketPrice, changePct: r.meta.regularMarketChangePercent };
+          });
+        }
+      } catch(e) { logError('FX rates unavailable'); }
+      return rates;
+    }
+
+    function fmt(v, d) { d = d || 2; if (v == null || isNaN(v)) return '--'; return v.toFixed(d); }
+    function fmtMoney(v) { if (v == null || isNaN(v)) return '--'; return (v >= 0 ? '+' : '-') + '$' + Math.abs(v).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+    function pClass(v) { return v >= 0 ? 'up' : 'down'; }
+
+    function renderStockCard(sym, isHolding) {
+      var d = priceCache[sym.code];
+      var price = d ? d.price : null;
+      var chg = d ? d.change : 0;
+      var pct = d ? d.changePct : 0;
+      var isUp = pct >= 0;
+      var csym = sym.market === 'CN' ? '\u00a5' : (sym.market === 'HK' ? 'HK$' : '$');
+      var dec = sym.market === 'CN' ? 3 : 2;
+
+      var plHtml = '';
+      if (isHolding && price != null) {
+        var plv = (price - sym.cost) * sym.quantity;
+        var plp = ((price - sym.cost) / sym.cost) * 100;
+        var mv = price * sym.quantity;
+        plHtml = '<div class="metric"><span class="metric-label">P/L</span><span class="metric-value ' + pClass(plv) + '">' + fmtMoney(plv) + '</span></div>' +
+                 '<div class="metric"><span class="metric-label">Return</span><span class="metric-value ' + pClass(plv) + '">' + fmt(plp) + '%</span></div>' +
+                 '<div class="metric"><span class="metric-label">Mkt Value</span><span class="metric-value">' + csym + fmt(mv, 0) + '</span></div>';
+      }
+
+      var priceHtml = price == null
+        ? '<div class="skeleton skeleton-price" style="margin-top:4px"></div>'
+        : '<div class="stock-price">' + csym + fmt(price, dec) + '</div><div class="stock-change ' + (isUp ? 'up' : 'down') + '">' + (isUp ? '+' : '') + fmt(chg) + ' (' + fmt(pct) + '%)</div>';
+
+      return '<div class="stock-card">' +
+        '<div class="stock-card-header">' +
+          '<div><div class="stock-name">' + sym.name + '</div><div class="stock-code">' + sym.code + '</div></div>' +
+          '<div class="stock-price-wrap">' +
+            '<div class="market-tag ' + sym.market.toLowerCase() + '">' + sym.market + '</div>' +
+            priceHtml +
+          '</div>' +
+        '</div>' +
+        (isHolding ? '<div class="stock-divider"></div><div class="stock-metrics">' +
+          '<div class="metric"><span class="metric-label">Shares</span><span class="metric-value">' + sym.quantity.toLocaleString() + '</span></div>' +
+          '<div class="metric"><span class="metric-label">Avg Cost</span><span class="metric-value">' + csym + fmt(sym.cost, 3) + '</span></div>' +
+          plHtml +
+        '</div>' : '') +
+      '</div>';
+    }
+
+    async function render() {
+      var holdings = portfolio.holdings || [];
+      var watchlist = portfolio.watchlist || [];
+      var fxPairs = portfolio.fx_pairs || [];
+      document.getElementById('holdingsGrid').innerHTML = holdings.map(function(s) { return renderStockCard(s, true); }).join('');
+      document.getElementById('watchlistGrid').innerHTML = watchlist.map(function(s) { return renderStockCard(s, false); }).join('');
+      await renderFX(fxPairs);
+      renderSummary(holdings);
+    }
+
+    async function renderFX(pairs) {
+      var rates = await getFXRates();
+      var symMap = { CNY: '\u00a5', HKD: 'HK$', USD: '$', EUR: '\u20ac' };
+      var html = '';
+      for (var i = 0; i < pairs.length; i++) {
+        var p = pairs[i];
+        var key = p.from + p.to;
+        var d = rates[key];
+        if (!d) { html += '<div class="fx-card"><div class="fx-pair">' + p.from + '/' + p.to + '</div><div class="skeleton skeleton-price"></div></div>'; continue; }
+        var isUp = d.changePct >= 0;
+        html += '<div class="fx-card"><div class="fx-pair">' + p.from + '/' + p.to + '</div><div class="fx-rate">' + (symMap[p.to] || '') + fmt(d.rate, 4) + '</div><div class="fx-change ' + (isUp ? 'up' : 'down') + '">' + (isUp ? '+' : '') + fmt(d.changePct) + '% today</div></div>';
+      }
+      document.getElementById('fxGrid').innerHTML = html;
+    }
+
+    function renderSummary(holdings) {
+      var tv = 0, tc = 0, tpl = 0, dpl = 0, bestP = -Infinity, bestN = '--';
+      for (var i = 0; i < holdings.length; i++) {
+        var h = holdings[i];
+        var d = priceCache[h.code];
+        if (!d || !d.price) continue;
+        var v = d.price * h.quantity, c = h.cost * h.quantity;
+        tv += v; tc += c; tpl += v - c; dpl += (d.change || 0) * h.quantity;
+        if (d.changePct > bestP) { bestP = d.changePct; bestN = h.name; }
+      }
+      var tplp = tc > 0 ? (tpl / tc) * 100 : 0;
+      var dplp = tc > 0 ? (dpl / tc) * 100 : 0;
+      var el = function(v) { return v >= 0 ? 'up' : 'down'; };
+      document.getElementById('totalValue').textContent = tv > 0 ? '$' + tv.toLocaleString('en-US', {maximumFractionDigits:0}) : '--';
+      document.getElementById('totalPL').textContent = tpl !== 0 ? fmtMoney(tpl) : '--';
+      document.getElementById('totalPL').className = 'sub ' + el(tpl);
+      document.getElementById('totalPLValue').textContent = tpl !== 0 ? fmtMoney(tpl) : '--';
+      document.getElementById('totalPLValue').className = 'value ' + el(tpl);
+      document.getElementById('totalPLPct').textContent = tpl !== 0 ? fmt(tplp) + '% total return' : '--';
+      document.getElementById('totalPLPct').className = 'sub ' + el(tpl);
+      document.getElementById('dayPL').textContent = fmtMoney(dpl);
+      document.getElementById('dayPL').className = 'value ' + el(dpl);
+      document.getElementById('dayPLPct').textContent = fmt(dplp) + '% today';
+      document.getElementById('dayPLPct').className = 'sub ' + el(dpl);
+      document.getElementById('bestStock').textContent = bestN;
+      document.getElementById('bestPct').textContent = bestP > -Infinity ? '+' + fmt(bestP) + '% today' : '--';
+    }
+
+    function setStatus(s) {
+      var dot = document.getElementById('statusDot');
+      if (s === 'live') { dot.className = 'status-dot live'; dot.style.background = ''; }
+      else if (s === 'error') { dot.className = 'status-dot error'; }
+      else dot.className = 'status-dot';
+    }
+
+    document.getElementById('refreshBtn').onclick = fetchAll;
+    fetchAll();
+    setInterval(fetchAll, REFRESH_INTERVAL);
+  </script>
+</body>
+</html>
