@@ -105,152 +105,6 @@
       portfolio = await res.json();
     }
 
-    // Yahoo Finance chart API
-    async function fetchYahooChart(symbol) {
-      try {
-        var url = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(symbol) + '?interval=1d&range=2d';
-        var res = await fetch(url);
-        var data = await res.json();
-        var result = data.chart && data.chart.result && data.chart.result[0];
-        if (!result) return null;
-        var meta = result.meta;
-        var closes = result.indicators && result.indicators.quote && result.indicators.quote[0] && result.indicators.quote[0].close || [];
-        var currPrice = meta.regularMarketPrice;
-        var prevClose = meta.previousClose;
-        if (!prevClose && closes.length >= 2) {
-          for (var i = closes.length - 1; i >= 0; i--) {
-            if (closes[i] != null) { prevClose = i === closes.length - 1 ? currPrice : closes[i + 1]; break; }
-          }
-        }
-        var change = prevClose != null ? currPrice - prevClose : 0;
-        var changePct = prevClose != null && prevClose !== 0 ? (change / prevClose) * 100 : 0;
-        return { price: currPrice, change: change, changePct: changePct };
-      } catch(e) { return null; }
-    }
-
-    // 新浪财经 A股
-    async function fetchSinaAStock(codes) {
-      try {
-        var url = 'https://hq.sinajs.cn/list=' + codes.join(',');
-        var res = await fetch(url, { headers: { 'Referer': 'https://finance.sina.com.cn', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } });
-        if (!res.ok) throw new Error('sina failed');
-        var text = await res.text();
-        var results = {};
-        var lines = text.split('\n');
-        for (var i = 0; i < lines.length; i++) {
-          var line = lines[i].trim();
-          if (!line || line.indexOf('hq_str') === -1) continue;
-          var m = line.match(/hq_str_(\w+)="([^"]+)"/);
-          if (!m) continue;
-          var code = m[1];
-          var fields = m[2].split(',');
-          if (fields.length < 10) continue;
-          var price = parseFloat(fields[3]);
-          var prevClose = parseFloat(fields[2]);
-          var change = price - prevClose;
-          var changePct = prevClose !== 0 ? (change / prevClose) * 100 : 0;
-          results[code] = { price: price, change: change, changePct: changePct };
-        }
-        return results;
-      } catch(e) { return null; }
-    }
-
-    async function fetchAllPrices(symbols) {
-      var usSymbols = [], cnSymbols = [], hkSymbols = [];
-      for (var i = 0; i < symbols.length; i++) {
-        var sym = symbols[i];
-        if (sym.market === 'CN') cnSymbols.push(sym);
-        else if (sym.market === 'HK') hkSymbols.push(sym);
-        else usSymbols.push(sym);
-      }
-
-      // US: Yahoo chart API
-      for (var j = 0; j < usSymbols.length; j++) {
-        var usSym = usSymbols[j];
-        var yCode = usSym.code;
-        var d = await fetchYahooChart(yCode);
-        if (d) priceCache[usSym.code] = d;
-        else logError('No data: ' + usSym.code);
-      }
-
-      // HK: Yahoo chart API
-      for (var k = 0; k < hkSymbols.length; k++) {
-        var hkSym = hkSymbols[k];
-        var hkCode = hkSym.code + '.HK';
-        var hkD = await fetchYahooChart(hkCode);
-        if (hkD) priceCache[hkSym.code] = hkD;
-        else logError('No data: ' + hkSym.code);
-      }
-
-      // CN: 新浪 -> Yahoo fallback
-      if (cnSymbols.length > 0) {
-        var sinaCodes = cnSymbols.map(function(s) {
-          var c = s.code;
-          if (c.match(/^\d{6}$/)) c = c.charAt(0) === '6' ? 'sh' + c : 'sz' + c;
-          return c;
-        });
-        var sinaResults = await fetchSinaAStock(sinaCodes);
-        if (sinaResults) {
-          for (var l = 0; l < cnSymbols.length; l++) {
-            var cnSym = cnSymbols[l];
-            var sc = cnSym.code;
-            var scKey = sc.charAt(0) === '6' ? 'sh' + sc : 'sz' + sc;
-            if (sinaResults[scKey]) priceCache[cnSym.code] = sinaResults[scKey];
-          }
-        } else {
-          logError('Sina A-share API failed, using Yahoo fallback');
-          for (var m = 0; m < cnSymbols.length; m++) {
-            var cnSymM = cnSymbols[m];
-            var yCodeM = cnSymM.code.charAt(0) === '6' ? cnSymM.code + '.SS' : cnSymM.code + '.SZ';
-            var dM = await fetchYahooChart(yCodeM);
-            if (dM) priceCache[cnSymM.code] = dM;
-          }
-        }
-      }
-    }
-
-    async function fetchAll() {
-      setStatus('loading');
-      fetchErrors = [];
-      try {
-        await loadPortfolio();
-        var all = (portfolio.holdings || []).concat(portfolio.watchlist || []);
-        await fetchAllPrices(all);
-        await render();
-        setStatus('live');
-        document.getElementById('lastUpdate').textContent = 'Updated ' + new Date().toLocaleTimeString();
-        var banner = document.getElementById('errorBanner');
-        if (fetchErrors.length > 0) {
-          banner.style.display = 'block';
-          banner.textContent = fetchErrors.join(' | ');
-        } else {
-          banner.style.display = 'none';
-        }
-      } catch(e) {
-        setStatus('error');
-        var banner = document.getElementById('errorBanner');
-        banner.style.display = 'block';
-        banner.textContent = 'Failed: ' + e.message;
-      }
-    }
-
-    async function getFXRates() {
-      var pairs = portfolio.fx_pairs || [];
-      var rates = {};
-      var fxSymbols = pairs.map(function(p) { return p.from + p.to + '=X'; });
-      try {
-        var res = await fetch('https://query1.finance.yahoo.com/v7/finance/quote?symbols=' + encodeURIComponent(fxSymbols.join(',')));
-        var data = await res.json();
-        if (data.chart && data.chart.result) {
-          data.chart.result.forEach(function(r) {
-            var pair = r.meta.symbol.replace('=X', '');
-            rates[pair] = { rate: r.meta.regularMarketPrice, changePct: r.meta.regularMarketChangePercent };
-          });
-        }
-      } catch(e) { logError('FX rates unavailable'); }
-      return rates;
-    }
-
     function fmt(v, d) { d = d || 2; if (v == null || isNaN(v)) return '--'; return v.toFixed(d); }
     function fmtMoney(v) { if (v == null || isNaN(v)) return '--'; return (v >= 0 ? '+' : '-') + '$' + Math.abs(v).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
     function pClass(v) { return v >= 0 ? 'up' : 'down'; }
@@ -294,31 +148,6 @@
       '</div>';
     }
 
-    async function render() {
-      var holdings = portfolio.holdings || [];
-      var watchlist = portfolio.watchlist || [];
-      var fxPairs = portfolio.fx_pairs || [];
-      document.getElementById('holdingsGrid').innerHTML = holdings.map(function(s) { return renderStockCard(s, true); }).join('');
-      document.getElementById('watchlistGrid').innerHTML = watchlist.map(function(s) { return renderStockCard(s, false); }).join('');
-      await renderFX(fxPairs);
-      renderSummary(holdings);
-    }
-
-    async function renderFX(pairs) {
-      var rates = await getFXRates();
-      var symMap = { CNY: '\u00a5', HKD: 'HK$', USD: '$', EUR: '\u20ac' };
-      var html = '';
-      for (var i = 0; i < pairs.length; i++) {
-        var p = pairs[i];
-        var key = p.from + p.to;
-        var d = rates[key];
-        if (!d) { html += '<div class="fx-card"><div class="fx-pair">' + p.from + '/' + p.to + '</div><div class="skeleton skeleton-price"></div></div>'; continue; }
-        var isUp = d.changePct >= 0;
-        html += '<div class="fx-card"><div class="fx-pair">' + p.from + '/' + p.to + '</div><div class="fx-rate">' + (symMap[p.to] || '') + fmt(d.rate, 4) + '</div><div class="fx-change ' + (isUp ? 'up' : 'down') + '">' + (isUp ? '+' : '') + fmt(d.changePct) + '% today</div></div>';
-      }
-      document.getElementById('fxGrid').innerHTML = html;
-    }
-
     function renderSummary(holdings) {
       var tv = 0, tc = 0, tpl = 0, dpl = 0, bestP = -Infinity, bestN = '--';
       for (var i = 0; i < holdings.length; i++) {
@@ -354,9 +183,78 @@
       else dot.className = 'status-dot';
     }
 
-    document.getElementById('refreshBtn').onclick = fetchAll;
-    fetchAll();
-    setInterval(fetchAll, REFRESH_INTERVAL);
+    async function readMarketSnapshot() {
+      var endpoints = ['./api/market', './data/market.json'];
+      for (var i = 0; i < endpoints.length; i++) {
+        try {
+          var response = await fetch(endpoints[i] + '?t=' + Date.now());
+          if (response.ok) return await response.json();
+        } catch (e) {}
+      }
+      throw new Error('Market snapshot is unavailable');
+    }
+
+    function renderSnapshotFX(fx) {
+      var pairs = portfolio.fx_pairs || [];
+      var symbols = { CNY: '\u00a5', HKD: 'HK$', USD: '$', EUR: '\u20ac' };
+      var html = '';
+      for (var i = 0; i < pairs.length; i++) {
+        var pair = pairs[i];
+        var key = pair.from + pair.to;
+        var item = fx && fx[key];
+        if (!item || item.rate == null) {
+          html += '<div class="fx-card"><div class="fx-pair">' + key.slice(0, 3) + '/' + key.slice(3) + '</div><div class="skeleton skeleton-price"></div></div>';
+          continue;
+        }
+        var positive = Number(item.changePct || 0) >= 0;
+        html += '<div class="fx-card"><div class="fx-pair">' + pair.from + '/' + pair.to + '</div>' +
+          '<div class="fx-rate">' + (symbols[pair.to] || '') + fmt(Number(item.rate), 4) + '</div>' +
+          '<div class="fx-change ' + (positive ? 'up' : 'down') + '">' + (positive ? '+' : '') + fmt(Number(item.changePct || 0)) + '% today</div></div>';
+      }
+      document.getElementById('fxGrid').innerHTML = html;
+    }
+
+    async function fetchSnapshot() {
+      setStatus('loading');
+      fetchErrors = [];
+      try {
+        await loadPortfolio();
+        var snapshot = await readMarketSnapshot();
+        priceCache = snapshot.quotes || {};
+        var holdings = portfolio.holdings || [];
+        var watchlist = portfolio.watchlist || [];
+        document.getElementById('holdingsGrid').innerHTML = holdings.map(function(s) { return renderStockCard(s, true); }).join('');
+        document.getElementById('watchlistGrid').innerHTML = watchlist.map(function(s) { return renderStockCard(s, false); }).join('');
+        renderSnapshotFX(snapshot.fx || {});
+        renderSummary(holdings);
+        setStatus('live');
+        document.getElementById('lastUpdate').textContent = snapshot.updatedAt ? 'Updated ' + new Date(snapshot.updatedAt).toLocaleString() : 'Waiting for snapshot';
+        var banner = document.getElementById('errorBanner');
+        var quoteCount = Object.keys(priceCache).length;
+        if (!quoteCount && !(snapshot.fx && Object.keys(snapshot.fx).length)) {
+          banner.style.display = 'block';
+          banner.textContent = 'No market snapshot yet. Run the GitHub Actions workflow once, or use start.bat for the local proxy.';
+        } else {
+          banner.style.display = 'none';
+        }
+      } catch (e) {
+        setStatus('error');
+        var holdings = (portfolio && portfolio.holdings) || [];
+        var watchlist = (portfolio && portfolio.watchlist) || [];
+        document.getElementById('holdingsGrid').innerHTML = holdings.map(function(s) { return renderStockCard(s, true); }).join('');
+        document.getElementById('watchlistGrid').innerHTML = watchlist.map(function(s) { return renderStockCard(s, false); }).join('');
+        document.getElementById('fxGrid').innerHTML = (portfolio && portfolio.fx_pairs || []).map(function(pair) {
+          return '<div class="fx-card"><div class="fx-pair">' + pair.from + '/' + pair.to + '</div><div class="skeleton skeleton-price"></div></div>';
+        }).join('');
+        var errorBanner = document.getElementById('errorBanner');
+        errorBanner.style.display = 'block';
+        errorBanner.textContent = 'Market data unavailable. Run the GitHub Actions workflow once, then refresh this page.';
+      }
+    }
+
+    document.getElementById('refreshBtn').onclick = fetchSnapshot;
+    fetchSnapshot();
+    setInterval(fetchSnapshot, REFRESH_INTERVAL);
   </script>
 </body>
 </html>
