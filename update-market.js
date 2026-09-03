@@ -1,7 +1,33 @@
 const fs = require('fs');
 const https = require('https');
 
-const portfolio = JSON.parse(fs.readFileSync('portfolio.json', 'utf8').replace(/^\uFEFF/, ''));
+function readPortfolio() {
+  const raw = fs.readFileSync('portfolio.json', 'utf8').replace(/^\uFEFF/, '');
+  let clean = '';
+  let inString = false;
+  let escaped = false;
+  for (const char of raw) {
+    if (escaped) {
+      clean += char;
+      escaped = false;
+      continue;
+    }
+    if (char === '\\') {
+      clean += char;
+      escaped = true;
+      continue;
+    }
+    if (char === '"') {
+      clean += char;
+      inString = !inString;
+      continue;
+    }
+    clean += inString && char.charCodeAt(0) < 32 ? ' ' : char;
+  }
+  return JSON.parse(clean);
+}
+
+const portfolio = readPortfolio();
 const items = (portfolio.holdings || []).concat(portfolio.watchlist || []);
 
 function get(url, headers) {
