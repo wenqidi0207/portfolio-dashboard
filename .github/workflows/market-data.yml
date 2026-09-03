@@ -18,6 +18,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - run: node --check update-market.js
       - run: node update-market.js
       - name: Commit snapshot
         run: |
