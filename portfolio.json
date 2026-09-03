@@ -4,7 +4,23 @@
     { "code": "VXUS", "name": "Vanguard Total International Stock ETF", "market": "US", "quantity": 46, "cost": 84.64 },
     { "code": "SGOV", "name": "iShares 0-3 Month Treasury Bond ETF", "market": "US", "quantity": 61, "cost": 100.44 },
     { "code": "QQQM", "name": "Invesco NASDAQ 100 ETF", "market": "US", "quantity": 17, "cost": 288.52 },
+    { "code": "DRAM", "nam{
+  "holdings": [
+    { "code": "VTI",  "name": "Vanguard Total Stock Market ETF",  "market": "US", "quantity": 29, "cost": 367.96 },
+    { "code": "VXUS", "name": "Vanguard Total International Stock ETF", "market": "US", "quantity": 46, "cost": 84.64 },
+    { "code": "SGOV", "name": "iShares 0-3 Month Treasury Bond ETF", "market": "US", "quantity": 61, "cost": 100.44 },
+    { "code": "QQQM", "name": "Invesco NASDAQ 100 ETF", "market": "US", "quantity": 17, "cost": 288.52 },
     { "code": "DRAM", "name": "Roundhill Memory ETF", "market": "US", "quantity": 27, "cost": 62.79 }
+  ],
+  "watchlist": [],
+  "fx_pairs": [
+    { "from": "USD", "to": "CNY" },
+    { "from": "USD", "to": "HKD" },
+    { "from": "EUR", "to": "CNY" },
+    { "from": "HKD", "to": "CNY" }
+  ]
+}
+e": "Roundhill Memory ETF", "market": "US", "quantity": 27, "cost": 62.79 }
   ],
   "watchlist": [],
   "fx_pairs": [
