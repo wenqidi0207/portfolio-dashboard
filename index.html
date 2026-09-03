@@ -7,15 +7,18 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    :root{--bg:#fafafa;--card:#fff;--border:#e5e5e5;--text:#1a1a1a;--text-dim:#888;--up:#22c55e;--down:#ef4444;--neutral:#888;--tag-us:#3b82f6;--tag-cn:#ef4444;--tag-hk:#f59e0b;--radius:8px;--shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04)}
-    body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
+    :root{--bg:#fafafa;--card:#fff;--border:#e5e5e5;--text:#1a1a1a;--text-dim:#888;--muted-surface:#f4f4f4;--up:#22c55e;--down:#ef4444;--neutral:#888;--tag-us:#3b82f6;--tag-cn:#ef4444;--tag-hk:#f59e0b;--radius:8px;--shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04)}
+    :root[data-theme="dark"]{--bg:#111;--card:#1a1a1a;--border:#333;--text:#f5f5f5;--text-dim:#999;--muted-surface:#242424;--shadow:0 1px 3px rgba(0,0,0,.3),0 1px 2px rgba(0,0,0,.24)}
+    body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh;transition:background .2s,color .2s}
     .container{max-width:1400px;margin:0 auto;padding:24px 24px 48px}
     .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border)}
     .header h1{font-size:20px;font-weight:600;letter-spacing:-.3px}
     .header-right{display:flex;align-items:center;gap:16px}
     .last-update{font-size:12px;color:var(--text-dim)}
-    .refresh-btn{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-size:13px;cursor:pointer;color:var(--text);font-family:inherit}
-    .refresh-btn:hover{border-color:#999}
+    .header-actions{display:flex;align-items:center;gap:8px}
+    .refresh-btn,.theme-btn{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 11px;font-size:13px;cursor:pointer;color:var(--text);font-family:inherit}
+    .refresh-btn:hover,.theme-btn:hover{border-color:#999}
+    .theme-btn{font-size:16px;line-height:1;padding:6px 9px}
     .status-dot{width:7px;height:7px;border-radius:50%;background:var(--neutral);display:inline-block}
     .status-dot.live{background:var(--up);animation:pulse 2s infinite}
     .status-dot.error{background:var(--down)}
@@ -59,11 +62,23 @@
     .fx-change{font-size:12px;font-weight:500;margin-top:2px}
     .fx-change.up{color:var(--up)}
     .fx-change.down{color:var(--down)}
-    .skeleton{background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:4px}
+    .skeleton{background:linear-gradient(90deg,var(--muted-surface) 25%,var(--border) 50%,var(--muted-surface) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:4px}
     @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
     .skeleton-price{height:22px;width:70%}
     .error-banner{background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:10px 14px;font-size:12px;color:var(--down);margin-bottom:16px;display:none}
-    @media(max-width:768px){.container{padding:16px}.summary-card .value{font-size:20px}.holdings-grid{grid-template-columns:1fr}.header{flex-direction:column;align-items:flex-start;gap:12px}}
+    :root[data-theme="dark"] .error-banner{background:#321b1b;border-color:#743333}
+    .fx-card{position:relative}
+    .fx-meta{font-size:10px;color:var(--text-dim);margin-top:7px}
+    .fx-source{font-size:10px;color:var(--text-dim);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .fx-toolbar{display:flex;align-items:end;gap:12px;margin:-2px 0 14px;padding:12px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+    .fx-control{display:flex;flex-direction:column;gap:4px;min-width:140px}
+    .fx-control span,.fx-converted span{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.6px}
+    .fx-control input,.fx-control select{height:34px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font:inherit;padding:0 9px;outline:none}
+    .fx-control input:focus,.fx-control select:focus{border-color:var(--text-dim)}
+    .fx-converted{display:flex;flex-direction:column;gap:3px;margin-left:auto;min-width:160px}
+    .fx-converted strong{font-size:18px}
+    .fx-inverse{font-size:11px;color:var(--text-dim);margin-top:5px}
+    @media(max-width:768px){.container{padding:16px}.summary-card .value{font-size:20px}.holdings-grid{grid-template-columns:1fr}.header{flex-direction:column;align-items:flex-start;gap:12px}.header-right{width:100%;justify-content:space-between}.header-actions{margin-left:auto}.last-update{max-width:125px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fx-toolbar{align-items:stretch;flex-wrap:wrap}.fx-control{flex:1;min-width:120px}.fx-converted{width:100%;margin-left:0}}
   </style>
 </head>
 <body>
@@ -73,7 +88,10 @@
       <div class="header-right">
         <span class="last-update" id="lastUpdate">--</span>
         <span class="status-dot" id="statusDot"></span>
-        <button class="refresh-btn" id="refreshBtn">Refresh</button>
+        <div class="header-actions">
+          <button class="theme-btn" id="themeBtn" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">◐</button>
+          <button class="refresh-btn" id="refreshBtn" type="button">Refresh</button>
+        </div>
       </div>
     </div>
     <div class="error-banner" id="errorBanner"></div>
@@ -88,6 +106,11 @@
     <div class="section-title">Watchlist</div>
     <div class="holdings-grid holdings-grid-narrow" id="watchlistGrid"></div>
     <div class="section-title">FX Rates</div>
+    <div class="fx-toolbar">
+      <label class="fx-control"><span>Amount</span><input id="fxAmount" type="number" min="0" step="any" value="1"></label>
+      <label class="fx-control"><span>Pair</span><select id="fxPairSelect"></select></label>
+      <div class="fx-converted"><span>Converted</span><strong id="fxConverted">--</strong></div>
+    </div>
     <div class="fx-grid" id="fxGrid"></div>
   </div>
   <script>
@@ -96,6 +119,7 @@
     var portfolio = null;
     var priceCache = {};
     var fetchErrors = [];
+    var fxCache = {};
 
     function logError(msg) { fetchErrors.push(msg); }
 
@@ -108,6 +132,18 @@
     function fmt(v, d) { d = d || 2; if (v == null || isNaN(v)) return '--'; return v.toFixed(d); }
     function fmtMoney(v) { if (v == null || isNaN(v)) return '--'; return (v >= 0 ? '+' : '-') + '$' + Math.abs(v).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
     function pClass(v) { return v >= 0 ? 'up' : 'down'; }
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      document.getElementById('themeBtn').textContent = theme === 'dark' ? '○' : '◐';
+      document.getElementById('themeBtn').setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+      document.getElementById('themeBtn').setAttribute('title', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+      localStorage.setItem('portfolio-theme', theme);
+    }
+
+    function initTheme() {
+      applyTheme(localStorage.getItem('portfolio-theme') || 'light');
+    }
 
     function renderStockCard(sym, isHolding) {
       var d = priceCache[sym.code];
@@ -194,9 +230,17 @@
       throw new Error('Market snapshot is unavailable');
     }
 
-    function renderSnapshotFX(fx) {
+    function renderSnapshotFX(fx, snapshotUpdatedAt) {
       var pairs = portfolio.fx_pairs || [];
       var symbols = { CNY: '\u00a5', HKD: 'HK$', USD: '$', EUR: '\u20ac' };
+      fxCache = fx || {};
+      var selector = document.getElementById('fxPairSelect');
+      var selected = selector.value;
+      selector.innerHTML = pairs.map(function(pair) {
+        var key = pair.from + pair.to;
+        return '<option value="' + key + '">' + pair.from + '/' + pair.to + '</option>';
+      }).join('');
+      if (selected && fxCache[selected]) selector.value = selected;
       var html = '';
       for (var i = 0; i < pairs.length; i++) {
         var pair = pairs[i];
@@ -207,11 +251,28 @@
           continue;
         }
         var positive = Number(item.changePct || 0) >= 0;
+        var inverse = Number(item.rate) ? (1 / Number(item.rate)) : null;
+        var source = item.source || 'Market snapshot';
+        var updated = item.updatedAt ? new Date(item.updatedAt).toLocaleTimeString() : (snapshotUpdatedAt ? new Date(snapshotUpdatedAt).toLocaleTimeString() : '--');
         html += '<div class="fx-card"><div class="fx-pair">' + pair.from + '/' + pair.to + '</div>' +
           '<div class="fx-rate">' + (symbols[pair.to] || '') + fmt(Number(item.rate), 4) + '</div>' +
-          '<div class="fx-change ' + (positive ? 'up' : 'down') + '">' + (positive ? '+' : '') + fmt(Number(item.changePct || 0)) + '% today</div></div>';
+          '<div class="fx-change ' + (positive ? 'up' : 'down') + '">' + (positive ? '+' : '') + fmt(Number(item.changePct || 0)) + '% today</div>' +
+          '<div class="fx-inverse">1 ' + pair.to + ' = ' + (inverse ? fmt(inverse, 4) : '--') + ' ' + pair.from + '</div>' +
+          '<div class="fx-source" title="' + source + '">' + source + ' · ' + updated + '</div></div>';
       }
       document.getElementById('fxGrid').innerHTML = html;
+      updateFXConversion();
+    }
+
+    function updateFXConversion() {
+      var key = document.getElementById('fxPairSelect').value;
+      var amount = Number(document.getElementById('fxAmount').value || 0);
+      var item = fxCache[key];
+      var converted = document.getElementById('fxConverted');
+      if (!item || item.rate == null) { converted.textContent = '--'; return; }
+      var to = key.slice(3);
+      var symbol = { CNY: '\u00a5', HKD: 'HK$', USD: '$', EUR: '\u20ac' }[to] || '';
+      converted.textContent = symbol + (amount * Number(item.rate)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
     }
 
     async function fetchSnapshot() {
@@ -225,7 +286,7 @@
         var watchlist = portfolio.watchlist || [];
         document.getElementById('holdingsGrid').innerHTML = holdings.map(function(s) { return renderStockCard(s, true); }).join('');
         document.getElementById('watchlistGrid').innerHTML = watchlist.map(function(s) { return renderStockCard(s, false); }).join('');
-        renderSnapshotFX(snapshot.fx || {});
+        renderSnapshotFX(snapshot.fx || {}, snapshot.updatedAt);
         renderSummary(holdings);
         setStatus('live');
         document.getElementById('lastUpdate').textContent = snapshot.updatedAt ? 'Updated ' + new Date(snapshot.updatedAt).toLocaleString() : 'Waiting for snapshot';
@@ -252,6 +313,12 @@
       }
     }
 
+    initTheme();
+    document.getElementById('themeBtn').onclick = function() {
+      applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    };
+    document.getElementById('fxAmount').oninput = updateFXConversion;
+    document.getElementById('fxPairSelect').onchange = updateFXConversion;
     document.getElementById('refreshBtn').onclick = fetchSnapshot;
     fetchSnapshot();
     setInterval(fetchSnapshot, REFRESH_INTERVAL);
