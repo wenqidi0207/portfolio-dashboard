@@ -125,17 +125,26 @@ input[type=number]{-moz-appearance:textfield}
     <div class="watchlist-header"><div class="section-title" style="margin-bottom:0">Watchlist</div><div class="watchlist-search-wrap"><input type="text" id="watchlistInput" class="watchlist-input" placeholder="US Ticker (e.g. AAPL)" autocomplete="off"><button id="watchlistStarBtn" class="star-btn" title="Follow / 关注" type="button">★</button><div id="watchlistSuggestions" class="search-suggestions"></div></div></div>
     <div class="holdings-grid holdings-grid-narrow" id="watchlistGrid"></div>
     <div class="section-title">FX Rates</div>
-    <div class="fx-toolbar">
-      <label class="fx-control"><span>Amount</span><input id="fxAmount" type="number" min="0" step="any" value="1"></label>
-      <div class="fx-control">
-        <span>Pair</span>
-        <div class="fx-pair-selects">
-          <select id="fxFromSelect" style="flex:1"></select>
-          <span style="color:var(--text-dim)">➔</span>
-          <select id="fxToSelect" style="flex:1"></select>
+    <div class="fx-toolbar" style="display:flex;align-items:center;flex-wrap:wrap;gap:16px;padding:12px 0;">
+      <div class="fx-control" style="flex:1;min-width:160px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <select id="fxFromSelect" style="font-weight:600;"></select>
+          <span style="font-size:11px;color:var(--text-dim);">基准货币</span>
         </div>
+        <input id="fxFromAmount" type="number" min="0" step="any" value="1" placeholder="1.00">
       </div>
-      <div class="fx-converted"><span>Converted</span><strong id="fxConverted">--</strong><span id="fxRateLabel" style="font-size:11px;color:var(--text-dim);margin-top:2px"></span></div>
+      <div style="font-size:18px;color:var(--text-dim);padding-top:14px;">⇄</div>
+      <div class="fx-control" style="flex:1;min-width:160px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <select id="fxToSelect" style="font-weight:600;"></select>
+          <span style="font-size:11px;color:var(--text-dim);">换算目标</span>
+        </div>
+        <input id="fxToAmount" type="number" min="0" step="any" value="" placeholder="0.00">
+      </div>
+      <div class="fx-converted" style="margin-left:auto;min-width:150px;">
+        <span>实时牌价参考</span>
+        <strong id="fxRateLabel" style="font-size:14px;margin-top:2px;">--</strong>
+      </div>
     </div>
     <div class="fx-grid" id="fxGrid"></div>
   </div>
@@ -354,39 +363,97 @@ input[type=number]{-moz-appearance:textfield}
       return null;
     }
 
-    async function refreshFXData() {
-      initFXSelectors();
-      var fromSel = document.getElementById("fxFromSelect");
-      var toSel = document.getElementById("fxToSelect");
-      if (!fromSel || !toSel) return;
-      var from = fromSel.value || "USD";
-      var to = toSel.value || "CNY";
-      var rates = await fetchLiveFXRates(from);
-      if (rates) {
-        fxLiveRates = rates;
-        var rate = rates[to];
-        var lbl = document.getElementById("fxRateLabel");
-        if (lbl) lbl.textContent = "1 " + from + " = " + (rate ? fmt(rate, 4) : "--") + " " + to + " (API Live)";
-      }
-      updateFXConversion();
+    var currentPairRate = 1;
+    var allUsdRates = {};
+
+    async function fetchAllLiveRates() {
+      try {
+        var res = await fetch("https://open.er-api.com/v6/latest/USD");
+        if (!res.ok) return null;
+        var data = await res.json();
+        if (data && data.result === "success" && data.rates) {
+          allUsdRates = data.rates;
+          return data.rates;
+        }
+      } catch(e) {}
+      return null;
     }
 
-    function updateFXConversion() {
-      var from = document.getElementById("fxFromSelect") ? document.getElementById("fxFromSelect").value : "USD";
-      var to = document.getElementById("fxToSelect") ? document.getElementById("fxToSelect").value : "CNY";
-      var amount = Number(document.getElementById("fxAmount").value || 0);
-      var converted = document.getElementById("fxConverted");
-      if (!converted) return;
-      var rate = fxLiveRates[to];
-      if (!rate) {
-        if (fxCache[from + to] && fxCache[from + to].rate) {
-          rate = Number(fxCache[from + to].rate);
-        } else {
-          converted.textContent = "--";
-          return;
-        }
+    function getRateBetween(from, to) {
+      if (from === to) return 1;
+      if (allUsdRates[from] && allUsdRates[to]) {
+        return allUsdRates[to] / allUsdRates[from];
       }
-      converted.textContent = currencySign(to) + (amount * rate).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+      var key = from + to;
+      if (fxCache[key] && fxCache[key].rate) return Number(fxCache[key].rate);
+      return null;
+    }
+
+    async function refreshFXData() {
+      initFXSelectors();
+    var fa = document.getElementById("fxFromAmount"); if (fa) fa.oninput = function() { syncConversion("from"); };
+    var ta = document.getElementById("fxToAmount"); if (ta) ta.oninput = function() { syncConversion("to"); };
+      if (!Object.keys(allUsdRates).length) {
+        await fetchAllLiveRates();
+      }
+      var from = document.getElementById("fxFromSelect").value || "USD";
+      var to = document.getElementById("fxToSelect").value || "CNY";
+      var rate = getRateBetween(from, to);
+      currentPairRate = rate || 1;
+
+      var lbl = document.getElementById("fxRateLabel");
+      if (lbl) {
+        lbl.textContent = rate ? ("1 " + from + " = " + fmt(rate, 4) + " " + to) : "牌价拉取中...";
+      }
+
+      syncConversion("from");
+      renderAllFXCards();
+    }
+
+    function syncConversion(source) {
+      var fromIn = document.getElementById("fxFromAmount");
+      var toIn = document.getElementById("fxToAmount");
+      if (!fromIn || !toIn || !currentPairRate) return;
+
+      if (source === "from") {
+        var val = parseFloat(fromIn.value);
+        if (isNaN(val)) { toIn.value = ""; return;
+ }
+        toIn.value = (val * currentPairRate).toFixed(4).replace(/\.?0+$/, "");
+      } else {
+        var val = parseFloat(toIn.value);
+        if (isNaN(val)) { fromIn.value = ""; return;
+ }
+        fromIn.value = (val / currentPairRate).toFixed(4).replace(/\.?0+$/, "");
+      }
+    }
+
+    function renderAllFXCards() {
+      var grid = document.getElementById("fxGrid");
+      if (!grid) return;
+      var pairs = (portfolio && portfolio.fx_pairs && portfolio.fx_pairs.length) ? portfolio.fx_pairs : [
+        {from:"USD", to:"CNY"}, {from:"USD", to:"HKD"}, {from:"EUR", to:"CNY"}, {from:"HKD", to:"CNY"}
+      ];
+      var html = "";
+      for (var i = 0; i < pairs.length; i++) {
+        var p = pairs[i];
+        var rate = getRateBetween(p.from, p.to);
+        var inverse = rate ? (1 / rate) : null;
+        var key = p.from + p.to;
+        var changePct = (fxCache[key] && fxCache[key].changePct) ? Number(fxCache[key].changePct) : 0;
+        var isUp = changePct >= 0;
+        var symb = currencySign(p.to);
+
+        html += "<div class=\"fx-card\">" +
+          "<div class=\"fx-pair\">" + p.from + "/" + p.to + "</div>" +
+          (rate != null ? (
+            "<div class=\"fx-rate\">" + symb + fmt(rate, 4) + "</div>" +
+            "<div class=\"fx-change " + (isUp ? "up" : "down") + "\">" + (isUp ? "+" : "") + fmt(changePct, 2) + "% 今日</div>" +
+            "<div class=\"fx-inverse\">1 " + p.to + " = " + (inverse ? fmt(inverse, 4) : "--") + " " + p.from + "</div>"
+          ) : "<div class=\"skeleton skeleton-price\" style=\"margin-top:6px\"></div>") +
+        "</div>";
+      }
+      grid.innerHTML = html;
     }
 
     function getUserWatchlist() {
