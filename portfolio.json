@@ -34,6 +34,13 @@
                          "name":  "Roundhill Memory ETF",
                          "quantity":  27,
                          "cost":  62.79
+                     },
+                     {
+                         "market":  "US",
+                         "code":  "TQQQ",
+                         "name":  "Invesco NASDAQ 100 ETF",
+                         "quantity":  4.087,
+                         "cost":  64.88
                      }
                  ],
     "watchlist":  [
