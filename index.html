@@ -1,5 +1,952 @@
 <!DOCTYPE html>
+<html lang<!DOCTYPE html>
 <html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portfolio Monitor</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#fafafa;--card:#fff;--border:#e5e5e5;--text:#1a1a1a;--text-dim:#888;--muted-surface:#f4f4f4;--up:#22c55e;--down:#ef4444;--neutral:#888;--tag-us:#3b82f6;--tag-cn:#ef4444;--tag-hk:#f59e0b;--radius:8px;--shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04)}
+    :root[data-theme="dark"]{--bg:#111;--card:#1a1a1a;--border:#333;--text:#f5f5f5;--text-dim:#999;--muted-surface:#242424;--shadow:0 1px 3px rgba(0,0,0,.3),0 1px 2px rgba(0,0,0,.24)}
+    body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh;transition:background .2s,color .2s}
+    .container{max-width:1400px;margin:0 auto;padding:24px 24px 48px}
+    .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border)}
+    .header h1{font-size:20px;font-weight:600;letter-spacing:-.3px}
+    .header-right{display:flex;align-items:center;gap:16px}
+    .last-update{font-size:12px;color:var(--text-dim)}
+    .header-actions{display:flex;align-items:center;gap:8px}
+    .refresh-btn,.theme-btn{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 11px;font-size:13px;cursor:pointer;color:var(--text);font-family:inherit}
+    .refresh-btn:hover,.theme-btn:hover{border-color:#999}
+    .theme-btn{font-size:16px;line-height:1;padding:6px 9px}
+    .status-dot{width:7px;height:7px;border-radius:50%;background:var(--neutral);display:inline-block}
+    .status-dot.live{background:var(--up);animation:pulse 2s infinite}
+    .status-dot.error{background:var(--down)}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    .summary-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:24px}
+    .summary-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;box-shadow:var(--shadow)}
+    .summary-card .label{font-size:11px;font-weight:500;color:var(--text-dim);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+    .summary-card .value{font-size:26px;font-weight:700;letter-spacing:-.5px}
+    .summary-card .sub{font-size:12px;color:var(--text-dim);margin-top:4px}
+    .summary-card .sub.up,.summary-card .value.up{color:var(--up)}
+    .summary-card .sub.down,.summary-card .value.down{color:var(--down)}
+    .section-title{font-size:13px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;padding-left:2px}
+    .holdings-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-bottom:28px}
+    .holdings-grid-narrow{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+    .stock-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);transition:box-shadow .2s}
+    .stock-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.08)}
+    .stock-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+    .stock-name{font-size:14px;font-weight:600}
+    .stock-code{font-size:11px;color:var(--text-dim);font-family:monospace;margin-top:2px}
+    .market-tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;color:#fff;margin-bottom:4px;display:inline-block}
+    .market-tag.us{background:var(--tag-us)}
+    .market-tag.cn{background:var(--tag-cn)}
+    .market-tag.hk{background:var(--tag-hk)}
+    .stock-price-wrap{text-align:right}
+    .stock-price{font-size:18px;font-weight:700}
+    .stock-change{font-size:12px;font-weight:500}
+    .stock-change.up{color:var(--up)}
+    .stock-change.down{color:var(--down)}
+    .stock-change.neutral{color:var(--neutral)}
+    .stock-divider{height:1px;background:var(--border);margin:10px 0}
+    .stock-metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .metric{display:flex;flex-direction:column;gap:2px}
+    .metric-label{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px}
+    .metric-value{font-size:13px;font-weight:600}
+    .metric-value.up{color:var(--up)}
+    .metric-value.down{color:var(--down)}
+    .fx-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:28px}
+    .fx-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow)}
+    .fx-pair{font-size:13px;font-weight:600;margin-bottom:4px;font-family:monospace}
+    .fx-rate{font-size:22px;font-weight:700}
+    .fx-change{font-size:12px;font-weight:500;margin-top:2px}
+    .fx-change.up{color:var(--up)}
+    .fx-change.down{color:var(--down)}
+    .skeleton{background:linear-gradient(90deg,var(--muted-surface) 25%,var(--border) 50%,var(--muted-surface) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:4px}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    .skeleton-price{height:22px;width:70%}
+    .error-banner{background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:10px 14px;font-size:12px;color:var(--down);margin-bottom:16px;display:none}
+    :root[data-theme="dark"] .error-banner{background:#321b1b;border-color:#743333}
+    .fx-card{position:relative}
+    .fx-meta{font-size:10px;color:var(--text-dim);margin-top:7px}
+    .fx-source{font-size:10px;color:var(--text-dim);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .fx-toolbar{display:flex;align-items:end;gap:12px;margin:-2px 0 14px;padding:12px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+    .fx-control{display:flex;flex-direction:column;gap:4px;min-width:140px}
+    .fx-control span,.fx-converted span{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.6px}
+    .fx-control input,.fx-control select{height:34px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font:inherit;padding:0 9px;outline:none}
+    .fx-control input:focus,.fx-control select:focus{border-color:var(--text-dim)}
+    .fx-converted{display:flex;flex-direction:column;gap:3px;margin-left:auto;min-width:160px}
+    .fx-converted strong{font-size:18px}
+    .fx-inverse{font-size:11px;color:var(--text-dim);margin-top:5px}
+    @media(max-width:768px){.container{padding:16px}.summary-card .value{font-size:20px}.holdings-grid{grid-template-columns:1fr}.header{flex-direction:column;align-items:flex-start;gap:12px}.header-right{width:100%;justify-content:space-between}.header-actions{margin-left:auto}.last-update{max-width:125px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fx-toolbar{align-items:stretch;flex-wrap:wrap}.fx-control{flex:1;min-width:120px}.fx-converted{width:100%;margin-left:0}}
+  /* Hide number spinners */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+input[type=number]{-moz-appearance:textfield}
+.watchlist-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:12px}
+.watchlist-search-wrap{display:flex;align-items:center;gap:8px;position:relative}
+.watchlist-input{height:34px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font:inherit;padding:0 10px;width:190px;text-transform:uppercase;outline:none}
+.watchlist-input:focus{border-color:var(--text-dim)}
+.star-btn{height:34px;width:36px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:#f59e0b;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s,border-color .2s}
+.star-btn:hover{border-color:#f59e0b;background:rgba(245,158,11,0.1)}
+.search-suggestions{position:absolute;top:38px;left:0;width:290px;background:var(--card);border:1px solid var(--border);border-radius:6px;box-shadow:0 6px 16px rgba(0,0,0,0.18);z-index:100;max-height:240px;overflow-y:auto;display:none}
+.suggestion-item{padding:8px 12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)}
+.suggestion-item:last-child{border-bottom:none}
+.suggestion-item:hover{background:var(--muted-surface)}
+.suggestion-code{font-weight:600;font-size:13px}
+.suggestion-name{font-size:11px;color:var(--text-dim);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.unfollow-btn{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:16px;line-height:1;padding:2px 5px;border-radius:4px;margin-left:6px}
+.unfollow-btn:hover{color:var(--down);background:rgba(239,68,68,0.12)}
+.fx-pair-selects{display:flex;align-items:center;gap:6px}
+  
+    /* Modern FX Converter Widget */
+    .fx-converter-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+    .fx-converter-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .fx-converter-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: .8px;
+    }
+    .fx-rate-pill {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--up);
+      background: rgba(34, 197, 94, 0.1);
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      font-family: monospace;
+    }
+    .fx-converter-body {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 16px;
+      align-items: center;
+    }
+    .fx-box {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      transition: border-color .2s;
+    }
+    .fx-box:focus-within {
+      border-color: var(--tag-us);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+    }
+    .fx-box-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .fx-box-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+    .fx-select-custom {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-weight: 600;
+      font-size: 13px;
+      padding: 3px 8px;
+      border-radius: 5px;
+      cursor: pointer;
+      outline: none;
+    }
+    .fx-input-custom {
+      background: transparent;
+      border: none;
+      outline: none;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text);
+      width: 100%;
+      font-family: inherit;
+    }
+    .fx-swap-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 18px;
+      transition: all .2s;
+      align-self: center;
+      margin: 0 auto;
+    }
+    .fx-swap-btn:hover {
+      color: var(--text);
+      border-color: var(--text-dim);
+      transform: rotate(180deg);
+    }
+    @media (max-width: 640px) {
+      .fx-converter-body {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      .fx-swap-btn {
+        transform: rotate(90deg);
+        margin: 4px auto;
+      }
+      .fx-swap-btn:hover {
+        transform: rotate(270deg);
+      }
+    }
+
+  
+    /* Drag & Drop Styles for Watchlist */
+    .stock-card.draggable {
+      cursor: grab;
+      user-select: none;
+      transition: transform .2s, box-shadow .2s, opacity .2s;
+    }
+    .stock-card.draggable:active {
+      cursor: grabbing;
+    }
+    .stock-card.dragging {
+      opacity: 0.4;
+      transform: scale(0.98);
+      border: 2px dashed var(--tag-us);
+    }
+    .drag-handle {
+      cursor: grab;
+      color: var(--text-dim);
+      margin-right: 6px;
+      font-size: 14px;
+    }
+    /* Section reorder toggle button */
+    .section-move-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 12px;
+      cursor: pointer;
+      color: var(--text);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: 8px;
+    }
+    .section-move-btn:hover {
+      border-color: var(--text-dim);
+    }
+    .crown-icon {
+      font-size: 24px;
+      display: inline-block;
+      filter: drop-shadow(0 2px 4px rgba(234, 179, 8, 0.4));
+      margin-right: 4px;
+      vertical-align: middle;
+      animation: crownBounce 2s infinite ease-in-out;
+    }
+    @keyframes crownBounce {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-3px) rotate(4deg); }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Portfolio Monitor</h1>
+      <div class="header-right">
+        <span class="last-update" id="lastUpdate">--</span>
+        <span class="status-dot" id="statusDot"></span>
+        <div class="header-actions">
+          <button class="theme-btn" id="themeBtn" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">◐</button>
+          <button class="refresh-btn" id="refreshBtn" type="button">Refresh</button>
+        </div>
+      </div>
+    </div>
+    <div class="error-banner" id="errorBanner"></div>
+    <div class="summary-row">
+      <div class="summary-card"><div class="label">Total Value</div><div class="value" id="totalValue">--</div><div class="sub" id="totalPL">--</div></div>
+      <div class="summary-card"><div class="label">Total P/L</div><div class="value" id="totalPLValue">--</div><div class="sub" id="totalPLPct">--</div></div>
+      
+      <div class="summary-card"><div class="label">Best Today <span class="crown-icon">👑</span></div><div class="value" id="bestStock">--</div><div class="sub" id="bestPct">--</div></div>
+    </div>
+    <div class="section-title">Holdings</div>
+    <div class="holdings-grid" id="holdingsGrid"></div>
+    <div class="watchlist-header">
+      <div style="display:flex;align-items:center;">
+        <div class="section-title" style="margin-bottom:0">Watchlist</div>
+        <button id="toggleWatchlistPosBtn" class="section-move-btn" type="button" title="切换排版：置顶 / 置底">⇅ 切换位置</button>
+      </div>
+      <div class="watchlist-search-wrap">
+        <input type="text" id="watchlistInput" class="watchlist-input" placeholder="输入美股代码 (如 AAPL)" autocomplete="off">
+        <button id="watchlistStarBtn" class="star-btn" title="Follow / 关注" type="button">★</button>
+        <div id="watchlistSuggestions" class="search-suggestions"></div>
+      </div>
+    </div></div>
+    <div class="holdings-grid holdings-grid-narrow" id="watchlistGrid"></div>
+    <div class="section-title">FX Rates</div>
+    <div class="fx-converter-card">
+      <div class="fx-converter-header">
+        <span class="fx-converter-title">实时汇率极速换算</span>
+        <span class="fx-rate-pill" id="fxRateLabel">牌价拉取中...</span>
+      </div>
+      <div class="fx-converter-body">
+        <div class="fx-box">
+          <div class="fx-box-top">
+            <span class="fx-box-label">支付货币</span>
+            <select id="fxFromSelect" class="fx-select-custom"></select>
+          </div>
+          <input id="fxFromAmount" class="fx-input-custom" type="number" min="0" step="any" value="1" placeholder="1.00">
+        </div>
+
+        <button class="fx-swap-btn" id="fxSwapBtn" type="button" title="切换货币对">⇄</button>
+
+        <div class="fx-box">
+          <div class="fx-box-top">
+            <span class="fx-box-label">换算所得</span>
+            <select id="fxToSelect" class="fx-select-custom"></select>
+          </div>
+          <input id="fxToAmount" class="fx-input-custom" type="number" min="0" step="any" value="" placeholder="0.00">
+        </div>
+      </div>
+    </div>
+    <div class="fx-grid" id="fxGrid"></div>
+  </div>
+  <script>
+    var PORTFOLIO_FILE = 'portfolio.json';
+    var REFRESH_INTERVAL = 45000;
+    var portfolio = null;
+    var priceCache = {};
+    var fetchErrors = [];
+    var fxCache = {};
+
+    function logError(msg) { fetchErrors.push(msg); }
+
+    async function loadPortfolio() {
+      var res = await fetch(PORTFOLIO_FILE + '?t=' + Date.now());
+      if (!res.ok) throw new Error('Failed to load portfolio.json');
+      portfolio = await res.json();
+    }
+
+    function fmt(v, d) { d = d || 2; if (v == null || isNaN(v)) return '--'; return v.toFixed(d); }
+    function fmtMoney(v) { if (v == null || isNaN(v)) return '--'; return (v >= 0 ? '+' : '-') + '$' + Math.abs(v).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+    function pClass(v) { return v >= 0 ? 'up' : 'down'; }
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      document.getElementById('themeBtn').textContent = theme === 'dark' ? '○' : '◐';
+      document.getElementById('themeBtn').setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+      document.getElementById('themeBtn').setAttribute('title', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+      localStorage.setItem('portfolio-theme', theme);
+    }
+
+    function initTheme() {
+      applyTheme(localStorage.getItem('portfolio-theme') || 'light');
+    }
+
+    function renderStockCard(sym, isHolding) {
+      var d = priceCache[sym.code];
+      var price = d ? d.price : null;
+      var chg = d ? d.change : 0;
+      var pct = d ? d.changePct : 0;
+      var isUp = pct >= 0;
+      var csym = sym.market === 'CN' ? '\u00a5' : (sym.market === 'HK' ? 'HK$' : '$');
+      var dec = sym.market === 'CN' ? 3 : 2;
+
+      var plHtml = '';
+      if (isHolding && price != null) {
+        var plv = (price - sym.cost) * sym.quantity;
+        var plp = ((price - sym.cost) / sym.cost) * 100;
+        var mv = price * sym.quantity;
+        plHtml = '<div class="metric"><span class="metric-label">P/L</span><span class="metric-value ' + pClass(plv) + '">' + fmtMoney(plv) + '</span></div>' +
+                 '<div class="metric"><span class="metric-label">Return</span><span class="metric-value ' + pClass(plv) + '">' + fmt(plp) + '%</span></div>' +
+                 '<div class="metric"><span class="metric-label">Mkt Value</span><span class="metric-value">' + csym + fmt(mv, 0) + '</span></div>';
+      }
+
+      var priceHtml = price == null
+        ? '<div class="skeleton skeleton-price" style="margin-top:4px"></div>'
+        : '<div class="stock-price">' + csym + fmt(price, dec) + '</div><div class="stock-change ' + (isUp ? 'up' : 'down') + '">' + (isUp ? '+' : '') + fmt(chg) + ' (' + fmt(pct) + '%)</div>';
+
+      var unfollowBtn = !isHolding ? '<button class="unfollow-btn" title="Unfollow" onclick="unfollowStock(\'' + sym.code + '\')">\u2606 Unfollow</button>' : '';
+      return '<div class="stock-card">' +
+        '<div class="stock-card-header">' +
+          '<div><div class="stock-name">' + sym.name + '</div><div class="stock-code">' + sym.code + '</div></div>' +
+          '<div class="stock-price-wrap">' +
+            '<div class="market-tag ' + sym.market.toLowerCase() + '">' + sym.market + '</div>' +
+            priceHtml +
+          '</div>' +
+        '</div>' +
+        (isHolding ? '<div class="stock-divider"></div><div class="stock-metrics">' +
+          '<div class="metric"><span class="metric-label">Shares</span><span class="metric-value">' + sym.quantity.toLocaleString() + '</span></div>' +
+          '<div class="metric"><span class="metric-label">Avg Cost</span><span class="metric-value">' + csym + fmt(sym.cost, 3) + '</span></div>' +
+          plHtml +
+        '</div>' : '<div class="stock-divider"></div><div class="stock-metrics"><div class="metric">' + unfollowBtn + '</div></div>') +
+      '</div>';
+    }
+
+    function renderSummary(holdings) {
+      var tv = 0, tc = 0, tpl = 0, dpl = 0, bestP = -Infinity, bestN = '--';
+      for (var i = 0; i < holdings.length; i++) {
+        var h = holdings[i];
+        var d = priceCache[h.code];
+        if (!d || !d.price) continue;
+        var v = d.price * h.quantity, c = h.cost * h.quantity;
+        tv += v; tc += c; tpl += v - c; dpl += (d.change || 0) * h.quantity;
+        if (d.changePct > bestP) { bestP = d.changePct; bestN = h.name; }
+      }
+      var tplp = tc > 0 ? (tpl / tc) * 100 : 0;
+      var dplp = tc > 0 ? (dpl / tc) * 100 : 0;
+      var el = function(v) { return v >= 0 ? 'up' : 'down'; };
+      document.getElementById('totalValue').textContent = tv > 0 ? '$' + tv.toLocaleString('en-US', {maximumFractionDigits:0}) : '--';
+      document.getElementById('totalPL').textContent = tpl !== 0 ? fmtMoney(tpl) : '--';
+      document.getElementById('totalPL').className = 'sub ' + el(tpl);
+      document.getElementById('totalPLValue').textContent = tpl !== 0 ? fmtMoney(tpl) : '--';
+      document.getElementById('totalPLValue').className = 'value ' + el(tpl);
+      document.getElementById('totalPLPct').textContent = tpl !== 0 ? fmt(tplp) + '% total return' : '--';
+      document.getElementById('totalPLPct').className = 'sub ' + el(tpl);
+      var dp = document.getElementById('dayPL'); if (dp) dp.textContent = fmtMoney(dpl);
+      if (dp) dp.className = 'value ' + el(dpl);
+      var dpp = document.getElementById('dayPLPct'); if (dpp) dpp.textContent = fmt(dplp) + '% today';
+      if (dpp) dpp.className = 'sub ' + el(dpl);
+      document.getElementById('bestStock').textContent = bestN;
+      document.getElementById('bestPct').textContent = bestP > -Infinity ? '+' + fmt(bestP) + '% today' : '--';
+    }
+
+    function setStatus(s) {
+      var dot = document.getElementById('statusDot');
+      if (s === 'live') { dot.className = 'status-dot live'; dot.style.background = ''; }
+      else if (s === 'error') { dot.className = 'status-dot error'; }
+      else dot.className = 'status-dot';
+    }
+
+    async function readMarketSnapshot() {
+      var endpoints = ['./api/market', './data/market.json'];
+      for (var i = 0; i < endpoints.length; i++) {
+        try {
+          var response = await fetch(endpoints[i] + '?t=' + Date.now());
+          if (response.ok) return await response.json();
+        } catch (e) {}
+      }
+      throw new Error('Market snapshot is unavailable');
+    }
+
+    function renderSnapshotFX(fx, snapshotUpdatedAt) {
+      var pairs = portfolio.fx_pairs || [];
+      var symbols = { CNY: '\u00a5', HKD: 'HK$', USD: '$', EUR: '\u20ac' };
+      fxCache = fx || {};
+      var selector = document.getElementById('fxPairSelect');
+      var selected = selector.value;
+      selector.innerHTML = pairs.map(function(pair) {
+        var key = pair.from + pair.to;
+        return '<option value="' + key + '">' + pair.from + '/' + pair.to + '</option>';
+      }).join('');
+      if (selected && fxCache[selected]) selector.value = selected;
+      var html = '';
+      for (var i = 0; i < pairs.length; i++) {
+        var pair = pairs[i];
+        var key = pair.from + pair.to;
+        var item = fx && fx[key];
+        if (!item || item.rate == null) {
+          html += '<div class="fx-card"><div class="fx-pair">' + key.slice(0, 3) + '/' + key.slice(3) + '</div><div class="skeleton skeleton-price"></div></div>';
+          continue;
+        }
+        var positive = Number(item.changePct || 0) >= 0;
+        var inverse = Number(item.rate) ? (1 / Number(item.rate)) : null;
+        var source = item.source || 'Market snapshot';
+        var updated = item.updatedAt ? new Date(item.updatedAt).toLocaleTimeString() : (snapshotUpdatedAt ? new Date(snapshotUpdatedAt).toLocaleTimeString() : '--');
+        html += '<div class="fx-card"><div class="fx-pair">' + pair.from + '/' + pair.to + '</div>' +
+          '<div class="fx-rate">' + (symbols[pair.to] || '') + fmt(Number(item.rate), 4) + '</div>' +
+          '<div class="fx-change ' + (positive ? 'up' : 'down') + '">' + (positive ? '+' : '') + fmt(Number(item.changePct || 0)) + '% today</div>' +
+          '<div class="fx-inverse">1 ' + pair.to + ' = ' + (inverse ? fmt(inverse, 4) : '--') + ' ' + pair.from + '</div>' +
+          '<div class="fx-source" title="' + source + '">' + source + ' · ' + updated + '</div></div>';
+      }
+      document.getElementById('fxGrid').innerHTML = html;
+      updateFXConversion();
+    }
+
+    function updateFXConversion() {
+      var key = document.getElementById('fxPairSelect').value;
+      var amount = Number(document.getElementById('fxAmount').value || 0);
+      var item = fxCache[key];
+      var converted = document.getElementById('fxConverted');
+      if (!item || item.rate == null) { converted.textContent = '--'; return; }
+      var to = key.slice(3);
+      var symbol = { CNY: '\u00a5', HKD: 'HK$', USD: '$', EUR: '\u20ac' }[to] || '';
+      converted.textContent = symbol + (amount * Number(item.rate)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+    }
+
+    
+    var CURRENCY_LIST = ["USD","CNY","HKD","EUR","GBP","JPY","KRW","AUD","CAD","SGD","CHF","NZD","INR","THB","MYR","PHP","IDR","VND","BRL","MXN","RUB","TRY","ZAR","SAR","AED"];
+    var POPULAR_US_STOCKS = [
+      {symbol:"AAPL",name:"Apple Inc."},{symbol:"MSFT",name:"Microsoft Corporation"},
+      {symbol:"NVDA",name:"NVIDIA Corporation"},{symbol:"GOOGL",name:"Alphabet Inc."},
+      {symbol:"AMZN",name:"Amazon.com Inc."},{symbol:"META",name:"Meta Platforms Inc."},
+      {symbol:"TSLA",name:"Tesla Inc."},{symbol:"AVGO",name:"Broadcom Inc."},
+      {symbol:"BRK.B",name:"Berkshire Hathaway B"},{symbol:"JPM",name:"JPMorgan Chase"},
+      {symbol:"LLY",name:"Eli Lilly and Co."},{symbol:"V",name:"Visa Inc."},
+      {symbol:"WMT",name:"Walmart Inc."},{symbol:"MA",name:"Mastercard Inc."},
+      {symbol:"XOM",name:"Exxon Mobil Corp."},{symbol:"AMD",name:"Advanced Micro Devices"},
+      {symbol:"ORCL",name:"Oracle Corporation"},{symbol:"COST",name:"Costco Wholesale"},
+      {symbol:"NFLX",name:"Netflix Inc."},{symbol:"BAC",name:"Bank of America"},
+      {symbol:"ADBE",name:"Adobe Inc."},{symbol:"CRM",name:"Salesforce Inc."},
+      {symbol:"QCOM",name:"Qualcomm Inc."},{symbol:"INTC",name:"Intel Corporation"},
+      {symbol:"DIS",name:"Walt Disney Co."},{symbol:"CSCO",name:"Cisco Systems"},
+      {symbol:"BABA",name:"Alibaba Group"},{symbol:"PDD",name:"PDD Holdings"},
+      {symbol:"NIO",name:"NIO Inc."},{symbol:"LI",name:"Li Auto Inc."},
+      {symbol:"XPEV",name:"XPeng Inc."},{symbol:"BIDU",name:"Baidu Inc."},
+      {symbol:"JD",name:"JD.com Inc."},{symbol:"TQQQ",name:"ProShares UltraPro QQQ"},
+      {symbol:"SQQQ",name:"ProShares UltraPro Short QQQ"},{symbol:"SPY",name:"SPDR S&P 500 ETF"},
+      {symbol:"QQQ",name:"Invesco QQQ Trust"},{symbol:"VOO",name:"Vanguard S&P 500 ETF"},
+      {symbol:"VTI",name:"Vanguard Total Stock ETF"},{symbol:"COIN",name:"Coinbase Global"},
+      {symbol:"PLTR",name:"Palantir Technologies"},{symbol:"UBER",name:"Uber Technologies"}
+    ];
+    var fxLiveRates = {};
+
+    function currencySign(c) {
+      var map = { CNY: "¥", HKD: "HK$", USD: "$", EUR: "€", GBP: "£", JPY: "¥", KRW: "₩", AUD: "A$", CAD: "C$", SGD: "S$" };
+      return map[c] || c + " ";
+    }
+
+    function initFXSelectors() {
+      var fromSel = document.getElementById("fxFromSelect");
+      var toSel = document.getElementById("fxToSelect");
+      if (!fromSel || !toSel || fromSel.options.length > 0) return;
+      fromSel.innerHTML = CURRENCY_LIST.map(function(c){ return "<option value=\"" + c + "\">" + c + "</option>"; }).join("");
+      toSel.innerHTML = CURRENCY_LIST.map(function(c){ return "<option value=\"" + c + "\">" + c + "</option>"; }).join("");
+      fromSel.value = "USD";
+      toSel.value = "CNY";
+    }
+
+    async function fetchLiveFXRates(base) {
+      try {
+        var res = await fetch("https://open.er-api.com/v6/latest/" + base);
+        if (!res.ok) return null;
+        var data = await res.json();
+        if (data.result === "success" && data.rates) return data.rates;
+      } catch (e) {}
+      return null;
+    }
+
+    var currentPairRate = 1;
+    var allUsdRates = {};
+
+    async function fetchAllLiveRates() {
+      try {
+        var res = await fetch("https://open.er-api.com/v6/latest/USD");
+        if (!res.ok) return null;
+        var data = await res.json();
+        if (data && data.result === "success" && data.rates) {
+          allUsdRates = data.rates;
+          return data.rates;
+        }
+      } catch(e) {}
+      return null;
+    }
+
+    function getRateBetween(from, to) {
+      if (from === to) return 1;
+      if (allUsdRates[from] && allUsdRates[to]) {
+        return allUsdRates[to] / allUsdRates[from];
+      }
+      var key = from + to;
+      if (fxCache[key] && fxCache[key].rate) return Number(fxCache[key].rate);
+      return null;
+    }
+
+    async function refreshFXData() {
+      initFXSelectors();
+    var fa = document.getElementById("fxFromAmount"); if (fa) fa.oninput = function() { syncConversion("from"); };
+    var ta = document.getElementById("fxToAmount"); if (ta) ta.oninput = function() { syncConversion("to"); };
+      if (!Object.keys(allUsdRates).length) {
+        await fetchAllLiveRates();
+      }
+      var from = document.getElementById("fxFromSelect").value || "USD";
+      var to = document.getElementById("fxToSelect").value || "CNY";
+      var rate = getRateBetween(from, to);
+      currentPairRate = rate || 1;
+
+      var lbl = document.getElementById("fxRateLabel");
+      if (lbl) {
+        lbl.textContent = rate ? ("1 " + from + " = " + fmt(rate, 4) + " " + to) : "牌价拉取中...";
+      }
+
+      syncConversion("from");
+      renderAllFXCards();
+    }
+
+    function syncConversion(source) {
+      var fromIn = document.getElementById("fxFromAmount");
+      var toIn = document.getElementById("fxToAmount");
+      if (!fromIn || !toIn || !currentPairRate) return;
+
+      if (source === "from") {
+        var val = parseFloat(fromIn.value);
+        if (isNaN(val)) { toIn.value = ""; return;
+ }
+        toIn.value = (val * currentPairRate).toFixed(4).replace(/\.?0+$/, "");
+      } else {
+        var val = parseFloat(toIn.value);
+        if (isNaN(val)) { fromIn.value = ""; return;
+ }
+        fromIn.value = (val / currentPairRate).toFixed(4).replace(/\.?0+$/, "");
+      }
+    }
+
+    function renderAllFXCards() {
+      var grid = document.getElementById("fxGrid");
+      if (!grid) return;
+      var pairs = (portfolio && portfolio.fx_pairs && portfolio.fx_pairs.length) ? portfolio.fx_pairs : [
+        {from:"USD", to:"CNY"}, {from:"USD", to:"HKD"}, {from:"EUR", to:"CNY"}, {from:"HKD", to:"CNY"}
+      ];
+      var html = "";
+      for (var i = 0; i < pairs.length; i++) {
+        var p = pairs[i];
+        var rate = getRateBetween(p.from, p.to);
+        var inverse = rate ? (1 / rate) : null;
+        var symb = currencySign(p.to);
+
+        html += '<div class="fx-card">' +
+          '<div class="fx-pair" style="font-size:14px;font-weight:600;margin-bottom:8px;">' + p.from + '/' + p.to + '</div>' +
+          (rate != null ? (
+            '<div class="fx-rate" style="font-size:24px;font-weight:700;margin-bottom:6px;">' + symb + fmt(rate, 4) + '</div>' +
+            '<div class="fx-inverse" style="font-size:12px;color:var(--text-dim);">1 ' + p.from + ' = ' + fmt(rate, 4) + ' ' + p.to + '</div>' +
+            '<div class="fx-inverse" style="font-size:11px;color:var(--text-dim);margin-top:2px;">1 ' + p.to + ' = ' + (inverse ? fmt(inverse, 4) : "--") + ' ' + p.from + '</div>'
+          ) : '<div class="skeleton skeleton-price" style="margin-top:6px"></div>') +
+        '</div>';
+      }
+      grid.innerHTML = html;
+    }
+
+    function getUserWatchlist() {
+      var defaults = (portfolio && portfolio.watchlist) ? portfolio.watchlist : [];
+      try {
+        var custom = JSON.parse(localStorage.getItem("user_watchlist"));
+        if (Array.isArray(custom)) {
+          var map = {};
+          var combined = [];
+          custom.concat(defaults).forEach(function(item) {
+            if (!map[item.code]) {
+              map[item.code] = true;
+              combined.push(item);
+            }
+          });
+          return combined;
+        }
+      } catch(e) {}
+      return defaults;
+    }
+
+    function saveUserWatchlist(list) {
+      localStorage.setItem("user_watchlist", JSON.stringify(list));
+    }
+
+    function renderWatchlistSection() {
+      var list = getUserWatchlist();
+      var grid = document.getElementById("watchlistGrid");
+      if (!grid) return;
+      if (!list.length) {
+        grid.innerHTML = "<div style=\"color:var(--text-dim);font-size:12px;padding:8px 2px;\">未关注任何股票。在上方输入美股代码并点击 ★ 关注。</div>";
+        return;
+      }
+      grid.innerHTML = list.map(function(s) { return renderStockCard(s, false); }).join("");
+    }
+
+    function unfollowStock(code) {
+      var list = getUserWatchlist().filter(function(s){ return s.code !== code; });
+      saveUserWatchlist(list);
+      renderWatchlistSection();
+    }
+
+    function followStock(code, name) {
+      code = (code || "").trim().toUpperCase();
+      if (!code) return;
+      var list = getUserWatchlist();
+      if (!list.some(function(s){ return s.code === code; })) {
+        list.push({ market: "US", code: code, name: name || code });
+        saveUserWatchlist(list);
+      }
+      var inp = document.getElementById("watchlistInput");
+      if (inp) inp.value = "";
+      var sugg = document.getElementById("watchlistSuggestions");
+      if (sugg) sugg.style.display = "none";
+      renderWatchlistSection();
+      fetchSnapshot();
+    }
+
+    
+    // Strict valid list
+    function isValidStock(code) {
+      code = (code || '').trim().toUpperCase();
+      return POPULAR_US_STOCKS.some(function(s){ return s.symbol === code; });
+    }
+
+    // Direct live quote for Watchlist items (client-side fallback for new followed stocks)
+    async function fetchLiveStockQuote(symbol) {
+      try {
+        var url = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(symbol) + '?interval=1d&range=1d';
+        var res = await fetch(url);
+        if (!res.ok) return null;
+        var data = await res.json();
+        var result = data.chart && data.chart.result && data.chart.result[0];
+        if (result && result.meta) {
+          var price = Number(result.meta.regularMarketPrice);
+          var prev = Number(result.meta.previousClose || price);
+          return {
+            price: price,
+            change: price - prev,
+            changePct: prev ? ((price - prev) / prev) * 100 : 0
+          };
+        }
+      } catch(e) {}
+      return null;
+    }
+
+    async function ensureWatchlistQuotes() {
+      var list = getUserWatchlist();
+      var missing = list.filter(function(s){ return !priceCache[s.code] || !priceCache[s.code].price; });
+      if (!missing.length) return;
+      var updated = false;
+      await Promise.all(missing.map(async function(item) {
+        var q = await fetchLiveStockQuote(item.code);
+        if (q) {
+          priceCache[item.code] = q;
+          updated = true;
+        }
+      }));
+      if (updated) {
+        renderWatchlistSection();
+      }
+    }
+
+    function followStock(code, name) {
+      code = (code || '').trim().toUpperCase();
+      if (!isValidStock(code)) {
+        alert('未找到该美股代码：' + code + '。请从智能联想列表中选择有效股票。');
+        return;
+      }
+      var stock = POPULAR_US_STOCKS.find(function(s){ return s.symbol === code; });
+      var list = getUserWatchlist();
+      if (!list.some(function(s){ return s.code === code; })) {
+        list.push({ market: 'US', code: code, name: stock ? stock.name : name });
+        saveUserWatchlist(list);
+      }
+      var inp = document.getElementById('watchlistInput');
+      if (inp) inp.value = '';
+      var sugg = document.getElementById('watchlistSuggestions');
+      if (sugg) sugg.style.display = 'none';
+      renderWatchlistSection();
+      ensureWatchlistQuotes();
+    }
+
+    // Drag and drop for Watchlist
+    var draggedItemIndex = null;
+
+    function renderWatchlistSection() {
+      var list = getUserWatchlist();
+      var grid = document.getElementById('watchlistGrid');
+      if (!grid) return;
+      if (!list.length) {
+        grid.innerHTML = '<div style="color:var(--text-dim);font-size:12px;padding:8px 2px;">暂无关注美股。在上方输入有效美股代码（如 AAPL、NVDA、TSLA）并点击 ★ 关注。</div>';
+        return;
+      }
+      grid.innerHTML = list.map(function(s, index) {
+        var cardHtml = renderStockCard(s, false);
+        // Make draggable
+        return cardHtml.replace('class="stock-card"', 'class="stock-card draggable" draggable="true" data-index="' + index + '"');
+      }).join('');
+
+      // Attach Drag & Drop Events
+      var cards = grid.querySelectorAll('.stock-card.draggable');
+      cards.forEach(function(card) {
+        card.addEventListener('dragstart', function(e) {
+          draggedItemIndex = Number(this.getAttribute('data-index'));
+          this.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        card.addEventListener('dragend', function() {
+          this.classList.remove('dragging');
+        });
+        card.addEventListener('dragover', function(e) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+        });
+        card.addEventListener('drop', function(e) {
+          e.preventDefault();
+          var targetIndex = Number(this.getAttribute('data-index'));
+          if (draggedItemIndex !== null && draggedItemIndex !== targetIndex) {
+            var currentList = getUserWatchlist();
+            var movedItem = currentList.splice(draggedItemIndex, 1)[0];
+            currentList.splice(targetIndex, 0, movedItem);
+            saveUserWatchlist(currentList);
+            renderWatchlistSection();
+          }
+        });
+      });
+    }
+
+    // Section Position Toggle (Holdings vs Watchlist order)
+    function setupSectionPosition() {
+      var isWatchlistFirst = localStorage.getItem('watchlist_position') === 'top';
+      var container = document.querySelector('.container');
+      var watchlistHeader = document.querySelector('.watchlist-header');
+      var watchlistGrid = document.getElementById('watchlistGrid');
+      var holdingsTitle = document.querySelectorAll('.section-title')[0];
+      var holdingsGrid = document.getElementById('holdingsGrid');
+      var toggleBtn = document.getElementById('toggleWatchlistPosBtn');
+
+      function applyOrder() {
+        if (!holdingsTitle || !watchlistHeader) return;
+        if (isWatchlistFirst) {
+          holdingsTitle.parentNode.insertBefore(watchlistHeader, holdingsTitle);
+          holdingsTitle.parentNode.insertBefore(watchlistGrid, holdingsTitle);
+          if (toggleBtn) toggleBtn.textContent = '⇅ 移至下方';
+        } else {
+          holdingsGrid.parentNode.insertBefore(watchlistHeader, holdingsGrid.nextSibling);
+          watchlistHeader.parentNode.insertBefore(watchlistGrid, watchlistHeader.nextSibling);
+          if (toggleBtn) toggleBtn.textContent = '⇅ 移至上方';
+        }
+      }
+
+      if (toggleBtn) {
+        toggleBtn.onclick = function() {
+          isWatchlistFirst = !isWatchlistFirst;
+          localStorage.setItem('watchlist_position', isWatchlistFirst ? 'top' : 'bottom');
+          applyOrder();
+        };
+      }
+      applyOrder();
+    }
+
+    function setupWatchlistControls() {
+      var input = document.getElementById("watchlistInput");
+      var starBtn = document.getElementById("watchlistStarBtn");
+      var sugg = document.getElementById("watchlistSuggestions");
+      if (!input || !starBtn || !sugg) return;
+
+      input.addEventListener("input", function(e) {
+        var q = e.target.value.trim().toUpperCase();
+        if (!q) { sugg.style.display = "none"; return; }
+        var matches = POPULAR_US_STOCKS.filter(function(s){
+          return s.symbol.indexOf(q) === 0 || s.name.toUpperCase().indexOf(q) !== -1;
+        }).slice(0, 8);
+        if (!matches.length) {
+          sugg.innerHTML = "<div style=\"padding:8px 12px;color:var(--text-dim);font-size:12px;\">未找到匹配美股代码</div>";
+        } else {
+          sugg.innerHTML = matches.map(function(s){
+            return "<div class=\"suggestion-item\" onclick=\"followStock(\'" + s.symbol + "\',\'" + s.name.replace(/'/g, "\\x27") + "\')\" style=\"padding:8px 12px;cursor:pointer;display:flex;justify-content:space-between;\"><span class=\"suggestion-code\">" + s.symbol + "</span><span class=\"suggestion-name\">" + s.name + "</span></div>";
+          }).join("");
+        }
+        sugg.style.display = "block";
+      });
+
+      input.addEventListener("keydown", function(e) {
+        if (e.key === "Enter") {
+          var q = input.value.trim().toUpperCase();
+          if (q) followStock(q);
+        }
+      });
+
+      starBtn.onclick = function() {
+        var q = input.value.trim().toUpperCase();
+        if (q) {
+          var match = POPULAR_US_STOCKS.find(function(s){ return s.symbol === q; });
+          followStock(q, match ? match.name : q);
+        }
+      };
+
+      document.addEventListener("click", function(e) {
+        if (!e.target.closest(".watchlist-search-wrap")) {
+          sugg.style.display = "none";
+        }
+      });
+    }
+
+    async function fetchSnapshot() {
+      setStatus("loading");
+      fetchErrors = [];
+      try {
+        await loadPortfolio();
+      } catch(e) {
+        console.warn("Failed to load portfolio.json", e);
+      }
+      var holdings = (portfolio && portfolio.holdings) || [];
+      try {
+        var snapshot = await readMarketSnapshot();
+        priceCache = snapshot.quotes || {};
+        if (snapshot.fx) fxCache = snapshot.fx;
+        document.getElementById("lastUpdate").textContent = snapshot.updatedAt ? "Updated " + new Date(snapshot.updatedAt).toLocaleString() : "Waiting for snapshot";
+        setStatus("live");
+        var banner = document.getElementById("errorBanner");
+        if (banner) banner.style.display = "none";
+      } catch(e) {
+        console.warn("Snapshot not yet available", e);
+        setStatus("error");
+        var banner = document.getElementById("errorBanner");
+        if (banner) {
+          banner.style.display = "block";
+          banner.textContent = "Market data snapshot loading or waiting for GitHub Actions workflow to run.";
+        }
+      }
+      try {
+        document.getElementById("holdingsGrid").innerHTML = holdings.map(function(s) { return renderStockCard(s, true); }).join("");
+        renderWatchlistSection();
+        renderSummary(holdings);
+        await refreshFXData();
+      } catch(e) {
+        console.error("Render error:", e);
+      }
+    }
+
+    initTheme();
+    document.getElementById("themeBtn").onclick = function() {
+      applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
+    };
+    initFXSelectors();
+    setupWatchlistControls();
+    setupSectionPosition();
+    ensureWatchlistQuotes();
+    var fa = document.getElementById("fxFromAmount"); if (fa) fa.oninput = function() { syncConversion("from"); };
+    var ta = document.getElementById("fxToAmount"); if (ta) ta.oninput = function() { syncConversion("to"); };
+    var fsEl = document.getElementById("fxFromSelect"); if (fsEl) fsEl.onchange = refreshFXData;
+    var tsEl = document.getElementById("fxToSelect"); if (tsEl) tsEl.onchange = refreshFXData;
+    var swapBtn = document.getElementById("fxSwapBtn");
+    if (swapBtn) {
+      swapBtn.onclick = function() {
+        var fromVal = fsEl.value;
+        fsEl.value = tsEl.value;
+        tsEl.value = fromVal;
+        refreshFXData();
+      };
+    }
+    document.getElementById("refreshBtn").onclick = fetchSnapshot;
+    fetchSnapshot();
+    setInterval(fetchSnapshot, REFRESH_INTERVAL);
+  </script>
+</body>
+</html>
+="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
