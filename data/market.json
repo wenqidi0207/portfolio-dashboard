@@ -1,14 +1,14 @@
 {
-  "updatedAt": "2026-09-04T19:54:31.601Z",
+  "updatedAt": "2026-09-04T20:01:10.102Z",
   "quotes": {
     "VTI": {
-      "price": 379.77,
+      "price": 379.73,
       "change": 0,
       "changePct": 0,
       "source": "Yahoo Finance"
     },
     "VXUS": {
-      "price": 88.355,
+      "price": 88.41,
       "change": 0,
       "changePct": 0,
       "source": "Yahoo Finance"
@@ -20,19 +20,19 @@
       "source": "Yahoo Finance"
     },
     "QQQM": {
-      "price": 296.08,
+      "price": 296.07,
       "change": 0,
       "changePct": 0,
       "source": "Yahoo Finance"
     },
     "DRAM": {
-      "price": 59.47,
+      "price": 59.76,
       "change": 0,
       "changePct": 0,
       "source": "Yahoo Finance"
     },
     "TQQQ": {
-      "price": 72.39,
+      "price": 72.37,
       "change": 0,
       "changePct": 0,
       "source": "Yahoo Finance"
