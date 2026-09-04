@@ -98,6 +98,126 @@ input[type=number]{-moz-appearance:textfield}
 .unfollow-btn{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:16px;line-height:1;padding:2px 5px;border-radius:4px;margin-left:6px}
 .unfollow-btn:hover{color:var(--down);background:rgba(239,68,68,0.12)}
 .fx-pair-selects{display:flex;align-items:center;gap:6px}
+  
+    /* Modern FX Converter Widget */
+    .fx-converter-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+    .fx-converter-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .fx-converter-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: .8px;
+    }
+    .fx-rate-pill {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--up);
+      background: rgba(34, 197, 94, 0.1);
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      font-family: monospace;
+    }
+    .fx-converter-body {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 16px;
+      align-items: center;
+    }
+    .fx-box {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      transition: border-color .2s;
+    }
+    .fx-box:focus-within {
+      border-color: var(--tag-us);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+    }
+    .fx-box-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .fx-box-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+    .fx-select-custom {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-weight: 600;
+      font-size: 13px;
+      padding: 3px 8px;
+      border-radius: 5px;
+      cursor: pointer;
+      outline: none;
+    }
+    .fx-input-custom {
+      background: transparent;
+      border: none;
+      outline: none;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text);
+      width: 100%;
+      font-family: inherit;
+    }
+    .fx-swap-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 18px;
+      transition: all .2s;
+      align-self: center;
+      margin: 0 auto;
+    }
+    .fx-swap-btn:hover {
+      color: var(--text);
+      border-color: var(--text-dim);
+      transform: rotate(180deg);
+    }
+    @media (max-width: 640px) {
+      .fx-converter-body {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      .fx-swap-btn {
+        transform: rotate(90deg);
+        margin: 4px auto;
+      }
+      .fx-swap-btn:hover {
+        transform: rotate(270deg);
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -125,25 +245,29 @@ input[type=number]{-moz-appearance:textfield}
     <div class="watchlist-header"><div class="section-title" style="margin-bottom:0">Watchlist</div><div class="watchlist-search-wrap"><input type="text" id="watchlistInput" class="watchlist-input" placeholder="US Ticker (e.g. AAPL)" autocomplete="off"><button id="watchlistStarBtn" class="star-btn" title="Follow / 关注" type="button">★</button><div id="watchlistSuggestions" class="search-suggestions"></div></div></div>
     <div class="holdings-grid holdings-grid-narrow" id="watchlistGrid"></div>
     <div class="section-title">FX Rates</div>
-    <div class="fx-toolbar" style="display:flex;align-items:center;flex-wrap:wrap;gap:16px;padding:12px 0;">
-      <div class="fx-control" style="flex:1;min-width:160px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-          <select id="fxFromSelect" style="font-weight:600;"></select>
-          <span style="font-size:11px;color:var(--text-dim);">基准货币</span>
-        </div>
-        <input id="fxFromAmount" type="number" min="0" step="any" value="1" placeholder="1.00">
+    <div class="fx-converter-card">
+      <div class="fx-converter-header">
+        <span class="fx-converter-title">实时汇率极速换算</span>
+        <span class="fx-rate-pill" id="fxRateLabel">牌价拉取中...</span>
       </div>
-      <div style="font-size:18px;color:var(--text-dim);padding-top:14px;">⇄</div>
-      <div class="fx-control" style="flex:1;min-width:160px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-          <select id="fxToSelect" style="font-weight:600;"></select>
-          <span style="font-size:11px;color:var(--text-dim);">换算目标</span>
+      <div class="fx-converter-body">
+        <div class="fx-box">
+          <div class="fx-box-top">
+            <span class="fx-box-label">支付货币</span>
+            <select id="fxFromSelect" class="fx-select-custom"></select>
+          </div>
+          <input id="fxFromAmount" class="fx-input-custom" type="number" min="0" step="any" value="1" placeholder="1.00">
         </div>
-        <input id="fxToAmount" type="number" min="0" step="any" value="" placeholder="0.00">
-      </div>
-      <div class="fx-converted" style="margin-left:auto;min-width:150px;">
-        <span>实时牌价参考</span>
-        <strong id="fxRateLabel" style="font-size:14px;margin-top:2px;">--</strong>
+
+        <button class="fx-swap-btn" id="fxSwapBtn" type="button" title="切换货币对">⇄</button>
+
+        <div class="fx-box">
+          <div class="fx-box-top">
+            <span class="fx-box-label">换算所得</span>
+            <select id="fxToSelect" class="fx-select-custom"></select>
+          </div>
+          <input id="fxToAmount" class="fx-input-custom" type="number" min="0" step="any" value="" placeholder="0.00">
+        </div>
       </div>
     </div>
     <div class="fx-grid" id="fxGrid"></div>
@@ -602,6 +726,15 @@ input[type=number]{-moz-appearance:textfield}
     var ta = document.getElementById("fxToAmount"); if (ta) ta.oninput = function() { syncConversion("to"); };
     var fsEl = document.getElementById("fxFromSelect"); if (fsEl) fsEl.onchange = refreshFXData;
     var tsEl = document.getElementById("fxToSelect"); if (tsEl) tsEl.onchange = refreshFXData;
+    var swapBtn = document.getElementById("fxSwapBtn");
+    if (swapBtn) {
+      swapBtn.onclick = function() {
+        var fromVal = fsEl.value;
+        fsEl.value = tsEl.value;
+        tsEl.value = fromVal;
+        refreshFXData();
+      };
+    }
     document.getElementById("refreshBtn").onclick = fetchSnapshot;
     fetchSnapshot();
     setInterval(fetchSnapshot, REFRESH_INTERVAL);
