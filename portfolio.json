@@ -1,74 +1,7 @@
 {
     "holdings":  [
                      {
-                         "market{
-    "holdings":  [
-                     {
                          "market":  "US",
-                         "code":  "VTI",
-                         "name":  "Vanguard Total Stock Market ETF",
-                         "quantity":  29,
-                         "cost":  367.96
-                     },
-                     {
-                         "market":  "US",
-                         "code":  "VXUS",
-                         "name":  "Vanguard Total International Stock ETF",
-                         "quantity":  46,
-                         "cost":  84.64
-                     },
-                     {
-                         "market":  "US",
-                         "code":  "SGOV",
-                         "name":  "iShares 0-3 Month Treasury Bond ETF",
-                         "quantity":  61,
-                         "cost":  100.44
-                     },
-                     {
-                         "market":  "US",
-                         "code":  "QQQM",
-                         "name":  "Invesco NASDAQ 100 ETF",
-                         "quantity":  17,
-                         "cost":  288.52
-                     },
-                     {
-                         "market":  "US",
-                         "code":  "DRAM",
-                         "name":  "Roundhill Memory ETF",
-                         "quantity":  27,
-                         "cost":  62.79
-                     },
-                     {
-                         "market":  "US",
-                         "code":  "TQQQ",
-                         "name":  "Invesco NASDAQ 100 ETF",
-                         "quantity":  4.087,
-                         "cost":  64.88
-                     }
-                 ],
-    "watchlist":  [
-
-                  ],
-    "fx_pairs":  [
-                     {
-                         "to":  "CNY",
-                         "from":  "USD"
-                     },
-                     {
-                         "to":  "HKD",
-                         "from":  "USD"
-                     },
-                     {
-                         "to":  "CNY",
-                         "from":  "EUR"
-                     },
-                     {
-                         "to":  "CNY",
-                         "from":  "HKD"
-                     }
-                 ]
-}
-":  "US",
                          "code":  "VTI",
                          "name":  "Vanguard Total Stock Market ETF",
                          "quantity":  29,
