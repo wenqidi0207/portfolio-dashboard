@@ -484,8 +484,10 @@ input[type=number]{-moz-appearance:textfield}
     .profit-trend-value.down { color: var(--down); }
     .market-widget { border: 1px solid var(--border); border-radius: 6px; background: var(--card); min-height: 310px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
     .market-widget-label { align-self: flex-start; border: 1px solid var(--border); border-radius: 4px; color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .08em; padding: 5px 7px; }
-    .market-widget-logo { width: 184px; max-width: 100%; height: auto; filter: grayscale(1) contrast(1.2); opacity: .94; }
-    :root[data-theme="dark"] .market-widget-logo { filter: grayscale(1) invert(1) contrast(1.1); }
+    .nasdaq-logo { display: inline-flex; align-items: center; gap: 10px; color: #1fc5bb; }
+    .nasdaq-mark { position: relative; width: 28px; height: 38px; border-left: 5px solid currentColor; border-right: 5px solid currentColor; transform: skewX(-18deg); }
+    .nasdaq-mark::after { content: ''; position: absolute; top: 4px; bottom: 4px; left: 7px; width: 5px; background: currentColor; transform: skewX(36deg); transform-origin: center; }
+    .nasdaq-wordmark { color: var(--text); font: 600 28px 'Space Grotesk', sans-serif; letter-spacing: .02em; }
     .market-widget-name { font: 11px var(--label-font); letter-spacing: .08em; color: var(--text-dim); }
     .market-widget-rule { height: 1px; background: var(--border); width: 100%; }
     :root[data-theme="dark"] .error-banner { background: transparent; border-color: var(--down); }
@@ -536,7 +538,7 @@ input[type=number]{-moz-appearance:textfield}
       </section>
       <aside class="market-widget" aria-label="Nasdaq market widget">
         <span class="market-widget-label">NASDAQ</span>
-        <img class="market-widget-logo" src="https://upload.wikimedia.org/wikipedia/commons/0/0e/Nasdaq_logo.svg" alt="Nasdaq">
+        <div class="nasdaq-logo" role="img" aria-label="Nasdaq logo"><span class="nasdaq-mark" aria-hidden="true"></span><span class="nasdaq-wordmark">NASDAQ</span></div>
         <div class="market-widget-rule"></div>
         <span class="market-widget-name">US TECHNOLOGY MARKET</span>
       </aside>
