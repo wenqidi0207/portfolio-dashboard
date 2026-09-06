@@ -457,7 +457,9 @@ input[type=number]{-moz-appearance:textfield}
     .fx-swap-btn { border-radius: 6px; box-shadow: none; }
     .fx-card-modern { padding: 20px; }
     .fx-pair-badge { background: transparent; border: 0; padding: 0; font-size: 15px; font-weight: 400; }
-    .fx-rate-val { font-size: 24px; font-weight: 400; }
+    .fx-rate-val { font-size: 20px; font-weight: 400; line-height: 1.25; white-space: nowrap; letter-spacing: 0; }
+    .fx-details-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
+    .fx-details-row span { white-space: nowrap; }
     .search-suggestions { box-shadow: none; border-radius: 6px; }
     .watchlist-input, .fx-select-custom, .fx-control input, .fx-control select { border-radius: 6px; font-family: var(--data-font); }
     .watchlist-input::placeholder { font-family: 'Space Grotesk', sans-serif; color: var(--text-dim); }
@@ -470,6 +472,8 @@ input[type=number]{-moz-appearance:textfield}
       .header h1 { font-size: 26px; }
       .summary-row { gap: 12px; margin-bottom: 32px; }
       .summary-card { padding: 18px; }
+      .fx-rate-val { font-size: 19px; }
+      .fx-details-row { gap: 6px; font-size: 10px; }
     }
 
 </style>
@@ -854,35 +858,52 @@ function renderAllFXCards() {
   grid.innerHTML = html;
 }
 
+function parseYahooQuote(data) {
+  var result = data && data.chart && data.chart.result && data.chart.result[0];
+  if (!result || !result.meta) return null;
+  var chart = result.indicators && result.indicators.quote && result.indicators.quote[0];
+  var closes = chart && Array.isArray(chart.close) ? chart.close.filter(function(v){ return v != null; }) : [];
+  var price = Number(result.meta.regularMarketPrice != null ? result.meta.regularMarketPrice : closes[closes.length - 1]);
+  var prev = Number(result.meta.previousClose || result.meta.chartPreviousClose || closes[closes.length - 2] || price);
+  if (!isFinite(price)) return null;
+  return { price: price, change: price - prev, changePct: prev ? ((price - prev) / prev) * 100 : 0, source: 'Yahoo Finance' };
+}
+
+function fetchQuoteEndpoint(url) {
+  var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  var timer = setTimeout(function(){ if (controller) controller.abort(); }, 4500);
+  return fetch(url, { cache: 'no-store', signal: controller ? controller.signal : undefined })
+    .then(function(res){ return res.ok ? res.json() : null; })
+    .then(parseYahooQuote)
+    .catch(function(){ return null; })
+    .finally(function(){ clearTimeout(timer); });
+}
+
 async function fetchLiveStockQuote(symbol) {
   if (!symbol) return null;
   var cleanSym = symbol.trim().toUpperCase();
   var targetUrl = "https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(cleanSym) + "?interval=1d&range=5d";
-  var proxies = [
+  var endpoints = [
     targetUrl,
     "https://api.allorigins.win/raw?url=" + encodeURIComponent(targetUrl),
     "https://corsproxy.io/?" + encodeURIComponent(targetUrl)
   ];
-  for (var i = 0; i < proxies.length; i++) {
-    try {
-      var res = await fetch(proxies[i], { cache: "no-store" });
-      if (!res.ok) continue;
-      var data = await res.json();
-      var result = data && data.chart && data.chart.result && data.chart.result[0];
-      if (result && result.meta) {
-        var chart = result.indicators && result.indicators.quote && result.indicators.quote[0];
-        var closes = chart && Array.isArray(chart.close) ? chart.close.filter(function(v){ return v != null; }) : [];
-        var price = Number(result.meta.regularMarketPrice != null ? result.meta.regularMarketPrice : closes[closes.length - 1]);
-        var prev = Number(result.meta.previousClose || result.meta.chartPreviousClose || closes[closes.length - 2] || price);
-        if (!isFinite(price)) continue;
-        return { price: price, change: price - prev, changePct: prev ? ((price - prev) / prev) * 100 : 0 };
-      }
-    } catch(e) {}
-  }
-  return null;
+  return new Promise(function(resolve) {
+    var remaining = endpoints.length;
+    var settled = false;
+    endpoints.forEach(function(url) {
+      fetchQuoteEndpoint(url).then(function(quote) {
+        if (settled) return;
+        if (quote) { settled = true; resolve(quote); return; }
+        remaining -= 1;
+        if (!remaining) resolve(null);
+      });
+    });
+  });
 }
 
 var watchlistQuoteStatus = {};
+var watchlistQuotesInFlight = null;
 
 function getUserWatchlist() {
   var defaults = (portfolio && portfolio.watchlist) ? portfolio.watchlist : [];
@@ -969,30 +990,27 @@ function unfollowStock(code) {
 }
 
 async function ensureWatchlistQuotes() {
+  if (watchlistQuotesInFlight) return watchlistQuotesInFlight;
   var list = getUserWatchlist();
-  var missing = list.filter(function(s){ return !priceCache[s.code] || !priceCache[s.code].price; });
+  var missing = list.filter(function(s){ return !priceCache[s.code] || priceCache[s.code].price == null; });
   if (!missing.length) return;
-  for (var i = 0; i < missing.length; i++) {
-    var item = missing[i];
-    watchlistQuoteStatus[item.code] = '[LOADING...]';
-    renderWatchlistSection();
-    var q = await fetchLiveStockQuote(item.code);
-    if (q) {
-      priceCache[item.code] = q;
-      delete watchlistQuoteStatus[item.code];
-      renderWatchlistSection();
-    } else {
-      watchlistQuoteStatus[item.code] = '[UNAVAILABLE]';
-      renderWatchlistSection();
-      if (!watchlistQuoteStatus[item.code + ':retried']) {
-        watchlistQuoteStatus[item.code + ':retried'] = true;
-        setTimeout(function() {
-          delete watchlistQuoteStatus[item.code + ':retried'];
-          ensureWatchlistQuotes();
-        }, 2500);
+  missing.forEach(function(item){ watchlistQuoteStatus[item.code] = '[LOADING...]'; });
+  renderWatchlistSection();
+  watchlistQuotesInFlight = Promise.all(missing.map(function(item){
+    return fetchLiveStockQuote(item.code).then(function(q){ return { item: item, quote: q }; });
+  })).then(function(results) {
+    results.forEach(function(result) {
+      if (result.quote) {
+        priceCache[result.item.code] = result.quote;
+        delete watchlistQuoteStatus[result.item.code];
+      } else {
+        watchlistQuoteStatus[result.item.code] = '[UNAVAILABLE]';
       }
-    }
-  }
+    });
+    renderWatchlistSection();
+    return results;
+  }).finally(function(){ watchlistQuotesInFlight = null; });
+  return watchlistQuotesInFlight;
 }
 
 function followStock(code, name) {
