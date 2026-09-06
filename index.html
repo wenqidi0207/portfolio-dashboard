@@ -465,6 +465,29 @@ input[type=number]{-moz-appearance:textfield}
     .watchlist-input::placeholder { font-family: 'Space Grotesk', sans-serif; color: var(--text-dim); }
     .watchlist-empty, .watchlist-quote-state { color: var(--text-dim); font-family: var(--label-font); font-size: 11px; letter-spacing: .03em; }
     .watchlist-quote-state { margin-top: 6px; }
+    .dashboard-insights { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 16px; margin: 0 0 40px; }
+    .profit-trend { margin: 0; }
+    .profit-trend-header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+    .profit-trend-meta { color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .08em; }
+    .profit-trend-frame { border: 1px solid var(--border); border-radius: 6px; padding: 18px 20px 12px; background: var(--card); }
+    .profit-trend-chart { width: 100%; height: 250px; display: block; overflow: visible; }
+    .profit-trend-grid { stroke: var(--border); stroke-width: 1; vector-effect: non-scaling-stroke; }
+    .profit-trend-axis { fill: var(--text-dim); font: 10px var(--label-font); letter-spacing: .03em; }
+    .profit-trend-line { fill: none; stroke: var(--text); stroke-width: 2; vector-effect: non-scaling-stroke; }
+    .profit-trend-line.up { stroke: var(--up); }
+    .profit-trend-line.down { stroke: var(--down); }
+    .profit-trend-dot { fill: var(--card); stroke: var(--text); stroke-width: 2; vector-effect: non-scaling-stroke; }
+    .profit-trend-dot.latest { fill: var(--text); }
+    .profit-trend-status { min-height: 250px; display: grid; place-items: center; color: var(--text-dim); font: 11px var(--label-font); letter-spacing: .06em; }
+    .profit-trend-value { font: 20px var(--data-font); }
+    .profit-trend-value.up { color: var(--up); }
+    .profit-trend-value.down { color: var(--down); }
+    .market-widget { border: 1px solid var(--border); border-radius: 6px; background: var(--card); min-height: 310px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
+    .market-widget-label { align-self: flex-start; border: 1px solid var(--border); border-radius: 4px; color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .08em; padding: 5px 7px; }
+    .market-widget-logo { width: 184px; max-width: 100%; height: auto; filter: grayscale(1) contrast(1.2); opacity: .94; }
+    :root[data-theme="dark"] .market-widget-logo { filter: grayscale(1) invert(1) contrast(1.1); }
+    .market-widget-name { font: 11px var(--label-font); letter-spacing: .08em; color: var(--text-dim); }
+    .market-widget-rule { height: 1px; background: var(--border); width: 100%; }
     :root[data-theme="dark"] .error-banner { background: transparent; border-color: var(--down); }
     .error-banner { background: transparent; border-color: var(--down); border-radius: 4px; font-family: var(--label-font); }
     @media (max-width: 768px) {
@@ -474,6 +497,10 @@ input[type=number]{-moz-appearance:textfield}
       .summary-card { padding: 18px; }
       .fx-rate-val { font-size: 19px; }
       .fx-details-row { gap: 6px; font-size: 10px; }
+      .profit-trend-frame { padding: 14px 10px 8px; }
+      .profit-trend-chart { height: 220px; }
+      .dashboard-insights { grid-template-columns: 1fr; }
+      .market-widget { min-height: 180px; }
     }
 
 </style>
@@ -496,6 +523,23 @@ input[type=number]{-moz-appearance:textfield}
       <div class="summary-card"><div class="label">Total Value</div><div class="value" id="totalValue">--</div><div class="sub" id="totalPL">--</div></div>
       <div class="summary-card"><div class="label">Total P/L</div><div class="value" id="totalPLValue">--</div><div class="sub" id="totalPLPct">--</div></div>
       <div class="summary-card"><div class="label">Best Today <span class="crown-icon">👑</span></div><div class="value" id="bestStock">--</div><div class="sub" id="bestPct">--</div></div>
+    </div>
+    <div class="dashboard-insights">
+      <section class="profit-trend" aria-labelledby="profitTrendTitle">
+        <div class="profit-trend-header">
+          <div class="section-title" id="profitTrendTitle" style="margin-bottom:0">Daily P/L</div>
+          <span class="profit-trend-meta" id="profitTrendMeta">LAST 5 SESSIONS</span>
+        </div>
+        <div class="profit-trend-frame" id="profitTrendFrame">
+          <div class="profit-trend-status" id="profitTrendStatus">[LOADING...]</div>
+        </div>
+      </section>
+      <aside class="market-widget" aria-label="Nasdaq market widget">
+        <span class="market-widget-label">NASDAQ</span>
+        <img class="market-widget-logo" src="https://upload.wikimedia.org/wikipedia/commons/0/0e/Nasdaq_logo.svg" alt="Nasdaq">
+        <div class="market-widget-rule"></div>
+        <span class="market-widget-name">US TECHNOLOGY MARKET</span>
+      </aside>
     </div>
     <div class="section-title">Holdings</div>
     <div class="holdings-grid" id="holdingsGrid"></div>
@@ -902,6 +946,105 @@ async function fetchLiveStockQuote(symbol) {
   });
 }
 
+function historySymbol(item) {
+  if (item.market === 'HK') return item.code + '.HK';
+  if (item.market === 'CN') return item.code + (String(item.code).charAt(0) === '6' ? '.SS' : '.SZ');
+  return item.code;
+}
+
+function parseYahooHistory(data) {
+  var result = data && data.chart && data.chart.result && data.chart.result[0];
+  var quote = result && result.indicators && result.indicators.quote && result.indicators.quote[0];
+  if (!result || !Array.isArray(result.timestamp) || !quote || !Array.isArray(quote.close)) return [];
+  var points = [];
+  result.timestamp.forEach(function(ts, index) {
+    var close = Number(quote.close[index]);
+    if (isFinite(close)) points.push({ date: new Date(ts * 1000).toISOString().slice(0, 10), close: close });
+  });
+  return points;
+}
+
+function fetchHistoryEndpoint(url) {
+  var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  var timer = setTimeout(function(){ if (controller) controller.abort(); }, 5500);
+  return fetch(url, { cache: 'no-store', signal: controller ? controller.signal : undefined })
+    .then(function(res){ return res.ok ? res.json() : null; })
+    .then(parseYahooHistory)
+    .catch(function(){ return []; })
+    .finally(function(){ clearTimeout(timer); });
+}
+
+async function fetchHistoricalSeries(item) {
+  var target = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(historySymbol(item)) + '?interval=1d&range=1mo';
+  var endpoints = [target, 'https://api.allorigins.win/raw?url=' + encodeURIComponent(target), 'https://corsproxy.io/?' + encodeURIComponent(target)];
+  return new Promise(function(resolve) {
+    var remaining = endpoints.length;
+    var settled = false;
+    endpoints.forEach(function(url) {
+      fetchHistoryEndpoint(url).then(function(points) {
+        if (settled) return;
+        if (points.length) { settled = true; resolve({ item: item, points: points }); return; }
+        remaining -= 1;
+        if (!remaining) resolve({ item: item, points: [] });
+      });
+    });
+  });
+}
+
+function formatTrendValue(value) {
+  var sign = value >= 0 ? '+' : '-';
+  return sign + '$' + Math.abs(value).toLocaleString('en-US', { maximumFractionDigits: 0 });
+}
+
+function renderProfitTrend(holdings, results) {
+  var frame = document.getElementById('profitTrendFrame');
+  if (!frame) return;
+  var valid = results.filter(function(result){ return result.points.length; });
+  if (!valid.length) {
+    frame.innerHTML = '<div class="profit-trend-status">[HISTORY UNAVAILABLE]</div>';
+    return;
+  }
+  var dateMap = {};
+  valid.forEach(function(result) { result.points.forEach(function(point){ dateMap[point.date] = true; }); });
+  var dates = Object.keys(dateMap).sort().slice(-5);
+  var values = dates.map(function(date) {
+    return valid.reduce(function(total, result) {
+      var point = null;
+      result.points.forEach(function(candidate){ if (candidate.date <= date) point = candidate; });
+      return point ? total + (point.close - Number(result.item.cost || 0)) * Number(result.item.quantity || 0) : total;
+    }, 0);
+  });
+  if (dates.length < 2) {
+    frame.innerHTML = '<div class="profit-trend-status">[NOT ENOUGH HISTORY]</div>';
+    return;
+  }
+  var width = 760, height = 250, left = 58, right = 18, top = 20, bottom = 42;
+  var plotW = width - left - right, plotH = height - top - bottom;
+  var min = Math.min.apply(Math, values), max = Math.max.apply(Math, values);
+  var spread = max - min || Math.max(Math.abs(max), 1);
+  min -= spread * .12; max += spread * .12;
+  var x = function(index){ return left + (plotW * index / (values.length - 1)); };
+  var y = function(value){ return top + (max - value) * plotH / (max - min); };
+  var path = values.map(function(value, index){ return (index ? 'L' : 'M') + x(index).toFixed(1) + ' ' + y(value).toFixed(1); }).join(' ');
+  var mid = (min + max) / 2;
+  var lineClass = values[values.length - 1] >= values[0] ? 'up' : 'down';
+  var grid = [min, mid, max].map(function(value){ return '<line class="profit-trend-grid" x1="' + left + '" x2="' + (width - right) + '" y1="' + y(value).toFixed(1) + '" y2="' + y(value).toFixed(1) + '" />'; }).join('');
+  var labels = dates.map(function(date, index){ return '<text class="profit-trend-axis" text-anchor="middle" x="' + x(index).toFixed(1) + '" y="' + (height - 14) + '">' + date.slice(5).replace('-', '/') + '</text>'; }).join('');
+  var dots = values.map(function(value, index){ return '<circle class="profit-trend-dot' + (index === values.length - 1 ? ' latest' : '') + '" cx="' + x(index).toFixed(1) + '" cy="' + y(value).toFixed(1) + '" r="' + (index === values.length - 1 ? 5 : 3) + '" />'; }).join('');
+  var latest = values[values.length - 1];
+  frame.innerHTML = '<div class="profit-trend-value ' + (latest >= 0 ? 'up' : 'down') + '">' + formatTrendValue(latest) + '</div>' +
+    '<svg class="profit-trend-chart" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Daily portfolio profit and loss trend">' +
+    grid + '<path class="profit-trend-line ' + lineClass + '" d="' + path + '" />' + dots + labels + '</svg>';
+}
+
+async function refreshProfitTrend(holdings) {
+  var frame = document.getElementById('profitTrendFrame');
+  if (!frame || !holdings.length) return;
+  frame.innerHTML = '<div class="profit-trend-status">[LOADING HISTORY...]</div>';
+  var results = await Promise.all(holdings.map(fetchHistoricalSeries));
+  renderProfitTrend(holdings, results);
+}
+
 var watchlistQuoteStatus = {};
 var watchlistQuotesInFlight = null;
 
@@ -1101,6 +1244,7 @@ async function fetchSnapshot() {
     document.getElementById("holdingsGrid").innerHTML = holdings.map(function(s) { return renderStockCard(s, true); }).join("");
     renderWatchlistSection();
     renderSummary(holdings);
+    refreshProfitTrend(holdings);
     await refreshFXData();
     await ensureWatchlistQuotes();
   } catch(e) {
