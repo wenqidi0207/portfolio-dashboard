@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portfolio Monitor</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Doto:wght@400;600&family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    :root{--bg:#fafafa;--card:#fff;--border:#e5e5e5;--text:#1a1a1a;--text-dim:#888;--muted-surface:#f4f4f4;--up:#22c55e;--down:#ef4444;--neutral:#888;--tag-us:#3b82f6;--tag-cn:#ef4444;--tag-hk:#f59e0b;--radius:8px;--shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04)}
-    :root[data-theme="dark"]{--bg:#111;--card:#1a1a1a;--border:#333;--text:#f5f5f5;--text-dim:#999;--muted-surface:#242424;--shadow:0 1px 3px rgba(0,0,0,.3),0 1px 2px rgba(0,0,0,.24)}
-    body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh;transition:background .2s,color .2s}
+    :root{--bg:#f5f5f5;--card:#fff;--border:#e8e8e8;--text:#1a1a1a;--text-dim:#666;--muted-surface:#f0f0f0;--up:#4a9e5c;--down:#d71921;--neutral:#666;--tag-us:#1a1a1a;--tag-cn:#1a1a1a;--tag-hk:#1a1a1a;--radius:8px;--shadow:none}
+    :root[data-theme="dark"]{--bg:#000;--card:#111;--border:#222;--text:#e8e8e8;--text-dim:#999;--muted-surface:#1a1a1a;--shadow:none}
+    body{font-family:'Space Grotesk',-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh;transition:background .2s,color .2s}
     .container{max-width:1400px;margin:0 auto;padding:24px 24px 48px}
     .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border)}
     .header h1{font-size:20px;font-weight:600;letter-spacing:-.3px}
@@ -415,6 +415,63 @@ input[type=number]{-moz-appearance:textfield}
       .fx-swap-btn:hover { transform: rotate(270deg); }
     }
 
+    /* Nothing-inspired final tokens. */
+    :root, :root[data-theme="dark"] {
+      --shadow: none;
+      --label-font: 'Space Mono', monospace;
+      --data-font: 'Space Mono', monospace;
+      --ease-mechanical: cubic-bezier(.25,.1,.25,1);
+    }
+    .container { max-width: 1280px; padding: 32px 32px 64px; }
+    .header { margin-bottom: 40px; padding-bottom: 24px; border-bottom-color: var(--border); }
+    .header h1 { font-family: 'Doto', 'Space Mono', monospace; font-size: 32px; font-weight: 600; letter-spacing: 0; }
+    .last-update, .status-dot, .section-title, .summary-card .label, .metric-label, .fx-box-label,
+    .fx-converter-title, .fx-pair-name, .fx-details-row, .fx-rate-pill { font-family: var(--label-font); }
+    .last-update { font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
+    .refresh-btn, .theme-btn, .star-btn, .section-move-btn { border-radius: 6px; box-shadow: none; transition: border-color .2s var(--ease-mechanical), color .2s var(--ease-mechanical); }
+    .refresh-btn:hover, .theme-btn:hover, .star-btn:hover, .section-move-btn:hover { border-color: var(--text); }
+    .summary-row { gap: 24px; margin-bottom: 40px; }
+    .summary-card, .stock-card, .fx-converter-card, .fx-card-modern, .fx-box { border-radius: 6px; box-shadow: none; }
+    .summary-card { padding: 24px; }
+    .summary-card .value { font-family: var(--data-font); font-size: 30px; font-weight: 400; letter-spacing: 0; }
+    .summary-card .label, .section-title { letter-spacing: .08em; }
+    .section-title { color: var(--text-dim); font-size: 11px; margin-bottom: 16px; }
+    .holdings-grid, .fx-grid { gap: 16px; margin-bottom: 40px; }
+    .stock-card { padding: 20px; transition: border-color .2s var(--ease-mechanical); }
+    .stock-card:hover, .fx-card-modern:hover { box-shadow: none; transform: none; border-color: var(--text-dim); }
+    .stock-name { font-size: 15px; font-weight: 500; }
+    .stock-code, .stock-price, .stock-change, .metric-value, .fx-rate-val, .fx-pair-badge, .fx-input-custom { font-family: var(--data-font); }
+    .stock-code { letter-spacing: .04em; }
+    .market-tag { color: var(--text); background: transparent !important; border: 1px solid var(--border-visible, var(--border)); border-radius: 4px; font-family: var(--label-font); letter-spacing: .06em; }
+    .stock-price { font-size: 22px; font-weight: 400; }
+    .stock-change { font-size: 11px; }
+    .stock-divider { background: var(--border); margin: 16px 0; }
+    .metric-label { font-size: 10px; letter-spacing: .08em; }
+    .metric-value { font-size: 13px; font-weight: 400; }
+    .skeleton { background: var(--muted-surface); animation: none; }
+    .fx-converter-card { padding: 24px; margin-bottom: 24px; }
+    .fx-converter-title { font-size: 11px; letter-spacing: .08em; }
+    .fx-rate-pill { color: var(--text); background: transparent; border: 1px solid var(--border); border-radius: 4px; font-size: 11px; }
+    .fx-box { background: var(--bg); padding: 16px; }
+    .fx-input-custom { font-size: 28px; font-weight: 400; }
+    .fx-swap-btn { border-radius: 6px; box-shadow: none; }
+    .fx-card-modern { padding: 20px; }
+    .fx-pair-badge { background: transparent; border: 0; padding: 0; font-size: 15px; font-weight: 400; }
+    .fx-rate-val { font-size: 24px; font-weight: 400; }
+    .search-suggestions { box-shadow: none; border-radius: 6px; }
+    .watchlist-input, .fx-select-custom, .fx-control input, .fx-control select { border-radius: 6px; font-family: var(--data-font); }
+    .watchlist-input::placeholder { font-family: 'Space Grotesk', sans-serif; color: var(--text-dim); }
+    .watchlist-empty, .watchlist-quote-state { color: var(--text-dim); font-family: var(--label-font); font-size: 11px; letter-spacing: .03em; }
+    .watchlist-quote-state { margin-top: 6px; }
+    :root[data-theme="dark"] .error-banner { background: transparent; border-color: var(--down); }
+    .error-banner { background: transparent; border-color: var(--down); border-radius: 4px; font-family: var(--label-font); }
+    @media (max-width: 768px) {
+      .container { padding: 24px 16px 48px; }
+      .header h1 { font-size: 26px; }
+      .summary-row { gap: 12px; margin-bottom: 32px; }
+      .summary-card { padding: 18px; }
+    }
+
 </style>
 </head>
 <body>
@@ -426,7 +483,7 @@ input[type=number]{-moz-appearance:textfield}
         <span class="status-dot" id="statusDot"></span>
         <div class="header-actions">
           <button class="theme-btn" id="themeBtn" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">○</button>
-          <button class="refresh-btn" id="refreshBtn" type="button">Refresh</button>
+          <button class="refresh-btn" id="refreshBtn" type="button" title="重新获取行情、汇率并刷新页面数据">Refresh</button>
         </div>
       </div>
     </div>
@@ -442,7 +499,7 @@ input[type=number]{-moz-appearance:textfield}
     <div class="watchlist-header">
       <div style="display:flex;align-items:center;">
         <div class="section-title" style="margin-bottom:0">Watchlist</div>
-        <span class="drag-hint">⋮⋮ 可拖拽卡片排序</span>
+        <span class="drag-hint">DRAG TO REORDER</span>
       </div>
       <div class="watchlist-search-wrap">
         <input type="text" id="watchlistInput" class="watchlist-input" placeholder="输入美股代码 (如 AAPL, SNDK)" autocomplete="off">
@@ -452,16 +509,16 @@ input[type=number]{-moz-appearance:textfield}
     </div>
     <div class="holdings-grid holdings-grid-narrow" id="watchlistGrid"></div>
     
-    <div class="section-title">FX Rates</div>
+    <div class="section-title">Exchange</div>
     <div class="fx-converter-card">
       <div class="fx-converter-header">
-        <span class="fx-converter-title">实时汇率极速换算</span>
-        <span class="fx-rate-pill" id="fxRateLabel">牌价拉取中...</span>
+        <span class="fx-converter-title">LIVE EXCHANGE</span>
+        <span class="fx-rate-pill" id="fxRateLabel">[LOADING...]</span>
       </div>
       <div class="fx-converter-body">
         <div class="fx-box">
           <div class="fx-box-top">
-            <span class="fx-box-label">支付货币</span>
+            <span class="fx-box-label">FROM</span>
             <select id="fxFromSelect" class="fx-select-custom"></select>
           </div>
           <input id="fxFromAmount" class="fx-input-custom" type="number" min="0" step="any" value="1" placeholder="1.00">
@@ -471,7 +528,7 @@ input[type=number]{-moz-appearance:textfield}
 
         <div class="fx-box">
           <div class="fx-box-top">
-            <span class="fx-box-label">换算所得</span>
+            <span class="fx-box-label">TO</span>
             <select id="fxToSelect" class="fx-select-custom"></select>
           </div>
           <input id="fxToAmount" class="fx-input-custom" type="number" min="0" step="any" value="" placeholder="0.00">
@@ -579,7 +636,7 @@ function fmt(v, d) { d = d || 2; if (v == null || isNaN(v)) return "--"; return 
 function fmtMoney(v) { if (v == null || isNaN(v)) return "--"; return (v >= 0 ? "+" : "-") + "$" + Math.abs(v).toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2}); }
 function pClass(v) { return v >= 0 ? "up" : "down"; }
 function currencySign(c) {
-  var map = { CNY: "¥", HKD: "HK$", USD: "$", EUR: "€", GBP: "£", JPY: "¥", KRW: "₩", AUD: "A$", CAD: "C$", SGD: "S$", CHF: "Fr" };
+  var map = { CNY: "CNY", HKD: "HKD", USD: "USD", EUR: "EUR", GBP: "GBP", JPY: "JPY", KRW: "KRW", AUD: "AUD", CAD: "CAD", SGD: "SGD", CHF: "CHF" };
   return map[c] || (c + " ");
 }
 function logError(msg) { fetchErrors.push(msg); }
@@ -741,7 +798,7 @@ async function refreshFXData() {
   var rate = getRateBetween(from, to);
   currentPairRate = rate || 1;
   var lbl = document.getElementById("fxRateLabel");
-  if (lbl) lbl.textContent = rate ? ("1 " + from + " = " + fmt(rate, 4) + " " + to) : "牌价拉取中...";
+  if (lbl) lbl.textContent = rate ? ("1 " + from + " = " + fmt(rate, 4) + " " + to) : "[UNAVAILABLE]";
   syncConversion("from");
   renderAllFXCards();
 }
@@ -776,7 +833,6 @@ function renderAllFXCards() {
     var p = pairs[i];
     var rate = getRateBetween(p.from, p.to);
     var inverse = rate ? (1 / rate) : null;
-    var symb = currencySign(p.to);
     var fromName = currencyNames[p.from] || p.from;
     var toName = currencyNames[p.to] || p.to;
     html += "<div class=\"fx-card-modern\">" +
@@ -787,7 +843,7 @@ function renderAllFXCards() {
         "</div>" +
       "</div>" +
       (rate != null ? (
-        "<div class=\"fx-rate-val\">" + symb + fmt(rate, 4) + "</div>" +
+        "<div class=\"fx-rate-val\">1 " + p.from + " = " + fmt(rate, 4) + " " + p.to + "</div>" +
         "<div class=\"fx-details-row\">" +
           "<span>1 " + p.from + " = " + fmt(rate, 4) + " " + p.to + "</span>" +
           "<span>1 " + p.to + " = " + (inverse ? fmt(inverse, 4) : "--") + " " + p.from + "</span>" +
@@ -801,8 +857,9 @@ function renderAllFXCards() {
 async function fetchLiveStockQuote(symbol) {
   if (!symbol) return null;
   var cleanSym = symbol.trim().toUpperCase();
-  var targetUrl = "https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(cleanSym) + "?interval=1d&range=1d";
+  var targetUrl = "https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(cleanSym) + "?interval=1d&range=5d";
   var proxies = [
+    targetUrl,
     "https://api.allorigins.win/raw?url=" + encodeURIComponent(targetUrl),
     "https://corsproxy.io/?" + encodeURIComponent(targetUrl)
   ];
@@ -812,15 +869,20 @@ async function fetchLiveStockQuote(symbol) {
       if (!res.ok) continue;
       var data = await res.json();
       var result = data && data.chart && data.chart.result && data.chart.result[0];
-      if (result && result.meta && result.meta.regularMarketPrice != null) {
-        var price = Number(result.meta.regularMarketPrice);
-        var prev = Number(result.meta.previousClose || price);
+      if (result && result.meta) {
+        var chart = result.indicators && result.indicators.quote && result.indicators.quote[0];
+        var closes = chart && Array.isArray(chart.close) ? chart.close.filter(function(v){ return v != null; }) : [];
+        var price = Number(result.meta.regularMarketPrice != null ? result.meta.regularMarketPrice : closes[closes.length - 1]);
+        var prev = Number(result.meta.previousClose || result.meta.chartPreviousClose || closes[closes.length - 2] || price);
+        if (!isFinite(price)) continue;
         return { price: price, change: price - prev, changePct: prev ? ((price - prev) / prev) * 100 : 0 };
       }
     } catch(e) {}
   }
   return null;
 }
+
+var watchlistQuoteStatus = {};
 
 function getUserWatchlist() {
   var defaults = (portfolio && portfolio.watchlist) ? portfolio.watchlist : [];
@@ -857,6 +919,16 @@ function renderWatchlistSection() {
     return card.replace("class=\"stock-card\"", "class=\"stock-card\" draggable=\"true\" data-idx=\"" + idx + "\"");
   }).join("");
 
+  list.forEach(function(s) {
+    if (!priceCache[s.code] || priceCache[s.code].price == null) {
+      var card = grid.querySelector('[data-idx="' + idxForCode(list, s.code) + '"]');
+      if (card) {
+        var priceWrap = card.querySelector('.stock-price-wrap');
+        if (priceWrap) priceWrap.insertAdjacentHTML('beforeend', '<div class="watchlist-quote-state">' + (watchlistQuoteStatus[s.code] || '[LOADING...]') + '</div>');
+      }
+    }
+  });
+
   var cards = grid.querySelectorAll(".stock-card[draggable]");
   cards.forEach(function(card) {
     card.addEventListener("dragstart", function(e) {
@@ -885,6 +957,11 @@ function renderWatchlistSection() {
   });
 }
 
+function idxForCode(list, code) {
+  for (var i = 0; i < list.length; i++) if (list[i].code === code) return i;
+  return -1;
+}
+
 function unfollowStock(code) {
   var list = getUserWatchlist().filter(function(s){ return s.code !== code; });
   saveUserWatchlist(list);
@@ -897,10 +974,23 @@ async function ensureWatchlistQuotes() {
   if (!missing.length) return;
   for (var i = 0; i < missing.length; i++) {
     var item = missing[i];
+    watchlistQuoteStatus[item.code] = '[LOADING...]';
+    renderWatchlistSection();
     var q = await fetchLiveStockQuote(item.code);
     if (q) {
       priceCache[item.code] = q;
+      delete watchlistQuoteStatus[item.code];
       renderWatchlistSection();
+    } else {
+      watchlistQuoteStatus[item.code] = '[UNAVAILABLE]';
+      renderWatchlistSection();
+      if (!watchlistQuoteStatus[item.code + ':retried']) {
+        watchlistQuoteStatus[item.code + ':retried'] = true;
+        setTimeout(function() {
+          delete watchlistQuoteStatus[item.code + ':retried'];
+          ensureWatchlistQuotes();
+        }, 2500);
+      }
     }
   }
 }
