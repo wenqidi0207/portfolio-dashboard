@@ -465,7 +465,7 @@ input[type=number]{-moz-appearance:textfield}
     .watchlist-input::placeholder { font-family: 'Space Grotesk', sans-serif; color: var(--text-dim); }
     .watchlist-empty, .watchlist-quote-state { color: var(--text-dim); font-family: var(--label-font); font-size: 11px; letter-spacing: .03em; }
     .watchlist-quote-state { margin-top: 6px; }
-    .dashboard-insights { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 16px; margin: 0 0 40px; }
+    .dashboard-insights { margin: 0 0 40px; }
     .profit-trend { margin: 0; }
     .profit-trend-header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
     .profit-trend-meta { color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .08em; }
@@ -482,14 +482,6 @@ input[type=number]{-moz-appearance:textfield}
     .profit-trend-value { font: 20px var(--data-font); }
     .profit-trend-value.up { color: var(--up); }
     .profit-trend-value.down { color: var(--down); }
-    .market-widget { border: 1px solid var(--border); border-radius: 6px; background: var(--card); min-height: 310px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
-    .market-widget-label { align-self: flex-start; border: 1px solid var(--border); border-radius: 4px; color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .08em; padding: 5px 7px; }
-    .nasdaq-logo { display: inline-flex; align-items: center; gap: 10px; color: #1fc5bb; }
-    .nasdaq-mark { position: relative; width: 28px; height: 38px; border-left: 5px solid currentColor; border-right: 5px solid currentColor; transform: skewX(-18deg); }
-    .nasdaq-mark::after { content: ''; position: absolute; top: 4px; bottom: 4px; left: 7px; width: 5px; background: currentColor; transform: skewX(36deg); transform-origin: center; }
-    .nasdaq-wordmark { color: var(--text); font: 600 28px 'Space Grotesk', sans-serif; letter-spacing: .02em; }
-    .market-widget-name { font: 11px var(--label-font); letter-spacing: .08em; color: var(--text-dim); }
-    .market-widget-rule { height: 1px; background: var(--border); width: 100%; }
     :root[data-theme="dark"] .error-banner { background: transparent; border-color: var(--down); }
     .error-banner { background: transparent; border-color: var(--down); border-radius: 4px; font-family: var(--label-font); }
     @media (max-width: 768px) {
@@ -501,8 +493,6 @@ input[type=number]{-moz-appearance:textfield}
       .fx-details-row { gap: 6px; font-size: 10px; }
       .profit-trend-frame { padding: 14px 10px 8px; }
       .profit-trend-chart { height: 220px; }
-      .dashboard-insights { grid-template-columns: 1fr; }
-      .market-widget { min-height: 180px; }
     }
 
 </style>
@@ -536,12 +526,6 @@ input[type=number]{-moz-appearance:textfield}
           <div class="profit-trend-status" id="profitTrendStatus">[LOADING...]</div>
         </div>
       </section>
-      <aside class="market-widget" aria-label="Nasdaq market widget">
-        <span class="market-widget-label">NASDAQ</span>
-        <div class="nasdaq-logo" role="img" aria-label="Nasdaq logo"><span class="nasdaq-mark" aria-hidden="true"></span><span class="nasdaq-wordmark">NASDAQ</span></div>
-        <div class="market-widget-rule"></div>
-        <span class="market-widget-name">US TECHNOLOGY MARKET</span>
-      </aside>
     </div>
     <div class="section-title">Holdings</div>
     <div class="holdings-grid" id="holdingsGrid"></div>
