@@ -514,6 +514,7 @@ input[type=number]{-moz-appearance:textfield}
     <div class="summary-row">
       <div class="summary-card"><div class="label">Total Value</div><div class="value" id="totalValue">--</div><div class="sub" id="totalPL">--</div></div>
       <div class="summary-card"><div class="label">Total P/L</div><div class="value" id="totalPLValue">--</div><div class="sub" id="totalPLPct">--</div></div>
+      <div class="summary-card"><div class="label">Today P/L</div><div class="value" id="todayPLValue">--</div><div class="sub" id="todayPLPct">--</div></div>
       <div class="summary-card"><div class="label">Best Today <span class="crown-icon">👑</span></div><div class="value" id="bestStock">--</div><div class="sub" id="bestPct">--</div></div>
     </div>
     <div class="dashboard-insights">
@@ -577,6 +578,14 @@ var PORTFOLIO_FILE = "portfolio.json";
 var REFRESH_INTERVAL = 3600000;
 var portfolio = null;
 var priceCache = {};
+var HISTORY_CACHE_KEY = "portfolio-history-v1";
+var HISTORY_CACHE_TTL = 10 * 60 * 1000;
+var WATCHLIST_QUOTE_CACHE_KEY = "portfolio-watchlist-quotes-v1";
+var historyCache = {};
+var historyRefreshInFlight = null;
+var watchlistQuoteCache = {};
+try { historyCache = JSON.parse(localStorage.getItem(HISTORY_CACHE_KEY) || "{}"); } catch (e) { historyCache = {}; }
+try { watchlistQuoteCache = JSON.parse(localStorage.getItem(WATCHLIST_QUOTE_CACHE_KEY) || "{}"); } catch (e) { watchlistQuoteCache = {}; }
 var fetchErrors = [];
 var fxCache = {};
 var fxLiveRates = {};
@@ -666,7 +675,7 @@ var POPULAR_US_STOCKS = [
   {symbol:"MELI",name:"MercadoLibre Inc."},{symbol:"SE",name:"Sea Limited"}
 ];
 
-function fmt(v, d) { d = d || 2; if (v == null || isNaN(v)) return "--"; return v.toFixed(d); }
+function fmt(v, d) { d = d == null ? 2 : d; if (v == null || isNaN(v)) return "--"; return v.toFixed(d); }
 function fmtMoney(v) { if (v == null || isNaN(v)) return "--"; return (v >= 0 ? "+" : "-") + "$" + Math.abs(v).toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2}); }
 function pClass(v) { return v >= 0 ? "up" : "down"; }
 function currencySign(c) {
@@ -674,10 +683,18 @@ function currencySign(c) {
   return map[c] || (c + " ");
 }
 function logError(msg) { fetchErrors.push(msg); }
+function hasQuoteChange(d) {
+  if (!d || d.change == null || d.changePct == null) return false;
+  if (d.changeAvailable === true) return isFinite(Number(d.change)) && isFinite(Number(d.changePct));
+  return isFinite(Number(d.change)) && isFinite(Number(d.changePct)) && (Number(d.change) !== 0 || Number(d.changePct) !== 0);
+}
 
 function applyTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
+  document.getElementById("themeBtn").textContent = theme === "dark" ? "Light" : "Dark";
+  /*
   document.getElementById("themeBtn").textContent = theme === "dark" ? "◐" : "○";
+  */
   localStorage.setItem("portfolio-theme", theme);
 }
 function initTheme() {
@@ -692,10 +709,11 @@ async function loadPortfolio() {
 
 function renderStockCard(sym, isHolding) {
   var d = priceCache[sym.code];
-  var price = d ? d.price : null;
-  var chg = d ? d.change : 0;
-  var pct = d ? d.changePct : 0;
-  var isUp = pct >= 0;
+  var price = d && d.price != null && isFinite(Number(d.price)) ? Number(d.price) : null;
+  var changeAvailable = hasQuoteChange(d);
+  var chg = changeAvailable && d.change != null && isFinite(Number(d.change)) ? Number(d.change) : null;
+  var pct = changeAvailable && d.changePct != null && isFinite(Number(d.changePct)) ? Number(d.changePct) : null;
+  var isUp = pct != null && pct >= 0;
   var csym = sym.market === "CN" ? "¥" : (sym.market === "HK" ? "HK$" : "$");
   var dec = sym.market === "CN" ? 3 : 2;
 
@@ -711,7 +729,8 @@ function renderStockCard(sym, isHolding) {
 
   var priceHtml = price == null
     ? "<div class=\"skeleton skeleton-price\" style=\"margin-top:4px\"></div>"
-    : "<div class=\"stock-price\">" + csym + fmt(price, dec) + "</div><div class=\"stock-change " + (isUp ? "up" : "down") + "\">" + (isUp ? "+" : "") + fmt(chg) + " (" + fmt(pct) + "%)</div>";
+    : "<div class=\"stock-price\">" + csym + fmt(price, dec) + "</div>" +
+      (pct == null ? "<div class=\"stock-change neutral\">--</div>" : "<div class=\"stock-change " + (isUp ? "up" : "down") + "\">" + (isUp ? "+" : "") + fmt(chg) + " (" + (isUp ? "+" : "") + fmt(pct) + "%)</div>");
 
   var bottomHtml = isHolding
     ? "<div class=\"stock-divider\"></div><div class=\"stock-metrics\">" +
@@ -732,15 +751,19 @@ function renderStockCard(sym, isHolding) {
 }
 
 function renderSummary(holdings) {
-  var tv = 0, tc = 0, tpl = 0, bestD = null;
+  var tv = 0, tc = 0, tpl = 0, todayPL = 0, todayCost = 0, bestD = null;
   for (var i = 0; i < holdings.length; i++) {
     var item = holdings[i];
     var d = priceCache[item.code];
     if (!d || d.price == null) continue;
     var v = d.price * item.quantity, c = item.cost * item.quantity;
     tv += v; tc += c; tpl += v - c;
-    var dayDollar = (d.change || 0) * item.quantity;
-    var pct = Number(d.changePct || 0);
+    var changeAvailable = hasQuoteChange(d);
+    if (!changeAvailable) continue;
+    var dayDollar = Number(d.change) * item.quantity;
+    var pct = Number(d.changePct);
+    todayPL += dayDollar;
+    todayCost += item.cost * item.quantity;
     if (!bestD || pct > bestD.pct) {
       bestD = { name: item.name, pct: pct, dollar: dayDollar };
     }
@@ -754,6 +777,11 @@ function renderSummary(holdings) {
   document.getElementById("totalPLValue").className = "value " + el(tpl);
   document.getElementById("totalPLPct").textContent = tpl !== 0 ? fmt(tplp) + "% total return" : "--";
   document.getElementById("totalPLPct").className = "sub " + el(tpl);
+  var todayPct = todayCost > 0 ? (todayPL / todayCost) * 100 : 0;
+  document.getElementById("todayPLValue").textContent = bestD ? fmtMoney(todayPL) : "--";
+  document.getElementById("todayPLValue").className = "value " + el(todayPL);
+  document.getElementById("todayPLPct").textContent = bestD ? fmt(todayPct) + "% today" : "--";
+  document.getElementById("todayPLPct").className = "sub " + el(todayPL);
 
   var bestStockEl = document.getElementById("bestStock");
   var bestPctEl = document.getElementById("bestPct");
@@ -901,7 +929,7 @@ function parseYahooQuote(data) {
 
 function fetchQuoteEndpoint(url) {
   var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-  var timer = setTimeout(function(){ if (controller) controller.abort(); }, 4500);
+  var timer = setTimeout(function(){ if (controller) controller.abort(); }, 3500);
   return fetch(url, { cache: 'no-store', signal: controller ? controller.signal : undefined })
     .then(function(res){ return res.ok ? res.json() : null; })
     .then(parseYahooQuote)
@@ -913,23 +941,18 @@ async function fetchLiveStockQuote(symbol) {
   if (!symbol) return null;
   var cleanSym = symbol.trim().toUpperCase();
   var targetUrl = "https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(cleanSym) + "?interval=1d&range=5d";
+  var backupTargetUrl = "https://query2.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(cleanSym) + "?interval=1d&range=5d";
   var endpoints = [
     targetUrl,
+    backupTargetUrl,
     "https://api.allorigins.win/raw?url=" + encodeURIComponent(targetUrl),
     "https://corsproxy.io/?" + encodeURIComponent(targetUrl)
   ];
-  return new Promise(function(resolve) {
-    var remaining = endpoints.length;
-    var settled = false;
-    endpoints.forEach(function(url) {
-      fetchQuoteEndpoint(url).then(function(quote) {
-        if (settled) return;
-        if (quote) { settled = true; resolve(quote); return; }
-        remaining -= 1;
-        if (!remaining) resolve(null);
-      });
-    });
-  });
+  for (var i = 0; i < endpoints.length; i++) {
+    var quote = await fetchQuoteEndpoint(endpoints[i]);
+    if (quote) return quote;
+  }
+  return null;
 }
 
 function historySymbol(item) {
@@ -961,20 +984,23 @@ function fetchHistoryEndpoint(url) {
 }
 
 async function fetchHistoricalSeries(item) {
-  var target = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(historySymbol(item)) + '?interval=1d&range=1mo';
-  var endpoints = [target, 'https://api.allorigins.win/raw?url=' + encodeURIComponent(target), 'https://corsproxy.io/?' + encodeURIComponent(target)];
-  return new Promise(function(resolve) {
-    var remaining = endpoints.length;
-    var settled = false;
-    endpoints.forEach(function(url) {
-      fetchHistoryEndpoint(url).then(function(points) {
-        if (settled) return;
-        if (points.length) { settled = true; resolve({ item: item, points: points }); return; }
-        remaining -= 1;
-        if (!remaining) resolve({ item: item, points: [] });
-      });
-    });
-  });
+  var key = historySymbol(item);
+  var cached = historyCache[key];
+  if (cached && cached.savedAt && Date.now() - cached.savedAt < HISTORY_CACHE_TTL && cached.points && cached.points.length) {
+    return { item: item, points: cached.points, cached: true };
+  }
+  var target = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(key) + '?interval=1d&range=5d';
+  var backupTarget = 'https://query2.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(key) + '?interval=1d&range=5d';
+  var endpoints = [target, backupTarget, 'https://api.allorigins.win/raw?url=' + encodeURIComponent(target), 'https://corsproxy.io/?' + encodeURIComponent(target)];
+  for (var i = 0; i < endpoints.length; i++) {
+    var points = await fetchHistoryEndpoint(endpoints[i]);
+    if (points.length) {
+      historyCache[key] = { savedAt: Date.now(), points: points };
+      try { localStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify(historyCache)); } catch (e) {}
+      return { item: item, points: points, cached: false };
+    }
+  }
+  return { item: item, points: [] };
 }
 
 function formatTrendValue(value) {
@@ -1026,13 +1052,36 @@ function renderProfitTrend(holdings, results) {
 async function refreshProfitTrend(holdings) {
   var frame = document.getElementById('profitTrendFrame');
   if (!frame || !holdings.length) return;
-  frame.innerHTML = '<div class="profit-trend-status">[LOADING HISTORY...]</div>';
-  var results = await Promise.all(holdings.map(fetchHistoricalSeries));
-  renderProfitTrend(holdings, results);
+  if (historyRefreshInFlight) return historyRefreshInFlight;
+  var cachedResults = holdings.map(function(item) {
+    var cached = historyCache[historySymbol(item)];
+    return cached && cached.savedAt && Date.now() - cached.savedAt < HISTORY_CACHE_TTL && cached.points && cached.points.length
+      ? { item: item, points: cached.points, cached: true } : null;
+  }).filter(Boolean);
+  if (cachedResults.length) renderProfitTrend(holdings, cachedResults);
+  else frame.innerHTML = '<div class="profit-trend-status">[LOADING HISTORY...]</div>';
+  historyRefreshInFlight = Promise.all(holdings.map(fetchHistoricalSeries))
+    .then(function(results) { renderProfitTrend(holdings, results); return results; })
+    .finally(function() { historyRefreshInFlight = null; });
+  return historyRefreshInFlight;
 }
 
 var watchlistQuoteStatus = {};
 var watchlistQuotesInFlight = null;
+
+function restoreWatchlistQuoteCache() {
+  Object.keys(watchlistQuoteCache || {}).forEach(function(code) {
+    var entry = watchlistQuoteCache[code];
+    if (!priceCache[code] && entry && entry.quote && entry.savedAt && Date.now() - entry.savedAt < 30 * 60 * 1000) {
+      priceCache[code] = entry.quote;
+    }
+  });
+}
+
+function cacheWatchlistQuote(code, quote) {
+  watchlistQuoteCache[code] = { savedAt: Date.now(), quote: quote };
+  try { localStorage.setItem(WATCHLIST_QUOTE_CACHE_KEY, JSON.stringify(watchlistQuoteCache)); } catch (e) {}
+}
 
 function getUserWatchlist() {
   var defaults = (portfolio && portfolio.watchlist) ? portfolio.watchlist : [];
@@ -1061,7 +1110,10 @@ function renderWatchlistSection() {
   var grid = document.getElementById("watchlistGrid");
   if (!grid) return;
   if (!list.length) {
+    grid.innerHTML = "<div style=\"color:var(--text-dim);font-size:12px;padding:8px 2px;\">No stocks in watchlist. Add a symbol above.</div>";
+    /*
     grid.innerHTML = "<div style=\"color:var(--text-dim);font-size:12px;padding:8px 2px;\">暂无关注美股。在上方输入美股代码（如 AAPL、NVDA、SNDK）并点击 ★ 关注。</div>";
+    */
     return;
   }
   grid.innerHTML = list.map(function(s, idx) {
@@ -1131,6 +1183,7 @@ async function ensureWatchlistQuotes() {
     results.forEach(function(result) {
       if (result.quote) {
         priceCache[result.item.code] = result.quote;
+        cacheWatchlistQuote(result.item.code, result.quote);
         delete watchlistQuoteStatus[result.item.code];
       } else {
         watchlistQuoteStatus[result.item.code] = '[UNAVAILABLE]';
@@ -1165,6 +1218,7 @@ function setupWatchlistControls() {
   var starBtn = document.getElementById("watchlistStarBtn");
   var sugg = document.getElementById("watchlistSuggestions");
   if (!input || !starBtn || !sugg) return;
+  starBtn.textContent = "+";
 
   input.addEventListener("input", function(e) {
     var q = e.target.value.trim().toUpperCase();
@@ -1211,12 +1265,18 @@ async function fetchSnapshot() {
   var holdings = (portfolio && portfolio.holdings) || [];
   try {
     var snapshot = await readMarketSnapshot();
-    priceCache = snapshot.quotes || {};
+    priceCache = Object.assign({}, priceCache, snapshot.quotes || {});
     if (snapshot.fx) fxCache = snapshot.fx;
-    document.getElementById("lastUpdate").textContent = snapshot.updatedAt ? "Updated " + new Date(snapshot.updatedAt).toLocaleString() : "Waiting for snapshot";
-    setStatus("live");
+    var snapshotDate = snapshot.updatedAt ? new Date(snapshot.updatedAt) : null;
+    var snapshotStale = !snapshotDate || !isFinite(snapshotDate.getTime()) || Date.now() - snapshotDate.getTime() > 2 * 60 * 60 * 1000;
+    document.getElementById("lastUpdate").textContent = snapshotDate && isFinite(snapshotDate.getTime())
+      ? (snapshotStale ? "Stale - Updated " : "Updated ") + snapshotDate.toLocaleString() : "Waiting for snapshot";
+    setStatus(snapshotStale ? "error" : "live");
     var banner = document.getElementById("errorBanner");
-    if (banner) banner.style.display = "none";
+    if (banner) {
+      banner.style.display = snapshotStale ? "block" : "none";
+      if (snapshotStale) banner.textContent = "Market snapshot is older than 2 hours. Values may be stale.";
+    }
   } catch(e) {
     console.warn("Snapshot not yet available", e);
     setStatus("error");
@@ -1226,13 +1286,14 @@ async function fetchSnapshot() {
       banner.textContent = "Market data snapshot loading or waiting for GitHub Actions workflow to run.";
     }
   }
+  restoreWatchlistQuoteCache();
   try {
     document.getElementById("holdingsGrid").innerHTML = holdings.map(function(s) { return renderStockCard(s, true); }).join("");
     renderWatchlistSection();
     renderSummary(holdings);
     refreshProfitTrend(holdings);
     await refreshFXData();
-    await ensureWatchlistQuotes();
+    ensureWatchlistQuotes();
   } catch(e) {
     console.error("Render error:", e);
   }

@@ -1,4 +1,5 @@
 const fs = require('fs');
+const http = require('http');
 const https = require('https');
 
 function readPortfolio() {
@@ -30,9 +31,14 @@ function readPortfolio() {
 const portfolio = readPortfolio();
 const items = (portfolio.holdings || []).concat(portfolio.watchlist || []);
 
-function get(url, headers) {
+function get(url, headers, redirectsLeft = 3) {
   return new Promise((resolve, reject) => {
-    const request = https.get(url, { headers: headers || {} }, response => {
+    const request = (url.startsWith('https') ? https : http).get(url, { headers: headers || {} }, response => {
+      if ([301, 302, 307, 308].includes(response.statusCode)) {
+        response.resume();
+        if (!response.headers.location || redirectsLeft <= 0) return reject(new Error(`redirect ${response.statusCode}`));
+        return resolve(get(new URL(response.headers.location, url).href, headers, redirectsLeft - 1));
+      }
       let body = '';
       response.setEncoding('utf8');
       response.on('data', chunk => { body += chunk; });
@@ -53,15 +59,36 @@ function yahooSymbol(item) {
 }
 
 async function yahooQuote(symbol) {
-  const body = await get(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=5d`, {
-    'User-Agent': 'Mozilla/5.0',
-    Accept: 'application/json'
-  });
+  const headers = { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' };
+  const encoded = encodeURIComponent(symbol);
+  let body;
+  for (const host of ['query1.finance.yahoo.com', 'query2.finance.yahoo.com']) {
+    try {
+      body = await get(`https://${host}/v8/finance/chart/${encoded}?interval=1d&range=5d`, headers);
+      break;
+    } catch (error) {
+      if (host === 'query2.finance.yahoo.com') throw error;
+    }
+  }
   const result = JSON.parse(body).chart?.result?.[0];
   if (!result?.meta?.regularMarketPrice) throw new Error(`empty quote ${symbol}`);
   const price = Number(result.meta.regularMarketPrice);
-  const previous = Number(result.meta.previousClose || price);
-  return { price, change: price - previous, changePct: previous ? ((price - previous) / previous) * 100 : 0, source: 'Yahoo Finance' };
+  const closes = result.indicators?.quote?.[0]?.close || [];
+  const previous = Number(
+    result.meta.previousClose ||
+    result.meta.chartPreviousClose ||
+    result.meta.regularMarketPreviousClose ||
+    closes.filter(value => value != null).slice(-2, -1)[0]
+  );
+  if (!Number.isFinite(price)) throw new Error(`invalid quote ${symbol}`);
+  const changeAvailable = Number.isFinite(previous) && previous !== 0;
+  return {
+    price,
+    change: changeAvailable ? price - previous : null,
+    changePct: changeAvailable ? ((price - previous) / previous) * 100 : null,
+    changeAvailable,
+    source: 'Yahoo Finance'
+  };
 }
 
 async function sinaQuotes(cnItems) {
@@ -75,7 +102,7 @@ async function sinaQuotes(cnItems) {
     const price = Number(fields[3]);
     const previous = Number(fields[2]);
     if (!price || !previous) continue;
-    quotes[match[1].replace(/^sh|^sz/, '')] = { price, change: price - previous, changePct: ((price - previous) / previous) * 100, source: 'A-share quote' };
+    quotes[match[1].replace(/^sh|^sz/, '')] = { price, change: price - previous, changePct: ((price - previous) / previous) * 100, changeAvailable: true, source: 'A-share quote' };
   }
   return quotes;
 }
@@ -86,10 +113,11 @@ async function main() {
   if (cnItems.length) {
     try { Object.assign(quotes, await sinaQuotes(cnItems)); } catch (error) { console.warn(`A-share source: ${error.message}`); }
   }
-  for (const item of items) {
-    if (quotes[item.code]) continue;
-    try { quotes[item.code] = await yahooQuote(yahooSymbol(item)); } catch (error) { console.warn(`${item.code}: ${error.message}`); }
-  }
+  const yahooResults = await Promise.all(items.filter(item => !quotes[item.code]).map(async item => {
+    try { return [item.code, await yahooQuote(yahooSymbol(item))]; }
+    catch (error) { console.warn(`${item.code}: ${error.message}`); return [item.code, null]; }
+  }));
+  yahooResults.forEach(([code, quote]) => { if (quote) quotes[code] = quote; });
   const fx = {};
   for (const pair of portfolio.fx_pairs || []) {
     const key = `${pair.from}${pair.to}`;
@@ -100,6 +128,7 @@ async function main() {
     } catch (error) { console.warn(`${key}: ${error.message}`); }
   }
   if (!Object.keys(quotes).length && !Object.keys(fx).length) throw new Error('No market data returned');
+  if (!Object.keys(quotes).length && items.length) throw new Error('No stock quotes returned; refusing to overwrite snapshot');
   fs.mkdirSync('data', { recursive: true });
   fs.writeFileSync('data/market.json', `${JSON.stringify({ updatedAt: new Date().toISOString(), quotes, fx }, null, 2)}\n`);
 }
