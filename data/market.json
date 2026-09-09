@@ -1,42 +1,69 @@
 {
-  "updatedAt": "2026-09-07T16:10:13.662Z",
+  "updatedAt": "2026-09-09T18:57:59.969Z",
   "quotes": {
     "VTI": {
-      "price": 379.73,
-      "change": 0,
-      "changePct": 0,
+      "price": 375.95,
+      "change": 0.7799999999999727,
+      "changePct": 0.20790574939360093,
+      "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "VXUS": {
-      "price": 88.41,
-      "change": 0,
-      "changePct": 0,
+      "price": 87.465,
+      "change": 0.7550000000000097,
+      "changePct": 0.8707184869104021,
+      "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "SGOV": {
-      "price": 100.47,
-      "change": 0,
-      "changePct": 0,
+      "price": 100.485,
+      "change": 0.07500000000000284,
+      "changePct": 0.0746937556020345,
+      "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "QQQM": {
-      "price": 296.07,
-      "change": 0,
-      "changePct": 0,
+      "price": 295.02,
+      "change": 3.6200000000000045,
+      "changePct": 1.2422786547700773,
+      "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "DRAM": {
-      "price": 59.69,
-      "change": 0,
-      "changePct": 0,
+      "price": 61.65,
+      "change": 6.589999999999996,
+      "changePct": 11.968761351253171,
+      "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "TQQQ": {
-      "price": 72.37,
-      "change": 0,
-      "changePct": 0,
+      "price": 71.56,
+      "change": 2.4099999999999966,
+      "changePct": 3.4851771511207468,
+      "changeAvailable": true,
       "source": "Yahoo Finance"
     }
   },
-  "fx": {}
+  "fx": {
+    "USDCNY": {
+      "rate": 6.7078,
+      "changePct": 0,
+      "source": "ECB reference rates"
+    },
+    "USDHKD": {
+      "rate": 7.8423,
+      "changePct": 0,
+      "source": "ECB reference rates"
+    },
+    "EURCNY": {
+      "rate": 7.8159,
+      "changePct": 0,
+      "source": "ECB reference rates"
+    },
+    "HKDCNY": {
+      "rate": 0.85534,
+      "changePct": 0,
+      "source": "ECB reference rates"
+    }
+  }
 }
