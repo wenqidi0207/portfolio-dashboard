@@ -75,8 +75,8 @@ async function yahooQuote(symbol) {
   const price = Number(result.meta.regularMarketPrice);
   const closes = result.indicators?.quote?.[0]?.close || [];
   const previous = Number(
-    result.meta.previousClose ||
     result.meta.chartPreviousClose ||
+    result.meta.previousClose ||
     result.meta.regularMarketPreviousClose ||
     closes.filter(value => value != null).slice(-2, -1)[0]
   );
@@ -84,6 +84,7 @@ async function yahooQuote(symbol) {
   const changeAvailable = Number.isFinite(previous) && previous !== 0;
   return {
     price,
+    previousClose: changeAvailable ? previous : null,
     change: changeAvailable ? price - previous : null,
     changePct: changeAvailable ? ((price - previous) / previous) * 100 : null,
     changeAvailable,
@@ -102,7 +103,7 @@ async function sinaQuotes(cnItems) {
     const price = Number(fields[3]);
     const previous = Number(fields[2]);
     if (!price || !previous) continue;
-    quotes[match[1].replace(/^sh|^sz/, '')] = { price, change: price - previous, changePct: ((price - previous) / previous) * 100, changeAvailable: true, source: 'A-share quote' };
+    quotes[match[1].replace(/^sh|^sz/, '')] = { price, previousClose: previous, change: price - previous, changePct: ((price - previous) / previous) * 100, changeAvailable: true, source: 'A-share quote' };
   }
   return quotes;
 }

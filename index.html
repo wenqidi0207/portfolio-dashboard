@@ -722,15 +722,16 @@ function renderStockCard(sym, isHolding) {
     var plv = (price - sym.cost) * sym.quantity;
     var plp = ((price - sym.cost) / sym.cost) * 100;
     var mv = price * sym.quantity;
-    plHtml = "<div class=\"metric\"><span class=\"metric-label\">P/L</span><span class=\"metric-value " + pClass(plv) + "\">" + fmtMoney(plv) + "</span></div>" +
-             "<div class=\"metric\"><span class=\"metric-label\">Return</span><span class=\"metric-value " + pClass(plv) + "\">" + fmt(plp) + "%</span></div>" +
+    plHtml = "<div class=\"metric\"><span class=\"metric-label\">Unrealized P/L</span><span class=\"metric-value " + pClass(plv) + "\">" + fmtMoney(plv) + "</span></div>" +
+             "<div class=\"metric\"><span class=\"metric-label\">Unrealized Return</span><span class=\"metric-value " + pClass(plv) + "\">" + fmt(plp) + "%</span></div>" +
+             (changeAvailable ? "<div class=\"metric\"><span class=\"metric-label\">Today P/L</span><span class=\"metric-value " + pClass(chg * sym.quantity) + "\">" + fmtMoney(chg * sym.quantity) + "</span></div>" : "") +
              "<div class=\"metric\"><span class=\"metric-label\">Mkt Value</span><span class=\"metric-value\">" + csym + fmt(mv, 0) + "</span></div>";
   }
 
   var priceHtml = price == null
     ? "<div class=\"skeleton skeleton-price\" style=\"margin-top:4px\"></div>"
     : "<div class=\"stock-price\">" + csym + fmt(price, dec) + "</div>" +
-      (pct == null ? "<div class=\"stock-change neutral\">--</div>" : "<div class=\"stock-change " + (isUp ? "up" : "down") + "\">" + (isUp ? "+" : "") + fmt(chg) + " (" + (isUp ? "+" : "") + fmt(pct) + "%)</div>");
+      (pct == null ? "<div class=\"stock-change neutral\">Daily move --</div>" : "<div class=\"stock-change " + (isUp ? "up" : "down") + "\">Daily move " + (isUp ? "+" : "") + fmt(chg) + " (" + (isUp ? "+" : "") + fmt(pct) + "%)</div>");
 
   var bottomHtml = isHolding
     ? "<div class=\"stock-divider\"></div><div class=\"stock-metrics\">" +
@@ -751,7 +752,7 @@ function renderStockCard(sym, isHolding) {
 }
 
 function renderSummary(holdings) {
-  var tv = 0, tc = 0, tpl = 0, todayPL = 0, todayCost = 0, bestD = null;
+  var tv = 0, tc = 0, tpl = 0, todayPL = 0, todayBase = 0, bestD = null;
   for (var i = 0; i < holdings.length; i++) {
     var item = holdings[i];
     var d = priceCache[item.code];
@@ -763,7 +764,10 @@ function renderSummary(holdings) {
     var dayDollar = Number(d.change) * item.quantity;
     var pct = Number(d.changePct);
     todayPL += dayDollar;
-    todayCost += item.cost * item.quantity;
+    var previousClose = d.previousClose != null && isFinite(Number(d.previousClose))
+      ? Number(d.previousClose)
+      : Number(d.price) - Number(d.change);
+    if (isFinite(previousClose) && previousClose > 0) todayBase += previousClose * item.quantity;
     if (!bestD || pct > bestD.pct) {
       bestD = { name: item.name, pct: pct, dollar: dayDollar };
     }
@@ -777,10 +781,10 @@ function renderSummary(holdings) {
   document.getElementById("totalPLValue").className = "value " + el(tpl);
   document.getElementById("totalPLPct").textContent = tpl !== 0 ? fmt(tplp) + "% total return" : "--";
   document.getElementById("totalPLPct").className = "sub " + el(tpl);
-  var todayPct = todayCost > 0 ? (todayPL / todayCost) * 100 : 0;
+  var todayPct = todayBase > 0 ? (todayPL / todayBase) * 100 : 0;
   document.getElementById("todayPLValue").textContent = bestD ? fmtMoney(todayPL) : "--";
   document.getElementById("todayPLValue").className = "value " + el(todayPL);
-  document.getElementById("todayPLPct").textContent = bestD ? fmt(todayPct) + "% today" : "--";
+  document.getElementById("todayPLPct").textContent = bestD ? fmt(todayPct) + "% vs previous close" : "--";
   document.getElementById("todayPLPct").className = "sub " + el(todayPL);
 
   var bestStockEl = document.getElementById("bestStock");
@@ -922,9 +926,9 @@ function parseYahooQuote(data) {
   var chart = result.indicators && result.indicators.quote && result.indicators.quote[0];
   var closes = chart && Array.isArray(chart.close) ? chart.close.filter(function(v){ return v != null; }) : [];
   var price = Number(result.meta.regularMarketPrice != null ? result.meta.regularMarketPrice : closes[closes.length - 1]);
-  var prev = Number(result.meta.previousClose || result.meta.chartPreviousClose || closes[closes.length - 2] || price);
+  var prev = Number(result.meta.chartPreviousClose || result.meta.previousClose || result.meta.regularMarketPreviousClose || closes[closes.length - 2] || price);
   if (!isFinite(price)) return null;
-  return { price: price, change: price - prev, changePct: prev ? ((price - prev) / prev) * 100 : 0, source: 'Yahoo Finance' };
+  return { price: price, previousClose: isFinite(prev) && prev > 0 ? prev : null, change: price - prev, changePct: prev ? ((price - prev) / prev) * 100 : 0, changeAvailable: isFinite(prev) && prev > 0, source: 'Yahoo Finance' };
 }
 
 function fetchQuoteEndpoint(url) {
