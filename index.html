@@ -1074,6 +1074,23 @@ var watchlistQuoteStatus = {};
 var watchlistQuotesInFlight = null;
 var holdingQuotesInFlight = null;
 var lastHoldingQuoteRefresh = 0;
+var liveQuotePromises = {};
+
+function getLiveQuote(symbol) {
+  var key = (symbol || "").trim().toUpperCase();
+  if (!key) return Promise.resolve(null);
+  if (!liveQuotePromises[key]) {
+    liveQuotePromises[key] = fetchLiveStockQuote(key).finally(function() { delete liveQuotePromises[key]; });
+  }
+  return liveQuotePromises[key];
+}
+
+function rerenderHoldings() {
+  var holdings = (portfolio && portfolio.holdings) || [];
+  var grid = document.getElementById("holdingsGrid");
+  if (grid) grid.innerHTML = holdings.map(function(item) { return renderStockCard(item, true); }).join("");
+  renderSummary(holdings);
+}
 
 function restoreWatchlistQuoteCache() {
   Object.keys(watchlistQuoteCache || {}).forEach(function(code) {
@@ -1093,7 +1110,7 @@ function refreshHoldingQuotes(holdings) {
   if (holdingQuotesInFlight || Date.now() - lastHoldingQuoteRefresh < 5 * 60 * 1000) return holdingQuotesInFlight;
   lastHoldingQuoteRefresh = Date.now();
   holdingQuotesInFlight = Promise.all(holdings.map(function(item) {
-    return fetchLiveStockQuote(historySymbol(item)).then(function(quote) { return { item: item, quote: quote }; });
+    return getLiveQuote(historySymbol(item)).then(function(quote) { return { item: item, quote: quote }; });
   })).then(function(results) {
     var changed = false;
     results.forEach(function(result) {
@@ -1103,8 +1120,8 @@ function refreshHoldingQuotes(holdings) {
       }
     });
     if (changed) {
-      document.getElementById("holdingsGrid").innerHTML = holdings.map(function(item) { return renderStockCard(item, true); }).join("");
-      renderSummary(holdings);
+      rerenderHoldings();
+      renderWatchlistSection();
     }
     return results;
   }).finally(function() { holdingQuotesInFlight = null; });
@@ -1198,15 +1215,15 @@ function unfollowStock(code) {
   renderWatchlistSection();
 }
 
-async function ensureWatchlistQuotes() {
+async function ensureWatchlistQuotes(force) {
   if (watchlistQuotesInFlight) return watchlistQuotesInFlight;
   var list = getUserWatchlist();
-  var missing = list.filter(function(s){ return !priceCache[s.code] || priceCache[s.code].price == null; });
+  var missing = force ? list : list.filter(function(s){ return !priceCache[s.code] || priceCache[s.code].price == null; });
   if (!missing.length) return;
   missing.forEach(function(item){ watchlistQuoteStatus[item.code] = '[LOADING...]'; });
   renderWatchlistSection();
   watchlistQuotesInFlight = Promise.all(missing.map(function(item){
-    return fetchLiveStockQuote(item.code).then(function(q){ return { item: item, quote: q }; });
+    return getLiveQuote(historySymbol(item)).then(function(q){ return { item: item, quote: q }; });
   })).then(function(results) {
     results.forEach(function(result) {
       if (result.quote) {
@@ -1218,6 +1235,7 @@ async function ensureWatchlistQuotes() {
       }
     });
     renderWatchlistSection();
+    rerenderHoldings();
     return results;
   }).finally(function(){ watchlistQuotesInFlight = null; });
   return watchlistQuotesInFlight;
@@ -1322,7 +1340,7 @@ async function fetchSnapshot() {
     refreshHoldingQuotes(holdings);
     refreshProfitTrend(holdings);
     await refreshFXData();
-    ensureWatchlistQuotes();
+    ensureWatchlistQuotes(true);
   } catch(e) {
     console.error("Render error:", e);
   }

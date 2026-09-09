@@ -44,7 +44,26 @@
                      }
                  ],
     "watchlist":  [
-
+                     {
+                         "market":  "US",
+                         "code":  "NVDA",
+                         "name":  "NVIDIA Corporation"
+                     },
+                     {
+                         "market":  "US",
+                         "code":  "AAPL",
+                         "name":  "Apple Inc."
+                     },
+                     {
+                         "market":  "US",
+                         "code":  "MSFT",
+                         "name":  "Microsoft Corporation"
+                     },
+                     {
+                         "market":  "US",
+                         "code":  "ORCL",
+                         "name":  "Oracle Corporation"
+                     }
                   ],
     "fx_pairs":  [
                      {

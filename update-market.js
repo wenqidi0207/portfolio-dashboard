@@ -130,8 +130,11 @@ async function main() {
   }
   if (!Object.keys(quotes).length && !Object.keys(fx).length) throw new Error('No market data returned');
   if (!Object.keys(quotes).length && items.length) throw new Error('No stock quotes returned; refusing to overwrite snapshot');
+  let previousQuotes = {};
+  try { previousQuotes = JSON.parse(fs.readFileSync('data/market.json', 'utf8')).quotes || {}; } catch (error) {}
+  const mergedQuotes = Object.assign({}, previousQuotes, quotes);
   fs.mkdirSync('data', { recursive: true });
-  fs.writeFileSync('data/market.json', `${JSON.stringify({ updatedAt: new Date().toISOString(), quotes, fx }, null, 2)}\n`);
+  fs.writeFileSync('data/market.json', `${JSON.stringify({ updatedAt: new Date().toISOString(), quotes: mergedQuotes, fx }, null, 2)}\n`);
 }
 
 main().catch(error => { console.error(error); process.exitCode = 1; });
