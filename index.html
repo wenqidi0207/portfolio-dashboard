@@ -1072,6 +1072,8 @@ async function refreshProfitTrend(holdings) {
 
 var watchlistQuoteStatus = {};
 var watchlistQuotesInFlight = null;
+var holdingQuotesInFlight = null;
+var lastHoldingQuoteRefresh = 0;
 
 function restoreWatchlistQuoteCache() {
   Object.keys(watchlistQuoteCache || {}).forEach(function(code) {
@@ -1085,6 +1087,28 @@ function restoreWatchlistQuoteCache() {
 function cacheWatchlistQuote(code, quote) {
   watchlistQuoteCache[code] = { savedAt: Date.now(), quote: quote };
   try { localStorage.setItem(WATCHLIST_QUOTE_CACHE_KEY, JSON.stringify(watchlistQuoteCache)); } catch (e) {}
+}
+
+function refreshHoldingQuotes(holdings) {
+  if (holdingQuotesInFlight || Date.now() - lastHoldingQuoteRefresh < 5 * 60 * 1000) return holdingQuotesInFlight;
+  lastHoldingQuoteRefresh = Date.now();
+  holdingQuotesInFlight = Promise.all(holdings.map(function(item) {
+    return fetchLiveStockQuote(historySymbol(item)).then(function(quote) { return { item: item, quote: quote }; });
+  })).then(function(results) {
+    var changed = false;
+    results.forEach(function(result) {
+      if (result.quote && result.quote.price != null) {
+        priceCache[result.item.code] = result.quote;
+        changed = true;
+      }
+    });
+    if (changed) {
+      document.getElementById("holdingsGrid").innerHTML = holdings.map(function(item) { return renderStockCard(item, true); }).join("");
+      renderSummary(holdings);
+    }
+    return results;
+  }).finally(function() { holdingQuotesInFlight = null; });
+  return holdingQuotesInFlight;
 }
 
 function getUserWatchlist() {
@@ -1295,6 +1319,7 @@ async function fetchSnapshot() {
     document.getElementById("holdingsGrid").innerHTML = holdings.map(function(s) { return renderStockCard(s, true); }).join("");
     renderWatchlistSection();
     renderSummary(holdings);
+    refreshHoldingQuotes(holdings);
     refreshProfitTrend(holdings);
     await refreshFXData();
     ensureWatchlistQuotes();
