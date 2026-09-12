@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-12T14:31:26.474Z",
+  "updatedAt": "2026-09-12T17:27:54.267Z",
   "quotes": {
     "VTI": {
       "price": 376.31,
@@ -85,6 +85,11 @@
   "fx": {
     "USDCNY": {
       "rate": 6.7082,
+      "changePct": 0,
+      "source": "ECB reference rates"
+    },
+    "USDHKD": {
+      "rate": 7.842,
       "changePct": 0,
       "source": "ECB reference rates"
     },
