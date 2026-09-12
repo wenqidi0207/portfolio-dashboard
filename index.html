@@ -955,10 +955,17 @@ function renderAllFXCards() {
 function parseYahooQuote(data) {
   var result = data && data.chart && data.chart.result && data.chart.result[0];
   if (!result || !result.meta) return null;
+  var meta = result.meta;
   var chart = result.indicators && result.indicators.quote && result.indicators.quote[0];
   var closes = chart && Array.isArray(chart.close) ? chart.close.filter(function(v){ return v != null; }) : [];
-  var price = Number(result.meta.regularMarketPrice != null ? result.meta.regularMarketPrice : closes[closes.length - 1]);
-  var prev = Number(result.meta.regularMarketPreviousClose || result.meta.chartPreviousClose || result.meta.previousClose || closes[closes.length - 2] || price);
+  var price = Number(meta.regularMarketPrice != null ? meta.regularMarketPrice : closes[closes.length - 1]);
+  // chartPreviousClose refers to the close before the requested chart range,
+  // which may be several sessions old. Prefer Yahoo's explicit daily change
+  // or previous close, then use the prior daily candle as a fallback.
+  var explicitChange = Number(meta.regularMarketChange != null ? meta.regularMarketChange : meta.fulldayChange);
+  var prev = Number(meta.regularMarketPreviousClose != null ? meta.regularMarketPreviousClose : meta.previousClose);
+  if (!(isFinite(prev) && prev > 0) && isFinite(explicitChange)) prev = price - explicitChange;
+  if (!(isFinite(prev) && prev > 0)) prev = Number(closes[closes.length - 2] || price);
   if (!isFinite(price)) return null;
   return { price: price, previousClose: isFinite(prev) && prev > 0 ? prev : null, change: price - prev, changePct: prev ? ((price - prev) / prev) * 100 : 0, changeAvailable: isFinite(prev) && prev > 0, source: 'Yahoo Finance' };
 }
