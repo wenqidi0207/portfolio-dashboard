@@ -686,6 +686,32 @@ function currencySign(c) {
   return map[c] || (c + " ");
 }
 function logError(msg) { fetchErrors.push(msg); }
+function normalizeQuote(d) {
+  if (!d || d.price == null || !isFinite(Number(d.price))) return d;
+  var quote = Object.assign({}, d);
+  var price = Number(quote.price);
+  var previous = quote.previousClose != null ? Number(quote.previousClose) : NaN;
+  if (isFinite(previous) && previous > 0) {
+    quote.previousClose = previous;
+    quote.change = price - previous;
+    quote.changePct = (quote.change / previous) * 100;
+    quote.changeAvailable = true;
+    return quote;
+  }
+  // Some cached snapshots only contain change fields. Derive a reference
+  // close when the source explicitly marked the change as available.
+  var change = quote.change != null ? Number(quote.change) : NaN;
+  if (quote.changeAvailable === true && isFinite(change)) {
+    previous = price - change;
+    if (isFinite(previous) && previous > 0) {
+      quote.previousClose = previous;
+      quote.change = change;
+      quote.changePct = (change / previous) * 100;
+      return quote;
+    }
+  }
+  return quote;
+}
 function hasQuoteChange(d) {
   if (!d || d.change == null || d.changePct == null) return false;
   if (d.changeAvailable === true) return isFinite(Number(d.change)) && isFinite(Number(d.changePct));
@@ -711,7 +737,7 @@ async function loadPortfolio() {
 }
 
 function renderStockCard(sym, isHolding) {
-  var d = priceCache[sym.code];
+  var d = normalizeQuote(priceCache[sym.code]);
   var price = d && d.price != null && isFinite(Number(d.price)) ? Number(d.price) : null;
   var changeAvailable = hasQuoteChange(d);
   var chg = changeAvailable && d.change != null && isFinite(Number(d.change)) ? Number(d.change) : null;
@@ -758,7 +784,7 @@ function renderSummary(holdings) {
   var tv = 0, tc = 0, tpl = 0, todayPL = 0, todayBase = 0, bestD = null;
   for (var i = 0; i < holdings.length; i++) {
     var item = holdings[i];
-    var d = priceCache[item.code];
+    var d = normalizeQuote(priceCache[item.code]);
     if (!d || d.price == null) continue;
     var v = d.price * item.quantity, c = item.cost * item.quantity;
     tv += v; tc += c; tpl += v - c;
@@ -797,7 +823,7 @@ function renderSummary(holdings) {
     if (bestD) {
       var sign = bestD.pct >= 0 ? "+" : "";
       var ds = bestD.dollar >= 0 ? "+$" : "-$";
-      bestPctEl.textContent = sign + fmt(bestD.pct) + "% (" + ds + Math.abs(bestD.dollar).toFixed(2) + ")";
+      bestPctEl.textContent = ds + Math.abs(bestD.dollar).toFixed(2) + " (" + sign + fmt(bestD.pct) + "%)";
       bestPctEl.className = "sub " + (bestD.pct >= 0 ? "up" : "down");
     } else {
       bestPctEl.textContent = "--";
@@ -932,7 +958,7 @@ function parseYahooQuote(data) {
   var chart = result.indicators && result.indicators.quote && result.indicators.quote[0];
   var closes = chart && Array.isArray(chart.close) ? chart.close.filter(function(v){ return v != null; }) : [];
   var price = Number(result.meta.regularMarketPrice != null ? result.meta.regularMarketPrice : closes[closes.length - 1]);
-  var prev = Number(result.meta.chartPreviousClose || result.meta.previousClose || result.meta.regularMarketPreviousClose || closes[closes.length - 2] || price);
+  var prev = Number(result.meta.regularMarketPreviousClose || result.meta.chartPreviousClose || result.meta.previousClose || closes[closes.length - 2] || price);
   if (!isFinite(price)) return null;
   return { price: price, previousClose: isFinite(prev) && prev > 0 ? prev : null, change: price - prev, changePct: prev ? ((price - prev) / prev) * 100 : 0, changeAvailable: isFinite(prev) && prev > 0, source: 'Yahoo Finance' };
 }
@@ -1115,15 +1141,28 @@ function cacheWatchlistQuote(code, quote) {
 function refreshHoldingQuotes(holdings) {
   if (holdingQuotesInFlight || Date.now() - lastHoldingQuoteRefresh < 5 * 60 * 1000) return holdingQuotesInFlight;
   lastHoldingQuoteRefresh = Date.now();
-  holdingQuotesInFlight = Promise.all(holdings.map(function(item) {
-    return getLiveQuote(historySymbol(item)).then(function(quote) { return { item: item, quote: quote }; });
-  })).then(function(results) {
+  var unique = {}, requests = [];
+  holdings.forEach(function(item) {
+    var symbol = historySymbol(item);
+    if (!unique[symbol]) {
+      unique[symbol] = true;
+      requests.push(getLiveQuote(symbol).then(function(quote) { return { symbol: symbol, quote: quote }; }));
+    }
+  });
+  holdingQuotesInFlight = Promise.all(requests).then(function(results) {
     var changed = false;
     results.forEach(function(result) {
-      if (result.quote && result.quote.price != null) {
-        priceCache[result.item.code] = result.quote;
-        changed = true;
-      }
+      if (!result.quote || result.quote.price == null) return;
+      var quote = normalizeQuote(result.quote);
+      // Keep one quote per symbol across Holdings and Watchlist so their
+      // Daily move cannot show different previous-close calculations.
+      var allItems = holdings.concat(getUserWatchlist());
+      allItems.forEach(function(item) {
+        if (historySymbol(item) === result.symbol) {
+          priceCache[item.code] = quote;
+          changed = true;
+        }
+      });
     });
     if (changed) {
       rerenderHoldings();
@@ -1224,7 +1263,15 @@ function unfollowStock(code) {
 async function ensureWatchlistQuotes(force) {
   if (watchlistQuotesInFlight) return watchlistQuotesInFlight;
   var list = getUserWatchlist();
-  var missing = force ? list : list.filter(function(s){ return !priceCache[s.code] || priceCache[s.code].price == null; });
+  // Reuse quotes already fetched for Holdings. A forced second request can
+  // return a different previous close and make the two sections disagree.
+  var holdingCodes = {};
+  ((portfolio && portfolio.holdings) || []).forEach(function(item) { holdingCodes[item.code] = true; });
+  var missing = list.filter(function(s){
+    if (holdingCodes[s.code]) return !priceCache[s.code] || priceCache[s.code].price == null;
+    var cached = normalizeQuote(priceCache[s.code]);
+    return !!force || !cached || cached.price == null || !hasQuoteChange(cached);
+  });
   if (!missing.length) return;
   missing.forEach(function(item){ watchlistQuoteStatus[item.code] = '[LOADING...]'; });
   renderWatchlistSection();
@@ -1233,8 +1280,9 @@ async function ensureWatchlistQuotes(force) {
   })).then(function(results) {
     results.forEach(function(result) {
       if (result.quote) {
-        priceCache[result.item.code] = result.quote;
-        cacheWatchlistQuote(result.item.code, result.quote);
+        var quote = normalizeQuote(result.quote);
+        priceCache[result.item.code] = quote;
+        cacheWatchlistQuote(result.item.code, quote);
         delete watchlistQuoteStatus[result.item.code];
       } else {
         watchlistQuoteStatus[result.item.code] = '[UNAVAILABLE]';

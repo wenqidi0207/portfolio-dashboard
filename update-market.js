@@ -29,7 +29,14 @@ function readPortfolio() {
 }
 
 const portfolio = readPortfolio();
-const items = (portfolio.holdings || []).concat(portfolio.watchlist || []);
+const items = [];
+const itemCodes = new Set();
+for (const item of (portfolio.holdings || []).concat(portfolio.watchlist || [])) {
+  if (!itemCodes.has(item.code)) {
+    itemCodes.add(item.code);
+    items.push(item);
+  }
+}
 
 function get(url, headers, redirectsLeft = 3) {
   return new Promise((resolve, reject) => {
@@ -75,6 +82,7 @@ async function yahooQuote(symbol) {
   const price = Number(result.meta.regularMarketPrice);
   const closes = result.indicators?.quote?.[0]?.close || [];
   const previous = Number(
+    result.meta.regularMarketPreviousClose ||
     result.meta.chartPreviousClose ||
     result.meta.previousClose ||
     result.meta.regularMarketPreviousClose ||
