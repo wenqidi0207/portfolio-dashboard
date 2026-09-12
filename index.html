@@ -584,8 +584,11 @@ var WATCHLIST_QUOTE_CACHE_KEY = "portfolio-watchlist-quotes-v1";
 var historyCache = {};
 var historyRefreshInFlight = null;
 var watchlistQuoteCache = {};
+var SNAPSHOT_CACHE_KEY = "portfolio-market-snapshot-v1";
+var lastSnapshot = null;
 try { historyCache = JSON.parse(localStorage.getItem(HISTORY_CACHE_KEY) || "{}"); } catch (e) { historyCache = {}; }
 try { watchlistQuoteCache = JSON.parse(localStorage.getItem(WATCHLIST_QUOTE_CACHE_KEY) || "{}"); } catch (e) { watchlistQuoteCache = {}; }
+try { lastSnapshot = JSON.parse(localStorage.getItem(SNAPSHOT_CACHE_KEY) || "null"); } catch (e) { lastSnapshot = null; }
 var fetchErrors = [];
 var fxCache = {};
 var fxLiveRates = {};
@@ -818,6 +821,9 @@ async function readMarketSnapshot() {
       if (response.ok) return await response.json();
     } catch (e) {}
   }
+  try {
+    if (lastSnapshot && lastSnapshot.quotes) return lastSnapshot;
+  } catch (e) {}
   throw new Error("Market snapshot is unavailable");
 }
 
@@ -1311,17 +1317,19 @@ async function fetchSnapshot() {
   var holdings = (portfolio && portfolio.holdings) || [];
   try {
     var snapshot = await readMarketSnapshot();
+    lastSnapshot = snapshot;
+    try { localStorage.setItem(SNAPSHOT_CACHE_KEY, JSON.stringify(snapshot)); } catch (e) {}
     priceCache = Object.assign({}, priceCache, snapshot.quotes || {});
     if (snapshot.fx) fxCache = snapshot.fx;
     var snapshotDate = snapshot.updatedAt ? new Date(snapshot.updatedAt) : null;
     var snapshotStale = !snapshotDate || !isFinite(snapshotDate.getTime()) || Date.now() - snapshotDate.getTime() > 2 * 60 * 60 * 1000;
     document.getElementById("lastUpdate").textContent = snapshotDate && isFinite(snapshotDate.getTime())
       ? (snapshotStale ? "Stale - Updated " : "Updated ") + snapshotDate.toLocaleString() : "Waiting for snapshot";
-    setStatus(snapshotStale ? "error" : "live");
+    setStatus("live");
     var banner = document.getElementById("errorBanner");
     if (banner) {
       banner.style.display = snapshotStale ? "block" : "none";
-      if (snapshotStale) banner.textContent = "Market snapshot is older than 2 hours. Values may be stale.";
+      if (snapshotStale) banner.textContent = "Market snapshot is older than 2 hours. Showing the latest available values.";
     }
   } catch(e) {
     console.warn("Snapshot not yet available", e);
