@@ -1370,9 +1370,11 @@ async function fetchSnapshot() {
   fetchErrors = [];
   try { await loadPortfolio(); } catch(e) { console.warn("Failed to load portfolio.json", e); }
   var holdings = (portfolio && portfolio.holdings) || [];
+  var snapshotAvailable = false;
   try {
     var snapshot = await readMarketSnapshot();
     lastSnapshot = snapshot;
+    snapshotAvailable = true;
     try { localStorage.setItem(SNAPSHOT_CACHE_KEY, JSON.stringify(snapshot)); } catch (e) {}
     priceCache = Object.assign({}, priceCache, snapshot.quotes || {});
     if (snapshot.fx) fxCache = snapshot.fx;
@@ -1400,7 +1402,13 @@ async function fetchSnapshot() {
     document.getElementById("holdingsGrid").innerHTML = holdings.map(function(s) { return renderStockCard(s, true); }).join("");
     renderWatchlistSection();
     renderSummary(holdings);
-    refreshHoldingQuotes(holdings);
+    // The generated snapshot has the authoritative previous-close values used
+    // for Daily move and Today P/L. Only use live quotes as a fallback when a
+    // snapshot is unavailable or missing a holding's daily change.
+    var needsLiveHoldings = !snapshotAvailable || holdings.some(function(item) {
+      return !hasQuoteChange(normalizeQuote(priceCache[item.code]));
+    });
+    if (needsLiveHoldings) refreshHoldingQuotes(holdings);
     refreshProfitTrend(holdings);
     await refreshFXData();
     ensureWatchlistQuotes(true);
