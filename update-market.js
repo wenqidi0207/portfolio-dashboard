@@ -79,15 +79,21 @@ async function yahooQuote(symbol) {
   }
   const result = JSON.parse(body).chart?.result?.[0];
   if (!result?.meta?.regularMarketPrice) throw new Error(`empty quote ${symbol}`);
-  const price = Number(result.meta.regularMarketPrice);
+  const meta = result.meta;
+  const price = Number(meta.regularMarketPrice);
   const closes = result.indicators?.quote?.[0]?.close || [];
-  const previous = Number(
-    result.meta.regularMarketPreviousClose ||
-    result.meta.chartPreviousClose ||
-    result.meta.previousClose ||
-    result.meta.regularMarketPreviousClose ||
-    closes.filter(value => value != null).slice(-2, -1)[0]
-  );
+  const validCloses = closes.filter(value => value != null).map(Number).filter(value => Number.isFinite(value));
+  // Yahoo's chartPreviousClose is the close before the requested range, not
+  // necessarily the previous trading session. Prefer the quote's explicit
+  // daily change, then an explicit previous close, then the prior daily bar.
+  const explicitChange = Number(meta.regularMarketChange ?? meta.fulldayChange);
+  let previous = Number(meta.regularMarketPreviousClose ?? meta.previousClose);
+  if (!(Number.isFinite(previous) && previous > 0) && Number.isFinite(explicitChange)) {
+    previous = price - explicitChange;
+  }
+  if (!(Number.isFinite(previous) && previous > 0)) {
+    previous = validCloses.length >= 2 ? validCloses[validCloses.length - 2] : NaN;
+  }
   if (!Number.isFinite(price)) throw new Error(`invalid quote ${symbol}`);
   const changeAvailable = Number.isFinite(previous) && previous !== 0;
   return {
