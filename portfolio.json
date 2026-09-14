@@ -4,8 +4,8 @@
                          "market":  "US",
                          "code":  "VTI",
                          "name":  "Vanguard Total Stock Market ETF",
-                         "quantity":  29,
-                         "cost":  367.96
+                         "quantity":  30,
+                         "cost":  368.15
                      },
                      {
                          "market":  "US",
@@ -18,15 +18,15 @@
                          "market":  "US",
                          "code":  "SGOV",
                          "name":  "iShares 0-3 Month Treasury Bond ETF",
-                         "quantity":  61,
+                         "quantity":  51,
                          "cost":  100.44
                      },
                      {
                          "market":  "US",
                          "code":  "QQQM",
                          "name":  "Invesco NASDAQ 100 ETF",
-                         "quantity":  17,
-                         "cost":  288.52
+                         "quantity":  19,
+                         "cost":  288.63
                      },
                      {
                          "market":  "US",
