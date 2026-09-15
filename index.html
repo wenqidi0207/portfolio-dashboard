@@ -439,12 +439,15 @@ input[type=number]{-moz-appearance:textfield}
     .holdings-grid, .fx-grid { gap: 16px; margin-bottom: 40px; }
     .stock-card { padding: 20px; transition: border-color .2s var(--ease-mechanical); }
     .stock-card:hover, .fx-card-modern:hover { box-shadow: none; transform: none; border-color: var(--text-dim); }
-    .stock-name { font-size: 15px; font-weight: 500; }
+    .stock-card-header { display: grid; grid-template-columns: minmax(0, 1fr) max-content; gap: 18px; align-items: start; }
+    .stock-card-header > div:first-child { min-width: 0; }
+    .stock-name { font-size: 15px; font-weight: 500; line-height: 1.35; }
     .stock-code, .stock-price, .stock-change, .metric-value, .fx-rate-val, .fx-pair-badge, .fx-input-custom { font-family: var(--data-font); }
     .stock-code { letter-spacing: .04em; }
     .market-tag { color: var(--text); background: transparent !important; border: 1px solid var(--border-visible, var(--border)); border-radius: 4px; font-family: var(--label-font); letter-spacing: .06em; }
-    .stock-price { font-size: 22px; font-weight: 400; }
-    .stock-change { font-size: 11px; }
+    .stock-price-wrap { min-width: max-content; display: flex; flex-direction: column; align-items: flex-end; }
+    .stock-price { font-size: 22px; font-weight: 400; white-space: nowrap; }
+    .stock-change { font-size: 11px; white-space: nowrap; line-height: 1.35; }
     .stock-divider { background: var(--border); margin: 16px 0; }
     .metric-label { font-size: 10px; letter-spacing: .08em; }
     .metric-value { font-size: 13px; font-weight: 400; }
@@ -465,6 +468,12 @@ input[type=number]{-moz-appearance:textfield}
     .watchlist-input::placeholder { font-family: 'Space Grotesk', sans-serif; color: var(--text-dim); }
     .watchlist-empty, .watchlist-quote-state { color: var(--text-dim); font-family: var(--label-font); font-size: 11px; letter-spacing: .03em; }
     .watchlist-quote-state { margin-top: 6px; }
+    @media (max-width: 520px) {
+      .stock-card { padding: 16px; }
+      .stock-card-header { gap: 10px; }
+      .stock-price { font-size: 20px; }
+      .stock-change { font-size: 10px; }
+    }
     .dashboard-insights { margin: 0 0 40px; }
     .profit-trend { margin: 0; }
     .profit-trend-header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
