@@ -1,83 +1,83 @@
 {
-  "updatedAt": "2026-09-15T23:15:31.504Z",
+  "updatedAt": "2026-09-16T02:02:22.673Z",
   "quotes": {
     "VTI": {
       "price": 372.84,
-      "previousClose": 374.67999999999995,
-      "change": -1.839999999999975,
-      "changePct": -0.4910857264865953,
+      "previousClose": 374.38,
+      "change": -1.5400000000000205,
+      "changePct": -0.4113467599765,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "VXUS": {
       "price": 85.69,
-      "previousClose": 86.03999999999999,
-      "change": -0.3499999999999943,
-      "changePct": -0.40678754067874745,
+      "previousClose": 85.94,
+      "change": -0.25,
+      "changePct": -0.29090062834535724,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "SGOV": {
       "price": 100.53,
-      "previousClose": 100.53,
-      "change": 0,
-      "changePct": 0,
+      "previousClose": 100.52,
+      "change": 0.010000000000005116,
+      "changePct": 0.009948269001198882,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "QQQM": {
       "price": 290.09,
-      "previousClose": 292.02,
-      "change": -1.9300000000000068,
-      "changePct": -0.6609136360523276,
+      "previousClose": 292.01,
+      "change": -1.920000000000016,
+      "changePct": -0.6575117290503805,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "DRAM": {
       "price": 55.01,
-      "previousClose": 54.8,
-      "change": 0.21000000000000085,
-      "changePct": 0.3832116788321184,
+      "previousClose": 54.82,
+      "change": 0.18999999999999773,
+      "changePct": 0.346588836191167,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "TQQQ": {
       "price": 67.9,
-      "previousClose": 69.27000000000001,
-      "change": -1.3700000000000045,
-      "changePct": -1.977768153601854,
+      "previousClose": 69.30000000000001,
+      "change": -1.4000000000000057,
+      "changePct": -2.020202020202028,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "NVDA": {
       "price": 212.17,
-      "previousClose": 210.72,
-      "change": 1.4499999999999886,
-      "changePct": 0.6881169324221662,
+      "previousClose": 211.03,
+      "change": 1.1399999999999864,
+      "changePct": 0.5402075534284161,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "AAPL": {
       "price": 331.34,
-      "previousClose": 332.53999999999996,
-      "change": -1.1999999999999886,
-      "changePct": -0.36085884404883284,
+      "previousClose": 332.69,
+      "change": -1.3500000000000227,
+      "changePct": -0.40578316150170507,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "MSFT": {
       "price": 497.12,
-      "previousClose": 504.01,
-      "change": -6.889999999999986,
-      "changePct": -1.3670363683260225,
+      "previousClose": 504.57,
+      "change": -7.449999999999989,
+      "changePct": -1.476504746615928,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "ORCL": {
       "price": 140.35,
-      "previousClose": 144.79,
-      "change": -4.439999999999998,
-      "changePct": -3.0665101181020775,
+      "previousClose": 145.09,
+      "change": -4.740000000000009,
+      "changePct": -3.2669377627679435,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     }
