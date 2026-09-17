@@ -534,7 +534,7 @@ input[type=number]{-moz-appearance:textfield}
     <div class="error-banner" id="errorBanner"></div>
     <div class="summary-row">
       <div class="summary-card"><div class="label">Total Value</div><div class="value" id="totalValue">--</div><div class="sub" id="totalPL">--</div></div>
-      <div class="summary-card"><div class="label">Total P/L</div><div class="value" id="totalPLValue">--</div><div class="sub" id="totalPLPct">--</div></div>
+      <div class="summary-card"><div class="label">Unrealized P/L</div><div class="value" id="totalPLValue">--</div><div class="sub" id="totalPLPct">--</div></div>
       <div class="summary-card"><div class="label">Today P/L</div><div class="value" id="todayPLValue">--</div><div class="sub" id="todayPLPct">--</div></div>
       <div class="summary-card"><div class="label">Best Today <span class="crown-icon">👑</span></div><div class="value best-stock-name" id="bestStock">--</div><div class="best-code" id="bestCode">--</div><div class="sub" id="bestPct">--</div></div>
     </div>
@@ -827,8 +827,8 @@ function renderSummary(holdings) {
   var tplp = tc > 0 ? (tpl / tc) * 100 : 0;
   var el = function(v) { return v >= 0 ? "up" : "down"; };
   document.getElementById("totalValue").textContent = tv > 0 ? ("$" + tv.toLocaleString("en-US", {maximumFractionDigits:0})) : "--";
-  document.getElementById("totalPL").textContent = tpl !== 0 ? fmtMoney(tpl) : "--";
-  document.getElementById("totalPL").className = "sub " + el(tpl);
+  document.getElementById("totalPL").textContent = tc > 0 ? "Cost basis $" + tc.toLocaleString("en-US", {maximumFractionDigits:0}) : "--";
+  document.getElementById("totalPL").className = "sub";
   document.getElementById("totalPLValue").textContent = tpl !== 0 ? fmtMoney(tpl) : "--";
   document.getElementById("totalPLValue").className = "value " + el(tpl);
   document.getElementById("totalPLPct").textContent = tpl !== 0 ? fmt(tplp) + "% total return" : "--";
@@ -1029,6 +1029,22 @@ function historySymbol(item) {
   return item.code;
 }
 
+function formatMarketDate(timestamp, timeZone) {
+  try {
+    var parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: timeZone || 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).formatToParts(new Date(Number(timestamp) * 1000));
+    var value = {};
+    parts.forEach(function(part) { value[part.type] = part.value; });
+    return value.year + '-' + value.month + '-' + value.day;
+  } catch (error) {
+    return new Date(Number(timestamp) * 1000).toISOString().slice(0, 10);
+  }
+}
+
 function parseYahooHistory(data) {
   var result = data && data.chart && data.chart.result && data.chart.result[0];
   var quote = result && result.indicators && result.indicators.quote && result.indicators.quote[0];
@@ -1036,7 +1052,7 @@ function parseYahooHistory(data) {
   var points = [];
   result.timestamp.forEach(function(ts, index) {
     var close = Number(quote.close[index]);
-    if (isFinite(close)) points.push({ date: new Date(ts * 1000).toISOString().slice(0, 10), close: close });
+    if (isFinite(close)) points.push({ date: formatMarketDate(ts, result.meta && result.meta.exchangeTimezoneName), close: close });
   });
   return points.slice(-6);
 }
@@ -1115,6 +1131,15 @@ function renderProfitTrend(holdings, results) {
       return current && previous ? total + (current.close - previous.close) * Number(result.item.quantity || 0) : total;
     }, 0);
   });
+  var liveTodayPL = 0;
+  var hasLiveTodayPL = false;
+  holdings.forEach(function(item) {
+    var quote = normalizeQuote(priceCache[item.code]);
+    if (!hasQuoteChange(quote)) return;
+    liveTodayPL += Number(quote.change) * Number(item.quantity || 0);
+    hasLiveTodayPL = true;
+  });
+  if (hasLiveTodayPL) values[values.length - 1] = liveTodayPL;
   var meta = document.getElementById('profitTrendMeta');
   if (meta) meta.textContent = 'LAST ' + values.length + ' SESSIONS';
   var width = 760, height = 250, left = 72, right = 18, top = 18, bottom = 42;

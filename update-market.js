@@ -65,7 +65,25 @@ function yahooSymbol(item) {
   return item.code;
 }
 
-function yahooHistory(result) {
+function marketTimeZone(market) {
+  if (market === 'HK') return 'Asia/Hong_Kong';
+  if (market === 'CN') return 'Asia/Shanghai';
+  return 'America/New_York';
+}
+
+function formatMarketDate(timestamp, timeZone) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(new Date(Number(timestamp) * 1000));
+  const value = {};
+  parts.forEach(part => { value[part.type] = part.value; });
+  return `${value.year}-${value.month}-${value.day}`;
+}
+
+function yahooHistory(result, timeZone) {
   const timestamps = result.timestamp || [];
   const closes = result.indicators?.quote?.[0]?.close || [];
   const points = [];
@@ -73,14 +91,14 @@ function yahooHistory(result) {
     const close = Number(closes[index]);
     if (!Number.isFinite(close)) continue;
     points.push({
-      date: new Date(Number(timestamps[index]) * 1000).toISOString().slice(0, 10),
+      date: formatMarketDate(timestamps[index], timeZone),
       close
     });
   }
   return points.slice(-6);
 }
 
-async function yahooQuote(symbol) {
+async function yahooQuote(symbol, timeZone) {
   const headers = { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' };
   const encoded = encodeURIComponent(symbol);
   let body;
@@ -98,7 +116,7 @@ async function yahooQuote(symbol) {
   const price = Number(meta.regularMarketPrice);
   const closes = result.indicators?.quote?.[0]?.close || [];
   const validCloses = closes.filter(value => value != null).map(Number).filter(value => Number.isFinite(value));
-  const history = yahooHistory(result);
+  const history = yahooHistory(result, timeZone);
   // Yahoo's chartPreviousClose is the close before the requested range, not
   // necessarily the previous trading session. Prefer the quote's explicit
   // daily change, then an explicit previous close, then the prior daily bar.
@@ -146,7 +164,7 @@ async function main() {
     try { Object.assign(quotes, await sinaQuotes(cnItems)); } catch (error) { console.warn(`A-share source: ${error.message}`); }
   }
   const yahooResults = await Promise.all(items.filter(item => !quotes[item.code]).map(async item => {
-    try { return [item.code, await yahooQuote(yahooSymbol(item))]; }
+    try { return [item.code, await yahooQuote(yahooSymbol(item), marketTimeZone(item.market))]; }
     catch (error) { console.warn(`${item.code}: ${error.message}`); return [item.code, null]; }
   }));
   yahooResults.forEach(([code, quote]) => { if (quote) quotes[code] = quote; });
