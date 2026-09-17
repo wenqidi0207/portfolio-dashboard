@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-16T23:20:12.639Z",
+  "updatedAt": "2026-09-17T02:06:16.841Z",
   "quotes": {
     "VTI": {
       "price": 371.26,
@@ -35,49 +35,49 @@
     },
     "DRAM": {
       "price": 55.33,
-      "previousClose": 54.268,
-      "change": 1.0619999999999976,
-      "changePct": 1.9569543745853866,
+      "previousClose": 55.01,
+      "change": 0.3200000000000003,
+      "changePct": 0.581712415924378,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "TQQQ": {
       "price": 67.93,
-      "previousClose": 67.02000000000001,
-      "change": 0.9099999999999966,
-      "changePct": 1.357803640704262,
+      "previousClose": 67.9,
+      "change": 0.030000000000001137,
+      "changePct": 0.0441826215022108,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "NVDA": {
       "price": 213.9,
-      "previousClose": 210.97,
-      "change": 2.930000000000007,
-      "changePct": 1.388823055410725,
+      "previousClose": 212.17000000000002,
+      "change": 1.7299999999999898,
+      "changePct": 0.8153838902766601,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "AAPL": {
       "price": 332.41,
-      "previousClose": 330.93,
-      "change": 1.4800000000000182,
-      "changePct": 0.4472244885625414,
+      "previousClose": 331.34000000000003,
+      "change": 1.0699999999999932,
+      "changePct": 0.32293112814631286,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "MSFT": {
       "price": 490.3,
-      "previousClose": 495.44800000000004,
-      "change": -5.148000000000025,
-      "changePct": -1.0390595985855275,
+      "previousClose": 497.12,
+      "change": -6.819999999999993,
+      "changePct": -1.3719021564209835,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "ORCL": {
       "price": 143.16,
-      "previousClose": 139.127,
-      "change": 4.032999999999987,
-      "changePct": 2.8987903138858644,
+      "previousClose": 140.35,
+      "change": 2.8100000000000023,
+      "changePct": 2.00213751335946,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     }
