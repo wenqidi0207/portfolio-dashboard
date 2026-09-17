@@ -1388,14 +1388,14 @@ async function fetchSnapshot() {
     priceCache = Object.assign({}, priceCache, snapshot.quotes || {});
     if (snapshot.fx) fxCache = snapshot.fx;
     var snapshotDate = snapshot.updatedAt ? new Date(snapshot.updatedAt) : null;
-    var snapshotStale = !snapshotDate || !isFinite(snapshotDate.getTime()) || Date.now() - snapshotDate.getTime() > 2 * 60 * 60 * 1000;
+    var snapshotStale = !snapshotDate || !isFinite(snapshotDate.getTime()) || Date.now() - snapshotDate.getTime() > 8 * 60 * 60 * 1000;
     document.getElementById("lastUpdate").textContent = snapshotDate && isFinite(snapshotDate.getTime())
       ? (snapshotStale ? "Stale - Updated " : "Updated ") + snapshotDate.toLocaleString() : "Waiting for snapshot";
     setStatus("live");
     var banner = document.getElementById("errorBanner");
     if (banner) {
       banner.style.display = snapshotStale ? "block" : "none";
-      if (snapshotStale) banner.textContent = "Market snapshot is older than 2 hours. Showing the latest available values.";
+      if (snapshotStale) banner.textContent = "Market snapshot is older than 8 hours. Showing the latest available values.";
     }
   } catch(e) {
     console.warn("Snapshot not yet available", e);
