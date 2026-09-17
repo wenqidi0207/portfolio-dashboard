@@ -1,105 +1,105 @@
 {
-  "updatedAt": "2026-09-17T13:51:47.153Z",
+  "updatedAt": "2026-09-17T17:47:43.115Z",
   "quotes": {
     "VTI": {
-      "price": 374.86,
-      "previousClose": 371.325,
-      "change": 3.535000000000025,
-      "changePct": 0.9519962297179089,
+      "price": 375.34,
+      "previousClose": 371.46999999999997,
+      "change": 3.8700000000000045,
+      "changePct": 1.0418068753869774,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "VXUS": {
-      "price": 86.644,
+      "price": 86.525,
       "previousClose": 85.41000000000001,
-      "change": 1.2339999999999947,
-      "changePct": 1.4447956913710274,
+      "change": 1.1149999999999949,
+      "changePct": 1.305467743823902,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "SGOV": {
       "price": 100.555,
-      "previousClose": 100.545,
-      "change": 0.010000000000005116,
-      "changePct": 0.009945795414993403,
+      "previousClose": 100.55000000000001,
+      "change": 0.0049999999999954525,
+      "changePct": 0.0049726504226707624,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "QQQM": {
-      "price": 294.22,
+      "price": 295.1,
       "previousClose": 290.20000000000005,
-      "change": 4.019999999999982,
-      "changePct": 1.3852515506547143,
+      "change": 4.899999999999977,
+      "changePct": 1.6884906960716668,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "DRAM": {
-      "price": 57.985,
-      "previousClose": 55.445,
-      "change": 2.539999999999999,
-      "changePct": 4.58111642167914,
+      "price": 57.76,
+      "previousClose": 55.335,
+      "change": 2.424999999999997,
+      "changePct": 4.382398120538532,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "TQQQ": {
-      "price": 70.77,
+      "price": 71.35,
       "previousClose": 67.92999999999999,
-      "change": 2.8400000000000034,
-      "changePct": 4.1807743265125925,
+      "change": 3.4200000000000017,
+      "changePct": 5.034594435448259,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "NVDA": {
-      "price": 218.11,
-      "previousClose": 213.9,
-      "change": 4.210000000000008,
-      "changePct": 1.9682094436652677,
+      "price": 219.385,
+      "previousClose": 213.89999999999998,
+      "change": 5.485000000000014,
+      "changePct": 2.564282374941568,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "AAPL": {
-      "price": 330.29,
+      "price": 336.165,
       "previousClose": 332.41,
-      "change": -2.1200000000000045,
-      "changePct": -0.6377666135194502,
+      "change": 3.7549999999999955,
+      "changePct": 1.129629072530909,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "MSFT": {
-      "price": 497.42,
+      "price": 495.745,
       "previousClose": 490.3,
-      "change": 7.1200000000000045,
-      "changePct": 1.4521721395064255,
+      "change": 5.444999999999993,
+      "changePct": 1.1105445645523135,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     },
     "ORCL": {
-      "price": 149.295,
-      "previousClose": 143.04999999999998,
-      "change": 6.2450000000000045,
-      "changePct": 4.365606431317725,
+      "price": 149.63,
+      "previousClose": 143.10999999999999,
+      "change": 6.52000000000001,
+      "changePct": 4.5559359932918815,
       "changeAvailable": true,
       "source": "Yahoo Finance"
     }
   },
   "fx": {
     "USDCNY": {
-      "rate": 6.7071,
+      "rate": 6.7075,
       "changePct": 0,
       "source": "ECB reference rates"
     },
     "USDHKD": {
-      "rate": 7.8449,
+      "rate": 7.8452,
       "changePct": 0,
       "source": "ECB reference rates"
     },
     "EURCNY": {
-      "rate": 7.738,
+      "rate": 7.7009,
       "changePct": 0,
       "source": "ECB reference rates"
     },
     "HKDCNY": {
-      "rate": 0.85496,
+      "rate": 0.85498,
       "changePct": 0,
       "source": "ECB reference rates"
     }
