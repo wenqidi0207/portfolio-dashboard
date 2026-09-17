@@ -77,7 +77,7 @@ function yahooHistory(result) {
       close
     });
   }
-  return points.slice(-5);
+  return points.slice(-6);
 }
 
 async function yahooQuote(symbol) {

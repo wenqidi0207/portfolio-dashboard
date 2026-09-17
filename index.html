@@ -478,19 +478,29 @@ input[type=number]{-moz-appearance:textfield}
     .profit-trend { margin: 0; }
     .profit-trend-header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
     .profit-trend-meta { color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .08em; }
-    .profit-trend-frame { border: 1px solid var(--border); border-radius: 6px; padding: 18px 20px 12px; background: var(--card); }
+    .profit-trend-frame { border: 1px solid var(--border); border-radius: 6px; padding: 18px 20px 14px; background: var(--card); }
+    .profit-trend-summary { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 8px; }
+    .profit-trend-caption { color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .08em; text-transform: uppercase; }
     .profit-trend-chart { width: 100%; height: 250px; display: block; overflow: visible; }
     .profit-trend-grid { stroke: var(--border); stroke-width: 1; vector-effect: non-scaling-stroke; }
+    .profit-trend-zero { stroke: var(--text-dim); stroke-width: 1; vector-effect: non-scaling-stroke; }
     .profit-trend-axis { fill: var(--text-dim); font: 10px var(--label-font); letter-spacing: .03em; }
-    .profit-trend-line { fill: none; stroke: var(--text); stroke-width: 2; vector-effect: non-scaling-stroke; }
-    .profit-trend-line.up { stroke: var(--up); }
-    .profit-trend-line.down { stroke: var(--down); }
-    .profit-trend-dot { fill: var(--card); stroke: var(--text); stroke-width: 2; vector-effect: non-scaling-stroke; }
-    .profit-trend-dot.latest { fill: var(--text); }
+    .profit-trend-bar { opacity: .88; }
+    .profit-trend-bar.up { fill: var(--up); }
+    .profit-trend-bar.down { fill: var(--down); }
+    .profit-trend-bar:hover { opacity: 1; }
+    .profit-trend-sessions { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .profit-trend-session { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+    .profit-trend-session-date { color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .03em; }
+    .profit-trend-session-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 12px var(--data-font); }
+    .profit-trend-session-value.up { color: var(--up); }
+    .profit-trend-session-value.down { color: var(--down); }
     .profit-trend-status { min-height: 250px; display: grid; place-items: center; color: var(--text-dim); font: 11px var(--label-font); letter-spacing: .06em; }
     .profit-trend-value { font: 20px var(--data-font); }
     .profit-trend-value.up { color: var(--up); }
     .profit-trend-value.down { color: var(--down); }
+    .best-stock-name { font-family: 'Space Grotesk', sans-serif !important; font-size: 18px !important; font-weight: 500 !important; line-height: 1.25; }
+    .best-code { color: var(--text-dim); font: 11px var(--data-font); letter-spacing: .06em; margin-top: 3px; }
     :root[data-theme="dark"] .error-banner { background: transparent; border-color: var(--down); }
     .error-banner { background: transparent; border-color: var(--down); border-radius: 4px; font-family: var(--label-font); }
     @media (max-width: 768px) {
@@ -502,6 +512,8 @@ input[type=number]{-moz-appearance:textfield}
       .fx-details-row { gap: 6px; font-size: 10px; }
       .profit-trend-frame { padding: 14px 10px 8px; }
       .profit-trend-chart { height: 220px; }
+      .profit-trend-sessions { gap: 4px; }
+      .profit-trend-session-value { font-size: 10px; }
     }
 
 </style>
@@ -524,7 +536,7 @@ input[type=number]{-moz-appearance:textfield}
       <div class="summary-card"><div class="label">Total Value</div><div class="value" id="totalValue">--</div><div class="sub" id="totalPL">--</div></div>
       <div class="summary-card"><div class="label">Total P/L</div><div class="value" id="totalPLValue">--</div><div class="sub" id="totalPLPct">--</div></div>
       <div class="summary-card"><div class="label">Today P/L</div><div class="value" id="todayPLValue">--</div><div class="sub" id="todayPLPct">--</div></div>
-      <div class="summary-card"><div class="label">Best Today <span class="crown-icon">👑</span></div><div class="value" id="bestStock">--</div><div class="sub" id="bestPct">--</div></div>
+      <div class="summary-card"><div class="label">Best Today <span class="crown-icon">👑</span></div><div class="value best-stock-name" id="bestStock">--</div><div class="best-code" id="bestCode">--</div><div class="sub" id="bestPct">--</div></div>
     </div>
     <div class="dashboard-insights">
       <section class="profit-trend" aria-labelledby="profitTrendTitle">
@@ -809,7 +821,7 @@ function renderSummary(holdings) {
       : Number(d.price) - Number(d.change);
     if (isFinite(previousClose) && previousClose > 0) todayBase += previousClose * item.quantity;
     if (!bestD || pct > bestD.pct) {
-      bestD = { name: item.name, pct: pct, change: Number(d.change) };
+      bestD = { name: item.name, code: item.code, pct: pct, change: Number(d.change) };
     }
   }
   var tplp = tc > 0 ? (tpl / tc) * 100 : 0;
@@ -828,8 +840,10 @@ function renderSummary(holdings) {
   document.getElementById("todayPLPct").className = "sub " + el(todayPL);
 
   var bestStockEl = document.getElementById("bestStock");
+  var bestCodeEl = document.getElementById("bestCode");
   var bestPctEl = document.getElementById("bestPct");
   if (bestStockEl) bestStockEl.textContent = bestD ? bestD.name : "--";
+  if (bestCodeEl) bestCodeEl.textContent = bestD ? bestD.code : "--";
   if (bestPctEl) {
     if (bestD) {
       var sign = bestD.pct >= 0 ? "+" : "";
@@ -1024,7 +1038,7 @@ function parseYahooHistory(data) {
     var close = Number(quote.close[index]);
     if (isFinite(close)) points.push({ date: new Date(ts * 1000).toISOString().slice(0, 10), close: close });
   });
-  return points.slice(-5);
+  return points.slice(-6);
 }
 
 function fetchHistoryEndpoint(url) {
@@ -1064,7 +1078,7 @@ function snapshotHistoricalSeries(item) {
     return point && typeof point.date === 'string' && isFinite(Number(point.close));
   }).map(function(point) {
     return { date: point.date, close: Number(point.close) };
-  }).slice(-5);
+  }).slice(-6);
 }
 
 function formatTrendValue(value) {
@@ -1082,35 +1096,61 @@ function renderProfitTrend(holdings, results) {
   }
   var dateMap = {};
   valid.forEach(function(result) { result.points.forEach(function(point){ dateMap[point.date] = true; }); });
-  var dates = Object.keys(dateMap).sort().slice(-5);
-  var values = dates.map(function(date) {
-    return valid.reduce(function(total, result) {
-      var point = null;
-      result.points.forEach(function(candidate){ if (candidate.date <= date) point = candidate; });
-      return point ? total + (point.close - Number(result.item.cost || 0)) * Number(result.item.quantity || 0) : total;
-    }, 0);
-  });
-  if (dates.length < 2) {
+  var closeDates = Object.keys(dateMap).sort().slice(-6);
+  if (closeDates.length < 2) {
     frame.innerHTML = '<div class="profit-trend-status">[NOT ENOUGH HISTORY]</div>';
     return;
   }
-  var width = 760, height = 250, left = 58, right = 18, top = 20, bottom = 42;
+  var sessionDates = closeDates.slice(1);
+  var closeForDate = function(points, date) {
+    var point = null;
+    points.forEach(function(candidate) { if (candidate.date <= date) point = candidate; });
+    return point;
+  };
+  var values = sessionDates.map(function(date, index) {
+    var previousDate = closeDates[index];
+    return valid.reduce(function(total, result) {
+      var current = closeForDate(result.points, date);
+      var previous = closeForDate(result.points, previousDate);
+      return current && previous ? total + (current.close - previous.close) * Number(result.item.quantity || 0) : total;
+    }, 0);
+  });
+  var meta = document.getElementById('profitTrendMeta');
+  if (meta) meta.textContent = 'LAST ' + values.length + ' SESSIONS';
+  var width = 760, height = 250, left = 72, right = 18, top = 18, bottom = 42;
   var plotW = width - left - right, plotH = height - top - bottom;
-  var min = Math.min.apply(Math, values), max = Math.max.apply(Math, values);
-  var spread = max - min || Math.max(Math.abs(max), 1);
-  min -= spread * .12; max += spread * .12;
-  var x = function(index){ return left + (plotW * index / (values.length - 1)); };
+  var limit = Math.max.apply(Math, values.map(function(value) { return Math.abs(value); }).concat([1]));
+  limit = Math.max(1, Math.ceil(limit / 10) * 10);
+  var min = -limit, max = limit;
   var y = function(value){ return top + (max - value) * plotH / (max - min); };
-  var path = values.map(function(value, index){ return (index ? 'L' : 'M') + x(index).toFixed(1) + ' ' + y(value).toFixed(1); }).join(' ');
-  var mid = (min + max) / 2;
-  var lineClass = values[values.length - 1] >= values[0] ? 'up' : 'down';
-  var grid = [min, mid, max].map(function(value){ return '<line class="profit-trend-grid" x1="' + left + '" x2="' + (width - right) + '" y1="' + y(value).toFixed(1) + '" y2="' + y(value).toFixed(1) + '" />'; }).join('');
-  var labels = dates.map(function(date, index){ return '<text class="profit-trend-axis" text-anchor="middle" x="' + x(index).toFixed(1) + '" y="' + (height - 14) + '">' + date.slice(5).replace('-', '/') + '</text>'; }).join('');
-  var dots = values.map(function(value, index){ return '<circle class="profit-trend-dot' + (index === values.length - 1 ? ' latest' : '') + '" cx="' + x(index).toFixed(1) + '" cy="' + y(value).toFixed(1) + '" r="' + (index === values.length - 1 ? 5 : 3) + '" />'; }).join('');
+  var zeroY = y(0);
+  var ticks = [limit, 0, -limit];
+  var grid = ticks.map(function(value) {
+    var className = value === 0 ? 'profit-trend-zero' : 'profit-trend-grid';
+    return '<line class="' + className + '" x1="' + left + '" x2="' + (width - right) + '" y1="' + y(value).toFixed(1) + '" y2="' + y(value).toFixed(1) + '" />' +
+      '<text class="profit-trend-axis" text-anchor="end" x="' + (left - 10) + '" y="' + (y(value) + 3).toFixed(1) + '">' + formatTrendValue(value) + '</text>';
+  }).join('');
+  var step = plotW / values.length;
+  var barWidth = Math.max(12, Math.min(56, step * 0.58));
+  var bars = values.map(function(value, index) {
+    var x = left + step * index + (step - barWidth) / 2;
+    var heightValue = Math.max(2, Math.abs(y(value) - zeroY));
+    var barY = value >= 0 ? zeroY - heightValue : zeroY;
+    var className = value >= 0 ? 'up' : 'down';
+    return '<rect class="profit-trend-bar ' + className + '" x="' + x.toFixed(1) + '" y="' + barY.toFixed(1) + '" width="' + barWidth.toFixed(1) + '" height="' + heightValue.toFixed(1) + '" rx="2"><title>' + sessionDates[index] + ': ' + formatTrendValue(value) + '</title></rect>';
+  }).join('');
+  var labels = sessionDates.map(function(date, index) {
+    var x = left + step * index + step / 2;
+    return '<text class="profit-trend-axis" text-anchor="middle" x="' + x.toFixed(1) + '" y="' + (height - 14) + '">' + date.slice(5).replace('-', '/') + '</text>';
+  }).join('');
   var latest = values[values.length - 1];
-  frame.innerHTML = '<div class="profit-trend-value ' + (latest >= 0 ? 'up' : 'down') + '">' + formatTrendValue(latest) + '</div>' +
-    '<svg class="profit-trend-chart" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Daily portfolio profit and loss trend">' +
-    grid + '<path class="profit-trend-line ' + lineClass + '" d="' + path + '" />' + dots + labels + '</svg>';
+  var sessions = values.map(function(value, index) {
+    var className = value >= 0 ? 'up' : 'down';
+    return '<div class="profit-trend-session"><span class="profit-trend-session-date">' + sessionDates[index].slice(5).replace('-', '/') + '</span><span class="profit-trend-session-value ' + className + '">' + formatTrendValue(value) + '</span></div>';
+  }).join('');
+  frame.innerHTML = '<div class="profit-trend-summary"><span class="profit-trend-caption">Latest session</span><div class="profit-trend-value ' + (latest >= 0 ? 'up' : 'down') + '">' + formatTrendValue(latest) + '</div></div>' +
+    '<svg class="profit-trend-chart" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Daily portfolio profit and loss by session">' +
+    grid + bars + labels + '</svg><div class="profit-trend-sessions">' + sessions + '</div>';
 }
 
 async function refreshProfitTrend(holdings) {
