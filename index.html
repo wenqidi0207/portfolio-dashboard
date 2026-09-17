@@ -595,9 +595,11 @@ var historyRefreshInFlight = null;
 var watchlistQuoteCache = {};
 var SNAPSHOT_CACHE_KEY = "portfolio-market-snapshot-v1";
 var lastSnapshot = null;
+var snapshotHistory = {};
 try { historyCache = JSON.parse(localStorage.getItem(HISTORY_CACHE_KEY) || "{}"); } catch (e) { historyCache = {}; }
 try { watchlistQuoteCache = JSON.parse(localStorage.getItem(WATCHLIST_QUOTE_CACHE_KEY) || "{}"); } catch (e) { watchlistQuoteCache = {}; }
 try { lastSnapshot = JSON.parse(localStorage.getItem(SNAPSHOT_CACHE_KEY) || "null"); } catch (e) { lastSnapshot = null; }
+if (lastSnapshot && lastSnapshot.history) snapshotHistory = lastSnapshot.history;
 var fetchErrors = [];
 var fxCache = {};
 var fxLiveRates = {};
@@ -807,7 +809,7 @@ function renderSummary(holdings) {
       : Number(d.price) - Number(d.change);
     if (isFinite(previousClose) && previousClose > 0) todayBase += previousClose * item.quantity;
     if (!bestD || pct > bestD.pct) {
-      bestD = { name: item.name, pct: pct, dollar: dayDollar };
+      bestD = { name: item.name, pct: pct, change: Number(d.change) };
     }
   }
   var tplp = tc > 0 ? (tpl / tc) * 100 : 0;
@@ -831,8 +833,8 @@ function renderSummary(holdings) {
   if (bestPctEl) {
     if (bestD) {
       var sign = bestD.pct >= 0 ? "+" : "";
-      var ds = bestD.dollar >= 0 ? "+$" : "-$";
-      bestPctEl.textContent = ds + Math.abs(bestD.dollar).toFixed(2) + " (" + sign + fmt(bestD.pct) + "%)";
+      var ds = bestD.change >= 0 ? "+$" : "-$";
+      bestPctEl.textContent = ds + Math.abs(bestD.change).toFixed(2) + " (" + sign + fmt(bestD.pct) + "%)";
       bestPctEl.className = "sub " + (bestD.pct >= 0 ? "up" : "down");
     } else {
       bestPctEl.textContent = "--";
@@ -1022,7 +1024,7 @@ function parseYahooHistory(data) {
     var close = Number(quote.close[index]);
     if (isFinite(close)) points.push({ date: new Date(ts * 1000).toISOString().slice(0, 10), close: close });
   });
-  return points;
+  return points.slice(-5);
 }
 
 function fetchHistoryEndpoint(url) {
@@ -1041,8 +1043,8 @@ async function fetchHistoricalSeries(item) {
   if (cached && cached.savedAt && Date.now() - cached.savedAt < HISTORY_CACHE_TTL && cached.points && cached.points.length) {
     return { item: item, points: cached.points, cached: true };
   }
-  var target = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(key) + '?interval=1d&range=5d';
-  var backupTarget = 'https://query2.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(key) + '?interval=1d&range=5d';
+  var target = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(key) + '?interval=1d&range=1mo';
+  var backupTarget = 'https://query2.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(key) + '?interval=1d&range=1mo';
   var endpoints = [target, backupTarget, 'https://api.allorigins.win/raw?url=' + encodeURIComponent(target), 'https://corsproxy.io/?' + encodeURIComponent(target)];
   for (var i = 0; i < endpoints.length; i++) {
     var points = await fetchHistoryEndpoint(endpoints[i]);
@@ -1053,6 +1055,16 @@ async function fetchHistoricalSeries(item) {
     }
   }
   return { item: item, points: [] };
+}
+
+function snapshotHistoricalSeries(item) {
+  var points = snapshotHistory && snapshotHistory[item.code];
+  if (!Array.isArray(points)) return [];
+  return points.filter(function(point) {
+    return point && typeof point.date === 'string' && isFinite(Number(point.close));
+  }).map(function(point) {
+    return { date: point.date, close: Number(point.close) };
+  }).slice(-5);
 }
 
 function formatTrendValue(value) {
@@ -1105,15 +1117,33 @@ async function refreshProfitTrend(holdings) {
   var frame = document.getElementById('profitTrendFrame');
   if (!frame || !holdings.length) return;
   if (historyRefreshInFlight) return historyRefreshInFlight;
-  var cachedResults = holdings.map(function(item) {
+  var snapshotResults = holdings.map(function(item) {
+    var points = snapshotHistoricalSeries(item);
+    return points.length ? { item: item, points: points, snapshot: true } : null;
+  }).filter(Boolean);
+  if (snapshotResults.length === holdings.length) {
+    renderProfitTrend(holdings, snapshotResults);
+    return snapshotResults;
+  }
+  var snapshotCodes = {};
+  snapshotResults.forEach(function(result) { snapshotCodes[result.item.code] = true; });
+  var cachedResults = holdings.filter(function(item) { return !snapshotCodes[item.code]; }).map(function(item) {
     var cached = historyCache[historySymbol(item)];
     return cached && cached.savedAt && Date.now() - cached.savedAt < HISTORY_CACHE_TTL && cached.points && cached.points.length
       ? { item: item, points: cached.points, cached: true } : null;
   }).filter(Boolean);
-  if (cachedResults.length) renderProfitTrend(holdings, cachedResults);
+  var initialResults = snapshotResults.concat(cachedResults);
+  if (initialResults.length) renderProfitTrend(holdings, initialResults);
   else frame.innerHTML = '<div class="profit-trend-status">[LOADING HISTORY...]</div>';
-  historyRefreshInFlight = Promise.all(holdings.map(fetchHistoricalSeries))
-    .then(function(results) { renderProfitTrend(holdings, results); return results; })
+  var availableCodes = {};
+  initialResults.forEach(function(result) { availableCodes[result.item.code] = true; });
+  var missingHoldings = holdings.filter(function(item) { return !availableCodes[item.code]; });
+  historyRefreshInFlight = Promise.all(missingHoldings.map(fetchHistoricalSeries))
+    .then(function(results) {
+      var allResults = initialResults.concat(results);
+      renderProfitTrend(holdings, allResults);
+      return allResults;
+    })
     .finally(function() { historyRefreshInFlight = null; });
   return historyRefreshInFlight;
 }
@@ -1386,6 +1416,7 @@ async function fetchSnapshot() {
     snapshotAvailable = true;
     try { localStorage.setItem(SNAPSHOT_CACHE_KEY, JSON.stringify(snapshot)); } catch (e) {}
     priceCache = Object.assign({}, priceCache, snapshot.quotes || {});
+    snapshotHistory = snapshot.history || {};
     if (snapshot.fx) fxCache = snapshot.fx;
     var snapshotDate = snapshot.updatedAt ? new Date(snapshot.updatedAt) : null;
     var snapshotStale = !snapshotDate || !isFinite(snapshotDate.getTime()) || Date.now() - snapshotDate.getTime() > 8 * 60 * 60 * 1000;

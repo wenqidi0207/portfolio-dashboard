@@ -65,13 +65,28 @@ function yahooSymbol(item) {
   return item.code;
 }
 
+function yahooHistory(result) {
+  const timestamps = result.timestamp || [];
+  const closes = result.indicators?.quote?.[0]?.close || [];
+  const points = [];
+  for (let index = 0; index < timestamps.length; index += 1) {
+    const close = Number(closes[index]);
+    if (!Number.isFinite(close)) continue;
+    points.push({
+      date: new Date(Number(timestamps[index]) * 1000).toISOString().slice(0, 10),
+      close
+    });
+  }
+  return points.slice(-5);
+}
+
 async function yahooQuote(symbol) {
   const headers = { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' };
   const encoded = encodeURIComponent(symbol);
   let body;
   for (const host of ['query1.finance.yahoo.com', 'query2.finance.yahoo.com']) {
     try {
-      body = await get(`https://${host}/v8/finance/chart/${encoded}?interval=1d&range=5d`, headers);
+      body = await get(`https://${host}/v8/finance/chart/${encoded}?interval=1d&range=1mo`, headers);
       break;
     } catch (error) {
       if (host === 'query2.finance.yahoo.com') throw error;
@@ -83,6 +98,7 @@ async function yahooQuote(symbol) {
   const price = Number(meta.regularMarketPrice);
   const closes = result.indicators?.quote?.[0]?.close || [];
   const validCloses = closes.filter(value => value != null).map(Number).filter(value => Number.isFinite(value));
+  const history = yahooHistory(result);
   // Yahoo's chartPreviousClose is the close before the requested range, not
   // necessarily the previous trading session. Prefer the quote's explicit
   // daily change, then an explicit previous close, then the prior daily bar.
@@ -102,7 +118,8 @@ async function yahooQuote(symbol) {
     change: changeAvailable ? price - previous : null,
     changePct: changeAvailable ? ((price - previous) / previous) * 100 : null,
     changeAvailable,
-    source: 'Yahoo Finance'
+    source: 'Yahoo Finance',
+    history
   };
 }
 
@@ -144,11 +161,22 @@ async function main() {
   }
   if (!Object.keys(quotes).length && !Object.keys(fx).length) throw new Error('No market data returned');
   if (!Object.keys(quotes).length && items.length) throw new Error('No stock quotes returned; refusing to overwrite snapshot');
-  let previousQuotes = {};
-  try { previousQuotes = JSON.parse(fs.readFileSync('data/market.json', 'utf8')).quotes || {}; } catch (error) {}
-  const mergedQuotes = Object.assign({}, previousQuotes, quotes);
+  let previousSnapshot = {};
+  try { previousSnapshot = JSON.parse(fs.readFileSync('data/market.json', 'utf8')); } catch (error) {}
+  const previousQuotes = previousSnapshot.quotes || {};
+  const previousHistory = previousSnapshot.history || {};
+  const newHistory = {};
+  const cleanQuotes = {};
+  Object.entries(quotes).forEach(([code, quote]) => {
+    if (Array.isArray(quote.history) && quote.history.length) newHistory[code] = quote.history;
+    const cleanQuote = Object.assign({}, quote);
+    delete cleanQuote.history;
+    cleanQuotes[code] = cleanQuote;
+  });
+  const mergedQuotes = Object.assign({}, previousQuotes, cleanQuotes);
+  const mergedHistory = Object.assign({}, previousHistory, newHistory);
   fs.mkdirSync('data', { recursive: true });
-  fs.writeFileSync('data/market.json', `${JSON.stringify({ updatedAt: new Date().toISOString(), quotes: mergedQuotes, fx }, null, 2)}\n`);
+  fs.writeFileSync('data/market.json', `${JSON.stringify({ updatedAt: new Date().toISOString(), quotes: mergedQuotes, history: mergedHistory, fx }, null, 2)}\n`);
 }
 
 main().catch(error => { console.error(error); process.exitCode = 1; });
