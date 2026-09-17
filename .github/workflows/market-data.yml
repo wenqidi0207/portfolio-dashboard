@@ -11,6 +11,7 @@ concurrency:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   update:
@@ -38,6 +39,7 @@ jobs:
             fi
             git commit -m "chore: update market snapshot"
             if git push origin HEAD:main; then
+              gh workflow run pages.yml --ref main
               exit 0
             fi
             echo "Remote changed during attempt ${attempt}; retrying"
