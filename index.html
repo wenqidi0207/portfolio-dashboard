@@ -499,17 +499,25 @@ input[type=number]{-moz-appearance:textfield}
       .stock-price { font-size: 20px; }
       .stock-change { font-size: 10px; }
     }
-    .dashboard-insights { margin: 0 0 40px; }
+    .dashboard-insights { display: flex; flex-direction: column; gap: 30px; margin: 0 0 40px; }
     .profit-trend { margin: 0; }
     .profit-trend-header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
     .profit-trend-meta { color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .08em; }
-    .profit-trend-frame { border: 1px solid var(--border); border-radius: 6px; padding: 18px 20px 14px; background: var(--card); }
+    .profit-trend-frame { border: 1px solid var(--border); border-radius: 6px; padding: 18px 20px 16px; background: var(--card); }
     .profit-trend-summary { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 8px; }
     .profit-trend-caption { color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .08em; text-transform: uppercase; }
     .profit-trend-chart { width: 100%; height: 250px; display: block; overflow: visible; }
     .profit-trend-grid { stroke: var(--border); stroke-width: 1; vector-effect: non-scaling-stroke; }
     .profit-trend-zero { stroke: var(--text-dim); stroke-width: 1; vector-effect: non-scaling-stroke; }
     .profit-trend-axis { fill: var(--text-dim); font: 10px var(--label-font); letter-spacing: .03em; }
+    .profit-trend-line { fill: none; stroke: var(--text); stroke-width: 2.5; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
+    .profit-trend-line.up { stroke: var(--up); }
+    .profit-trend-line.down { stroke: var(--down); }
+    .profit-trend-dot { fill: var(--card); stroke: var(--text); stroke-width: 2; vector-effect: non-scaling-stroke; }
+    .profit-trend-dot.latest { fill: var(--text); }
+    .profit-trend-area { opacity: .08; }
+    .profit-trend-area.up { fill: var(--up); }
+    .profit-trend-area.down { fill: var(--down); }
     .profit-trend-bar { opacity: .88; }
     .profit-trend-bar.up { fill: var(--up); }
     .profit-trend-bar.down { fill: var(--down); }
@@ -532,9 +540,18 @@ input[type=number]{-moz-appearance:textfield}
     .dino-game-score { color: var(--text); font: 12px var(--data-font); }
     .dino-game-btn { border: 1px solid var(--border); border-radius: 4px; background: transparent; color: var(--text); font: 10px var(--label-font); letter-spacing: .05em; padding: 5px 8px; cursor: pointer; }
     .dino-game-btn:hover { border-color: var(--text); }
-    .dino-game-stage { padding: 12px 18px 18px; background: var(--bg); }
+    .dino-game-body { display: grid; grid-template-columns: minmax(0, 1fr) 170px; gap: 16px; padding: 16px 18px 18px; background: var(--bg); }
+    .dino-game-stage { min-width: 0; }
     .dino-game-canvas { display: block; width: 100%; height: auto; min-height: 150px; border: 1px solid var(--border); background: var(--card); cursor: pointer; image-rendering: pixelated; }
-    @media (max-width: 520px) { .dino-game-header { padding: 12px 14px; } .dino-game-stage { padding: 10px 12px 12px; } .dino-game-status { display: none; } .dino-game-canvas { min-height: 130px; } }
+    .dino-leaderboard { border-left: 1px solid var(--border); padding-left: 16px; }
+    .dino-leaderboard-title { color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 10px; }
+    .dino-leaderboard-list { display: flex; flex-direction: column; gap: 8px; }
+    .dino-leaderboard-row { display: grid; grid-template-columns: 20px 1fr auto; gap: 6px; align-items: center; font: 11px var(--data-font); }
+    .dino-leaderboard-rank { color: var(--text-dim); }
+    .dino-leaderboard-row.current .dino-leaderboard-score { color: var(--up); }
+    .dino-leaderboard-empty { color: var(--text-dim); font: 10px var(--label-font); line-height: 1.5; }
+    @media (max-width: 680px) { .dino-game-body { grid-template-columns: 1fr; gap: 14px; } .dino-leaderboard { border-left: 0; border-top: 1px solid var(--border); padding: 14px 0 0; } .dino-leaderboard-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 520px) { .dino-game-header { padding: 12px 14px; } .dino-game-body { padding: 12px; } .dino-game-status { display: none; } .dino-game-canvas { min-height: 130px; } }
     .best-stock-name { font-family: 'Space Grotesk', sans-serif !important; font-size: 18px !important; font-weight: 500 !important; line-height: 1.25; }
     .best-code { color: var(--text-dim); font: 11px var(--data-font); letter-spacing: .06em; margin-top: 3px; }
     :root[data-theme="dark"] .error-banner { background: transparent; border-color: var(--down); }
@@ -590,7 +607,7 @@ input[type=number]{-moz-appearance:textfield}
           <span class="dino-game-status" id="dinoGameStatus">SPACE / TAP TO START</span>
           <div class="dino-game-actions"><span class="dino-game-score" id="dinoGameScore">00000</span><button class="dino-game-btn" id="dinoGameRestart" type="button">Restart</button></div>
         </div>
-        <div class="dino-game-stage"><canvas class="dino-game-canvas" id="dinoGameCanvas" width="900" height="220" tabindex="0" aria-label="Market Runner mini game"></canvas></div>
+        <div class="dino-game-body"><div class="dino-game-stage"><canvas class="dino-game-canvas" id="dinoGameCanvas" width="900" height="220" tabindex="0" aria-label="Market Runner mini game"></canvas></div><aside class="dino-leaderboard" aria-label="Market Runner high scores"><div class="dino-leaderboard-title">Top Runs</div><div class="dino-leaderboard-list" id="dinoLeaderboardList"></div></aside></div>
       </section>
     </div>
     <div class="section-title">Holdings</div>
@@ -1281,11 +1298,16 @@ function renderProfitTrend(holdings, results) {
   }).join('');
   var path = values.map(function(value, index){ return (index ? 'L' : 'M') + x(index).toFixed(1) + ' ' + y(value).toFixed(1); }).join(' ');
   var lineClass = values[values.length - 1] >= values[0] ? 'up' : 'down';
-  var dots = '<circle class="profit-trend-dot latest" cx="' + x(values.length - 1).toFixed(1) + '" cy="' + y(values[values.length - 1]).toFixed(1) + '" r="4"><title>' + dates[dates.length - 1] + ': ' + formatTrendValue(values[values.length - 1]) + '</title></circle>';
+  var areaPath = path + ' L ' + x(values.length - 1).toFixed(1) + ' ' + (height - bottom).toFixed(1) + ' L ' + x(0).toFixed(1) + ' ' + (height - bottom).toFixed(1) + ' Z';
+  var dots = values.map(function(value, index) {
+    var latestClass = index === values.length - 1 ? ' latest' : '';
+    var radius = index === values.length - 1 ? 4 : 2;
+    return '<circle class="profit-trend-dot' + latestClass + '" cx="' + x(index).toFixed(1) + '" cy="' + y(value).toFixed(1) + '" r="' + radius + '"><title>' + dates[index] + ': ' + formatTrendValue(value) + '</title></circle>';
+  }).join('');
   var latest = values[values.length - 1];
   frame.innerHTML = '<div class="profit-trend-summary"><span class="profit-trend-caption">Latest total profit</span><div class="profit-trend-value ' + (latest >= 0 ? 'up' : 'down') + '">' + formatTrendValue(latest) + '</div></div>' +
     '<svg class="profit-trend-chart" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Total portfolio profit trend">' +
-    grid + '<path class="profit-trend-line ' + lineClass + '" d="' + path + '" />' + dots + '</svg>';
+    grid + '<path class="profit-trend-area ' + lineClass + '" d="' + areaPath + '" />' + '<path class="profit-trend-line ' + lineClass + '" d="' + path + '" />' + dots + '</svg>';
 }
 
 function initDinoGame() {
@@ -1293,10 +1315,37 @@ function initDinoGame() {
   var restart = document.getElementById('dinoGameRestart');
   var scoreEl = document.getElementById('dinoGameScore');
   var statusEl = document.getElementById('dinoGameStatus');
+  var leaderboardEl = document.getElementById('dinoLeaderboardList');
   if (!canvas || !canvas.getContext) return;
   var ctx = canvas.getContext('2d');
   var width = canvas.width, height = canvas.height, ground = 184;
   var player, obstacles, score, speed, spawnIn, state, lastTime;
+  var leaderboardKey = 'portfolio-dino-leaderboard-v1';
+
+  function readLeaderboard() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(leaderboardKey) || '[]');
+      return Array.isArray(saved) ? saved.filter(function(value) { return isFinite(Number(value)); }).map(Number).sort(function(a, b) { return b - a; }).slice(0, 5) : [];
+    } catch (error) { return []; }
+  }
+
+  function renderLeaderboard(currentScore) {
+    if (!leaderboardEl) return;
+    var scores = readLeaderboard();
+    if (currentScore > 0 && scores.indexOf(currentScore) === -1) scores = scores.concat([currentScore]).sort(function(a, b) { return b - a; }).slice(0, 5);
+    leaderboardEl.innerHTML = scores.length ? scores.map(function(value, index) {
+      var current = currentScore > 0 && value === currentScore ? ' current' : '';
+      return '<div class="dino-leaderboard-row' + current + '"><span class="dino-leaderboard-rank">' + String(index + 1).padStart(2, '0') + '</span><span>RUN</span><span class="dino-leaderboard-score">' + String(value).padStart(5, '0') + '</span></div>';
+    }).join('') : '<div class="dino-leaderboard-empty">No runs yet.<br>Start your first run.</div>';
+  }
+
+  function saveScore() {
+    var currentScore = Math.floor(score);
+    if (!currentScore) return;
+    var scores = readLeaderboard().concat([currentScore]).sort(function(a, b) { return b - a; }).slice(0, 5);
+    try { localStorage.setItem(leaderboardKey, JSON.stringify(scores)); } catch (error) {}
+    renderLeaderboard(currentScore);
+  }
 
   function reset() {
     player = { x: 86, y: ground - 32, w: 26, h: 32, vy: 0, grounded: true };
@@ -1308,6 +1357,7 @@ function initDinoGame() {
     lastTime = 0;
     scoreEl.textContent = '00000';
     statusEl.textContent = 'SPACE / TAP TO START';
+    renderLeaderboard(0);
     draw();
   }
 
@@ -1387,6 +1437,7 @@ function initDinoGame() {
     if (obstacles.some(function(obstacle) { return collide(player, obstacle); })) {
       state = 'gameover';
       statusEl.textContent = 'GAME OVER';
+      saveScore();
     }
     scoreEl.textContent = String(Math.floor(score)).padStart(5, '0');
     draw();
@@ -1402,6 +1453,7 @@ function initDinoGame() {
   });
   restart.addEventListener('click', function() { reset(); canvas.focus(); });
   reset();
+  renderLeaderboard(0);
 }
 
 async function refreshProfitTrend(holdings) {
