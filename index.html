@@ -463,6 +463,31 @@ input[type=number]{-moz-appearance:textfield}
     .fx-rate-val { font-size: 20px; font-weight: 400; line-height: 1.25; white-space: nowrap; letter-spacing: 0; }
     .fx-details-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
     .fx-details-row span { white-space: nowrap; }
+    .fx-market-board { margin: 24px 0 40px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); }
+    .fx-market-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+    .fx-market-title { color: var(--text); font: 11px var(--label-font); letter-spacing: .08em; text-transform: uppercase; }
+    .fx-market-status { display: flex; align-items: center; gap: 10px; color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .04em; text-transform: uppercase; }
+    .fx-market-live { color: var(--up); }
+    .fx-market-refresh { border: 1px solid var(--border); border-radius: 4px; background: transparent; color: var(--text); font: 10px var(--label-font); letter-spacing: .05em; padding: 5px 8px; cursor: pointer; }
+    .fx-market-refresh:hover { border-color: var(--text); }
+    .fx-market-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .fx-market-row { min-width: 0; padding: 16px 18px 14px; border-right: 1px solid var(--border); }
+    .fx-market-row:last-child { border-right: 0; }
+    .fx-market-pair { font: 12px var(--data-font); font-weight: 700; letter-spacing: .05em; }
+    .fx-market-label { color: var(--text-dim); font: 10px var(--label-font); margin-top: 4px; }
+    .fx-market-data { display: grid; grid-template-columns: minmax(0, 1fr) 76px; gap: 8px; align-items: center; margin-top: 12px; }
+    .fx-market-rate { font: 22px var(--data-font); white-space: nowrap; }
+    .fx-market-change { font: 10px var(--data-font); margin-top: 5px; }
+    .fx-market-change.up { color: var(--up); }
+    .fx-market-change.down { color: var(--down); }
+    .fx-market-change.neutral { color: var(--text-dim); }
+    .fx-market-spark { width: 76px; height: 34px; overflow: visible; }
+    .fx-market-spark-line { fill: none; stroke: var(--text); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+    .fx-market-spark-line.up { stroke: var(--up); }
+    .fx-market-spark-line.down { stroke: var(--down); }
+    .fx-market-footer { display: flex; justify-content: space-between; gap: 12px; padding: 10px 20px; border-top: 1px solid var(--border); color: var(--text-dim); font: 10px var(--label-font); }
+    @media (max-width: 820px) { .fx-market-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fx-market-row:nth-child(2) { border-right: 0; } .fx-market-row:nth-child(-n+2) { border-bottom: 1px solid var(--border); } }
+    @media (max-width: 520px) { .fx-market-header, .fx-market-footer { padding-left: 14px; padding-right: 14px; } .fx-market-row { padding: 14px 12px; } .fx-market-rate { font-size: 18px; } .fx-market-data { grid-template-columns: minmax(0, 1fr) 64px; } .fx-market-spark { width: 64px; } }
     .search-suggestions { box-shadow: none; border-radius: 6px; }
     .watchlist-input, .fx-select-custom, .fx-control input, .fx-control select { border-radius: 6px; font-family: var(--data-font); }
     .watchlist-input::placeholder { font-family: 'Space Grotesk', sans-serif; color: var(--text-dim); }
@@ -499,6 +524,17 @@ input[type=number]{-moz-appearance:textfield}
     .profit-trend-value { font: 20px var(--data-font); }
     .profit-trend-value.up { color: var(--up); }
     .profit-trend-value.down { color: var(--down); }
+    .dino-game { border: 1px solid var(--border); border-radius: 6px; background: var(--card); overflow: hidden; }
+    .dino-game-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+    .dino-game-title { font: 11px var(--label-font); letter-spacing: .08em; text-transform: uppercase; }
+    .dino-game-status { color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .05em; }
+    .dino-game-actions { display: flex; align-items: center; gap: 10px; }
+    .dino-game-score { color: var(--text); font: 12px var(--data-font); }
+    .dino-game-btn { border: 1px solid var(--border); border-radius: 4px; background: transparent; color: var(--text); font: 10px var(--label-font); letter-spacing: .05em; padding: 5px 8px; cursor: pointer; }
+    .dino-game-btn:hover { border-color: var(--text); }
+    .dino-game-stage { padding: 12px 18px 18px; background: var(--bg); }
+    .dino-game-canvas { display: block; width: 100%; height: auto; min-height: 150px; border: 1px solid var(--border); background: var(--card); cursor: pointer; image-rendering: pixelated; }
+    @media (max-width: 520px) { .dino-game-header { padding: 12px 14px; } .dino-game-stage { padding: 10px 12px 12px; } .dino-game-status { display: none; } .dino-game-canvas { min-height: 130px; } }
     .best-stock-name { font-family: 'Space Grotesk', sans-serif !important; font-size: 18px !important; font-weight: 500 !important; line-height: 1.25; }
     .best-code { color: var(--text-dim); font: 11px var(--data-font); letter-spacing: .06em; margin-top: 3px; }
     :root[data-theme="dark"] .error-banner { background: transparent; border-color: var(--down); }
@@ -541,12 +577,20 @@ input[type=number]{-moz-appearance:textfield}
     <div class="dashboard-insights">
       <section class="profit-trend" aria-labelledby="profitTrendTitle">
         <div class="profit-trend-header">
-          <div class="section-title" id="profitTrendTitle" style="margin-bottom:0">Daily P/L</div>
-          <span class="profit-trend-meta" id="profitTrendMeta">LAST 5 SESSIONS</span>
+          <div class="section-title" id="profitTrendTitle" style="margin-bottom:0">Total Profit</div>
+          <span class="profit-trend-meta" id="profitTrendMeta">TOTAL PROFIT TREND</span>
         </div>
         <div class="profit-trend-frame" id="profitTrendFrame">
           <div class="profit-trend-status" id="profitTrendStatus">[LOADING...]</div>
         </div>
+      </section>
+      <section class="dino-game" aria-labelledby="dinoGameTitle">
+        <div class="dino-game-header">
+          <span class="dino-game-title" id="dinoGameTitle">Market Runner</span>
+          <span class="dino-game-status" id="dinoGameStatus">SPACE / TAP TO START</span>
+          <div class="dino-game-actions"><span class="dino-game-score" id="dinoGameScore">00000</span><button class="dino-game-btn" id="dinoGameRestart" type="button">Restart</button></div>
+        </div>
+        <div class="dino-game-stage"><canvas class="dino-game-canvas" id="dinoGameCanvas" width="900" height="220" tabindex="0" aria-label="Market Runner mini game"></canvas></div>
       </section>
     </div>
     <div class="section-title">Holdings</div>
@@ -592,6 +636,14 @@ input[type=number]{-moz-appearance:textfield}
       </div>
     </div>
     <div class="fx-grid" id="fxGrid"></div>
+    <section class="fx-market-board" aria-labelledby="fxMarketTitle">
+      <div class="fx-market-header">
+        <span class="fx-market-title" id="fxMarketTitle">FX Market Snapshot</span>
+        <div class="fx-market-status"><span class="fx-market-live">● Live</span><span id="fxSnapshotSync">Sync --</span><button class="fx-market-refresh" id="fxSnapshotRefresh" type="button">Refresh</button></div>
+      </div>
+      <div class="fx-market-list" id="fxMarketList"></div>
+      <div class="fx-market-footer"><span>Reference rates • 30 min cache</span><span id="fxSnapshotSource">Source: --</span></div>
+    </section>
   </div>
 
   <script>
@@ -617,6 +669,9 @@ var fxCache = {};
 var fxLiveRates = {};
 var allUsdRates = {};
 var currentPairRate = 1;
+var FX_SNAPSHOT_KEY = "portfolio-fx-snapshot-v1";
+var fxSnapshotHistory = {};
+try { fxSnapshotHistory = JSON.parse(localStorage.getItem(FX_SNAPSHOT_KEY) || "{}"); } catch (e) { fxSnapshotHistory = {}; }
 
 var CURRENCY_LIST = ["USD","CNY","HKD","EUR","GBP","JPY","KRW","AUD","CAD","SGD","CHF","NZD","INR","THB","MYR","PHP","IDR","VND","BRL","MXN","RUB","TRY","ZAR","SAR","AED"];
 
@@ -924,6 +979,8 @@ async function refreshFXData() {
   if (lbl) lbl.textContent = rate ? ("1 " + from + " = " + fmt(rate, 4) + " " + to) : "[UNAVAILABLE]";
   syncConversion("from");
   renderAllFXCards();
+  recordFXSnapshot();
+  renderFXSnapshot();
 }
 
 function syncConversion(source) {
@@ -975,6 +1032,77 @@ function renderAllFXCards() {
     "</div>";
   }
   grid.innerHTML = html;
+}
+
+function fxSnapshotPairs() {
+  return [
+    { from: "EUR", to: "CNY", label: "1 欧元" },
+    { from: "USD", to: "CNY", label: "1 美元" },
+    { from: "JPY", to: "CNY", label: "100 日元", multiplier: 100 },
+    { from: "KRW", to: "CNY", label: "100 韩元", multiplier: 100 }
+  ];
+}
+
+function recordFXSnapshot() {
+  var now = new Date();
+  var stamp = now.toISOString();
+  fxSnapshotPairs().forEach(function(pair) {
+    var rate = getRateBetween(pair.from, pair.to);
+    if (!isFinite(rate) || rate <= 0) return;
+    var displayRate = rate * (pair.multiplier || 1);
+    var key = pair.from + pair.to;
+    var series = Array.isArray(fxSnapshotHistory[key]) ? fxSnapshotHistory[key] : [];
+    series.push({ t: stamp, value: displayRate });
+    fxSnapshotHistory[key] = series.slice(-24);
+  });
+  try { localStorage.setItem(FX_SNAPSHOT_KEY, JSON.stringify(fxSnapshotHistory)); } catch (e) {}
+}
+
+function fxSparkline(values, direction) {
+  if (!values.length) return '<svg class="fx-market-spark" viewBox="0 0 76 34" aria-hidden="true"><path class="fx-market-spark-line" d="M2 17 L74 17" /></svg>';
+  var min = Math.min.apply(Math, values), max = Math.max.apply(Math, values);
+  var spread = max - min || Math.max(Math.abs(max) * 0.002, 0.0001);
+  var points = values.map(function(value, index) {
+    var x = values.length === 1 ? 38 : 2 + index * 72 / (values.length - 1);
+    var y = 29 - (value - min) * 24 / spread;
+    return x.toFixed(1) + ',' + y.toFixed(1);
+  }).join(' ');
+  return '<svg class="fx-market-spark" viewBox="0 0 76 34" aria-hidden="true"><polyline class="fx-market-spark-line ' + direction + '" points="' + points + '" /></svg>';
+}
+
+function renderFXSnapshot() {
+  var list = document.getElementById("fxMarketList");
+  if (!list) return;
+  var pairs = fxSnapshotPairs();
+  var html = "";
+  var hasData = false;
+  pairs.forEach(function(pair) {
+    var key = pair.from + pair.to;
+    var series = Array.isArray(fxSnapshotHistory[key]) ? fxSnapshotHistory[key] : [];
+    var values = series.map(function(point) { return Number(point.value); }).filter(function(value) { return isFinite(value); });
+    var current = values.length ? values[values.length - 1] : null;
+    var previous = values.length > 1 ? values[values.length - 2] : null;
+    var change = current != null && previous != null ? current - previous : null;
+    var changePct = change != null && previous ? (change / previous) * 100 : null;
+    var direction = change == null || Math.abs(change) < 1e-12 ? "neutral" : (change > 0 ? "up" : "down");
+    var sign = change != null && change >= 0 ? "+" : "";
+    if (current != null) hasData = true;
+    html += '<article class="fx-market-row"><div class="fx-market-pair">' + pair.from + ' / ' + pair.to + '</div>' +
+      '<div class="fx-market-label">' + pair.label + '</div><div class="fx-market-data">' +
+      '<div>' +
+      '<div class="fx-market-rate">' + (current != null ? fmt(current, 4) : "--") + '</div>' +
+      '<div class="fx-market-change ' + direction + '">' + (changePct != null ? sign + fmt(changePct, 2) + '% vs last sync' : '▲ 0.00%') + '</div>' +
+      '</div>' + fxSparkline(values, direction) + '</div></article>';
+  });
+  list.innerHTML = hasData ? html : '<div class="profit-trend-status" style="grid-column:1/-1;min-height:120px">[WAITING FOR LIVE RATES]</div>';
+  var sync = document.getElementById("fxSnapshotSync");
+  var latest = Object.keys(fxSnapshotHistory).reduce(function(found, key) {
+    var series = fxSnapshotHistory[key];
+    return Array.isArray(series) && series.length && (!found || series[series.length - 1].t > found) ? series[series.length - 1].t : found;
+  }, null);
+  if (sync) sync.textContent = latest ? "Sync " + new Date(latest).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Sync --";
+  var source = document.getElementById("fxSnapshotSource");
+  if (source) source.textContent = "Source: live exchange rates";
 }
 
 function parseYahooQuote(data) {
@@ -1054,7 +1182,7 @@ function parseYahooHistory(data) {
     var close = Number(quote.close[index]);
     if (isFinite(close)) points.push({ date: formatMarketDate(ts, result.meta && result.meta.exchangeTimezoneName), close: close });
   });
-  return points.slice(-6);
+  return points.slice(-60);
 }
 
 function fetchHistoryEndpoint(url) {
@@ -1073,8 +1201,8 @@ async function fetchHistoricalSeries(item) {
   if (cached && cached.savedAt && Date.now() - cached.savedAt < HISTORY_CACHE_TTL && cached.points && cached.points.length) {
     return { item: item, points: cached.points, cached: true };
   }
-  var target = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(key) + '?interval=1d&range=1mo';
-  var backupTarget = 'https://query2.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(key) + '?interval=1d&range=1mo';
+  var target = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(key) + '?interval=1d&range=3mo';
+  var backupTarget = 'https://query2.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(key) + '?interval=1d&range=3mo';
   var endpoints = [target, backupTarget, 'https://api.allorigins.win/raw?url=' + encodeURIComponent(target), 'https://corsproxy.io/?' + encodeURIComponent(target)];
   for (var i = 0; i < endpoints.length; i++) {
     var points = await fetchHistoryEndpoint(endpoints[i]);
@@ -1094,7 +1222,7 @@ function snapshotHistoricalSeries(item) {
     return point && typeof point.date === 'string' && isFinite(Number(point.close));
   }).map(function(point) {
     return { date: point.date, close: Number(point.close) };
-  }).slice(-6);
+  }).slice(-60);
 }
 
 function formatTrendValue(value) {
@@ -1112,70 +1240,168 @@ function renderProfitTrend(holdings, results) {
   }
   var dateMap = {};
   valid.forEach(function(result) { result.points.forEach(function(point){ dateMap[point.date] = true; }); });
-  var closeDates = Object.keys(dateMap).sort().slice(-6);
-  if (closeDates.length < 2) {
+  var dates = Object.keys(dateMap).sort().slice(-60);
+  if (dates.length < 2) {
     frame.innerHTML = '<div class="profit-trend-status">[NOT ENOUGH HISTORY]</div>';
     return;
   }
-  var sessionDates = closeDates.slice(1);
   var closeForDate = function(points, date) {
     var point = null;
     points.forEach(function(candidate) { if (candidate.date <= date) point = candidate; });
     return point;
   };
-  var values = sessionDates.map(function(date, index) {
-    var previousDate = closeDates[index];
+  var values = dates.map(function(date) {
     return valid.reduce(function(total, result) {
-      var current = closeForDate(result.points, date);
-      var previous = closeForDate(result.points, previousDate);
-      return current && previous ? total + (current.close - previous.close) * Number(result.item.quantity || 0) : total;
+      var point = closeForDate(result.points, date);
+      return point ? total + (point.close - Number(result.item.cost || 0)) * Number(result.item.quantity || 0) : total;
     }, 0);
   });
-  var liveTodayPL = 0;
-  var hasLiveTodayPL = false;
+  var liveTotal = 0;
+  var hasLiveTotal = false;
   holdings.forEach(function(item) {
     var quote = normalizeQuote(priceCache[item.code]);
-    if (!hasQuoteChange(quote)) return;
-    liveTodayPL += Number(quote.change) * Number(item.quantity || 0);
-    hasLiveTodayPL = true;
+    if (!quote || quote.price == null || !isFinite(Number(quote.price))) return;
+    liveTotal += (Number(quote.price) - Number(item.cost || 0)) * Number(item.quantity || 0);
+    hasLiveTotal = true;
   });
-  if (hasLiveTodayPL) values[values.length - 1] = liveTodayPL;
+  if (hasLiveTotal) values[values.length - 1] = liveTotal;
   var meta = document.getElementById('profitTrendMeta');
-  if (meta) meta.textContent = 'LAST ' + values.length + ' SESSIONS';
-  var width = 760, height = 250, left = 72, right = 18, top = 18, bottom = 42;
+  if (meta) meta.textContent = 'TOTAL PROFIT • ' + values.length + ' SESSIONS';
+  var width = 760, height = 250, left = 70, right = 18, top = 18, bottom = 18;
   var plotW = width - left - right, plotH = height - top - bottom;
-  var limit = Math.max.apply(Math, values.map(function(value) { return Math.abs(value); }).concat([1]));
-  limit = Math.max(1, Math.ceil(limit / 10) * 10);
-  var min = -limit, max = limit;
+  var min = Math.min.apply(Math, values), max = Math.max.apply(Math, values);
+  var spread = max - min || Math.max(Math.abs(max), 1);
+  min -= spread * .12; max += spread * .12;
   var y = function(value){ return top + (max - value) * plotH / (max - min); };
-  var zeroY = y(0);
-  var ticks = [limit, 0, -limit];
+  var x = function(index){ return left + plotW * index / (values.length - 1); };
+  var ticks = [max, (min + max) / 2, min];
   var grid = ticks.map(function(value) {
-    var className = value === 0 ? 'profit-trend-zero' : 'profit-trend-grid';
-    return '<line class="' + className + '" x1="' + left + '" x2="' + (width - right) + '" y1="' + y(value).toFixed(1) + '" y2="' + y(value).toFixed(1) + '" />' +
+    return '<line class="profit-trend-grid" x1="' + left + '" x2="' + (width - right) + '" y1="' + y(value).toFixed(1) + '" y2="' + y(value).toFixed(1) + '" />' +
       '<text class="profit-trend-axis" text-anchor="end" x="' + (left - 10) + '" y="' + (y(value) + 3).toFixed(1) + '">' + formatTrendValue(value) + '</text>';
   }).join('');
-  var step = plotW / values.length;
-  var barWidth = Math.max(12, Math.min(56, step * 0.58));
-  var bars = values.map(function(value, index) {
-    var x = left + step * index + (step - barWidth) / 2;
-    var heightValue = Math.max(2, Math.abs(y(value) - zeroY));
-    var barY = value >= 0 ? zeroY - heightValue : zeroY;
-    var className = value >= 0 ? 'up' : 'down';
-    return '<rect class="profit-trend-bar ' + className + '" x="' + x.toFixed(1) + '" y="' + barY.toFixed(1) + '" width="' + barWidth.toFixed(1) + '" height="' + heightValue.toFixed(1) + '" rx="2"><title>' + sessionDates[index] + ': ' + formatTrendValue(value) + '</title></rect>';
-  }).join('');
-  var labels = sessionDates.map(function(date, index) {
-    var x = left + step * index + step / 2;
-    return '<text class="profit-trend-axis" text-anchor="middle" x="' + x.toFixed(1) + '" y="' + (height - 14) + '">' + date.slice(5).replace('-', '/') + '</text>';
-  }).join('');
+  var path = values.map(function(value, index){ return (index ? 'L' : 'M') + x(index).toFixed(1) + ' ' + y(value).toFixed(1); }).join(' ');
+  var lineClass = values[values.length - 1] >= values[0] ? 'up' : 'down';
+  var dots = '<circle class="profit-trend-dot latest" cx="' + x(values.length - 1).toFixed(1) + '" cy="' + y(values[values.length - 1]).toFixed(1) + '" r="4"><title>' + dates[dates.length - 1] + ': ' + formatTrendValue(values[values.length - 1]) + '</title></circle>';
   var latest = values[values.length - 1];
-  var sessions = values.map(function(value, index) {
-    var className = value >= 0 ? 'up' : 'down';
-    return '<div class="profit-trend-session"><span class="profit-trend-session-date">' + sessionDates[index].slice(5).replace('-', '/') + '</span><span class="profit-trend-session-value ' + className + '">' + formatTrendValue(value) + '</span></div>';
-  }).join('');
-  frame.innerHTML = '<div class="profit-trend-summary"><span class="profit-trend-caption">Latest session</span><div class="profit-trend-value ' + (latest >= 0 ? 'up' : 'down') + '">' + formatTrendValue(latest) + '</div></div>' +
-    '<svg class="profit-trend-chart" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Daily portfolio profit and loss by session">' +
-    grid + bars + labels + '</svg><div class="profit-trend-sessions">' + sessions + '</div>';
+  frame.innerHTML = '<div class="profit-trend-summary"><span class="profit-trend-caption">Latest total profit</span><div class="profit-trend-value ' + (latest >= 0 ? 'up' : 'down') + '">' + formatTrendValue(latest) + '</div></div>' +
+    '<svg class="profit-trend-chart" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Total portfolio profit trend">' +
+    grid + '<path class="profit-trend-line ' + lineClass + '" d="' + path + '" />' + dots + '</svg>';
+}
+
+function initDinoGame() {
+  var canvas = document.getElementById('dinoGameCanvas');
+  var restart = document.getElementById('dinoGameRestart');
+  var scoreEl = document.getElementById('dinoGameScore');
+  var statusEl = document.getElementById('dinoGameStatus');
+  if (!canvas || !canvas.getContext) return;
+  var ctx = canvas.getContext('2d');
+  var width = canvas.width, height = canvas.height, ground = 184;
+  var player, obstacles, score, speed, spawnIn, state, lastTime;
+
+  function reset() {
+    player = { x: 86, y: ground - 32, w: 26, h: 32, vy: 0, grounded: true };
+    obstacles = [];
+    score = 0;
+    speed = 300;
+    spawnIn = .9;
+    state = 'idle';
+    lastTime = 0;
+    scoreEl.textContent = '00000';
+    statusEl.textContent = 'SPACE / TAP TO START';
+    draw();
+  }
+
+  function start() {
+    if (state === 'gameover') reset();
+    if (state === 'idle') {
+      state = 'running';
+      statusEl.textContent = 'RUNNING';
+      lastTime = performance.now();
+      requestAnimationFrame(loop);
+    }
+    jump();
+  }
+
+  function jump() {
+    if (state !== 'running') return;
+    if (player.grounded) {
+      player.vy = -560;
+      player.grounded = false;
+    }
+  }
+
+  function collide(a, b) {
+    return a.x < b.x + b.w - 3 && a.x + a.w - 3 > b.x && a.y < b.y + b.h && a.y + a.h > b.y + 2;
+  }
+
+  function spawn() {
+    var tall = Math.random() > .55;
+    obstacles.push({ x: width + 12, y: ground - (tall ? 42 : 28), w: tall ? 18 : 24, h: tall ? 42 : 28, tall: tall });
+    spawnIn = Math.max(.55, 1.25 - (speed - 300) / 900) + Math.random() * .55;
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--card').trim() || '#111';
+    ctx.fillRect(0, 0, width, height);
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border').trim() || '#222';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, ground + .5); ctx.lineTo(width, ground + .5); ctx.stroke();
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-dim').trim() || '#999';
+    for (var i = 0; i < 18; i++) {
+      var dashX = (i * 67 + Math.floor(score * 3) % 67) % width;
+      ctx.fillRect(dashX, ground + 13, 26, 1);
+    }
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#eee';
+    ctx.fillRect(player.x, player.y, player.w, player.h);
+    ctx.fillRect(player.x + 18, player.y - 7, 13, 12);
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--card').trim() || '#111';
+    ctx.fillRect(player.x + 25, player.y - 4, 3, 3);
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--up').trim() || '#4a9e5c';
+    obstacles.forEach(function(obstacle) {
+      ctx.fillRect(obstacle.x, obstacle.y, obstacle.w, obstacle.h);
+      if (obstacle.tall) { ctx.fillRect(obstacle.x - 7, obstacle.y + 11, 7, 4); ctx.fillRect(obstacle.x + obstacle.w, obstacle.y + 20, 7, 4); }
+    });
+    if (state === 'idle' || state === 'gameover') {
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-dim').trim() || '#999';
+      ctx.font = '12px Space Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(state === 'gameover' ? 'GAME OVER • TAP TO RESTART' : 'MARKET RUNNER', width / 2, 84);
+      ctx.textAlign = 'start';
+    }
+  }
+
+  function loop(now) {
+    if (state !== 'running') return;
+    var dt = Math.min(.032, (now - lastTime) / 1000 || 0);
+    lastTime = now;
+    score += dt * 10;
+    speed += dt * 4;
+    spawnIn -= dt;
+    if (spawnIn <= 0) spawn();
+    player.vy += 1500 * dt;
+    player.y += player.vy * dt;
+    if (player.y >= ground - player.h) { player.y = ground - player.h; player.vy = 0; player.grounded = true; }
+    obstacles.forEach(function(obstacle) { obstacle.x -= speed * dt; });
+    obstacles = obstacles.filter(function(obstacle) { return obstacle.x + obstacle.w > -10; });
+    if (obstacles.some(function(obstacle) { return collide(player, obstacle); })) {
+      state = 'gameover';
+      statusEl.textContent = 'GAME OVER';
+    }
+    scoreEl.textContent = String(Math.floor(score)).padStart(5, '0');
+    draw();
+    if (state === 'running') requestAnimationFrame(loop);
+  }
+
+  canvas.addEventListener('click', start);
+  canvas.addEventListener('keydown', function(event) {
+    if (event.code === 'Space' || event.code === 'ArrowUp') { event.preventDefault(); start(); }
+  });
+  document.addEventListener('keydown', function(event) {
+    if ((event.code === 'Space' || event.code === 'ArrowUp') && document.activeElement !== document.getElementById('watchlistInput')) { event.preventDefault(); start(); }
+  });
+  restart.addEventListener('click', function() { reset(); canvas.focus(); });
+  reset();
 }
 
 async function refreshProfitTrend(holdings) {
@@ -1532,6 +1758,8 @@ var fa = document.getElementById("fxFromAmount"); if (fa) fa.oninput = function(
 var ta = document.getElementById("fxToAmount"); if (ta) ta.oninput = function() { syncConversion("to"); };
 var fsel = document.getElementById("fxFromSelect"); if (fsel) fsel.onchange = refreshFXData;
 var tsel = document.getElementById("fxToSelect"); if (tsel) tsel.onchange = refreshFXData;
+var fxSnapshotRefresh = document.getElementById("fxSnapshotRefresh");
+if (fxSnapshotRefresh) fxSnapshotRefresh.onclick = refreshFXData;
 var swapBtn = document.getElementById("fxSwapBtn");
 if (swapBtn) {
   swapBtn.onclick = function() {
@@ -1542,6 +1770,7 @@ if (swapBtn) {
   };
 }
 document.getElementById("refreshBtn").onclick = fetchSnapshot;
+initDinoGame();
 fetchSnapshot();
 setInterval(fetchSnapshot, REFRESH_INTERVAL);
   </script>

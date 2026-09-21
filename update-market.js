@@ -95,7 +95,7 @@ function yahooHistory(result, timeZone) {
       close
     });
   }
-  return points.slice(-6);
+  return points.slice(-60);
 }
 
 async function yahooQuote(symbol, timeZone) {
@@ -104,7 +104,7 @@ async function yahooQuote(symbol, timeZone) {
   let body;
   for (const host of ['query1.finance.yahoo.com', 'query2.finance.yahoo.com']) {
     try {
-      body = await get(`https://${host}/v8/finance/chart/${encoded}?interval=1d&range=1mo`, headers);
+      body = await get(`https://${host}/v8/finance/chart/${encoded}?interval=1d&range=3mo`, headers);
       break;
     } catch (error) {
       if (host === 'query2.finance.yahoo.com') throw error;
