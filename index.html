@@ -550,7 +550,7 @@ input[type=number]{-moz-appearance:textfield}
     .dino-game-btn:focus-visible, .theme-btn:focus-visible, .refresh-btn:focus-visible, .fx-market-refresh:focus-visible { outline: 2px solid var(--up); outline-offset: 2px; }
     .dino-game-body { display: grid; grid-template-columns: minmax(0, 1fr) 170px; gap: 16px; padding: 16px 18px 18px; background: var(--bg); }
     .dino-game-stage { min-width: 0; }
-    .dino-game-canvas { display: block; width: 100%; height: auto; min-height: 150px; border: 1px solid var(--border); background: var(--card); cursor: pointer; image-rendering: pixelated; }
+    .dino-game-canvas { display: block; width: 100%; height: auto; min-height: 150px; border: 1px solid var(--border); background: var(--game-surface); cursor: pointer; image-rendering: pixelated; }
     .dino-leaderboard { border-left: 1px solid var(--border); padding-left: 16px; }
     .dino-leaderboard-title { color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 10px; }
     .dino-leaderboard-list { display: flex; flex-direction: column; gap: 8px; }
@@ -559,6 +559,8 @@ input[type=number]{-moz-appearance:textfield}
     .dino-leaderboard-row.current .dino-leaderboard-score { color: var(--up); }
     .dino-leaderboard-empty { color: var(--text-dim); font: 10px var(--label-font); line-height: 1.5; }
     .dino-game-note { color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .03em; }
+    :root { --game-surface: #f1f1f1; }
+    :root[data-theme="dark"] { --game-surface: #1a1a1a; }
     @media (max-width: 680px) { .dino-game-body { grid-template-columns: 1fr; gap: 14px; } .dino-leaderboard { border-left: 0; border-top: 1px solid var(--border); padding: 14px 0 0; } .dino-leaderboard-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 520px) { .dino-game-header { padding: 12px 14px; } .dino-game-body { padding: 12px; } .dino-game-status { display: none; } .dino-game-canvas { min-height: 130px; } }
     .best-stock-name { font-family: 'Space Grotesk', sans-serif !important; font-size: 18px !important; font-weight: 500 !important; line-height: 1.25; }
@@ -616,7 +618,7 @@ input[type=number]{-moz-appearance:textfield}
           <span class="dino-game-status" id="dinoGameStatus">SPACE / TAP TO START</span>
           <div class="dino-game-actions"><span class="dino-game-score" id="dinoGameScore">00000</span><button class="dino-game-btn" id="dinoGameRestart" type="button">Restart</button></div>
         </div>
-        <div class="dino-game-body"><div class="dino-game-stage"><canvas class="dino-game-canvas" id="dinoGameCanvas" width="900" height="220" tabindex="0" aria-label="Market Runner mini game"></canvas></div><aside class="dino-leaderboard" aria-label="Market Runner high scores"><div class="dino-leaderboard-title">Top Runs</div><div class="dino-leaderboard-list" id="dinoLeaderboardList"></div></aside></div>
+        <div class="dino-game-body"><div class="dino-game-stage"><canvas class="dino-game-canvas" id="dinoGameCanvas" width="900" height="220" tabindex="0" aria-label="Official T-Rex Runner mini game"></canvas></div><aside class="dino-leaderboard" aria-label="Market Runner high scores"><div class="dino-leaderboard-title">Top Runs</div><div class="dino-game-note">Official sprite - local scores</div><div class="dino-leaderboard-list" id="dinoLeaderboardList"></div></aside></div>
       </section>
     </div>
     <div class="section-title">Holdings</div>
@@ -1371,7 +1373,16 @@ function initDinoGame() {
   var ctx = canvas.getContext('2d');
   var trexSprite = new Image();
   trexSprite.src = 'trex-runner.png';
+  var smallObstacleSprite = new Image();
+  smallObstacleSprite.src = 'trex-obstacle-small.png';
+  var largeObstacleSprite = new Image();
+  largeObstacleSprite.src = 'trex-obstacle-large.png';
+  var horizonSprite = new Image();
+  horizonSprite.src = 'trex-horizon.png';
   trexSprite.onload = function() { draw(); };
+  smallObstacleSprite.onload = function() { draw(); };
+  largeObstacleSprite.onload = function() { draw(); };
+  horizonSprite.onload = function() { draw(); };
   var width = canvas.width, height = canvas.height, ground = 184;
   var player, obstacles, score, speed, spawnIn, state, lastTime;
   var leaderboardKey = 'portfolio-dino-leaderboard-v1';
@@ -1402,7 +1413,7 @@ function initDinoGame() {
   }
 
   function reset() {
-    player = { x: 86, y: ground - 32, w: 26, h: 32, vy: 0, grounded: true };
+    player = { x: 86, y: ground - 47, w: 44, h: 47, vy: 0, grounded: true };
     obstacles = [];
     score = 0;
     speed = 300;
@@ -1440,26 +1451,28 @@ function initDinoGame() {
 
   function spawn() {
     var tall = Math.random() > .55;
-    obstacles.push({ x: width + 12, y: ground - (tall ? 42 : 28), w: tall ? 18 : 24, h: tall ? 42 : 28, tall: tall });
+    var sprite = tall ? largeObstacleSprite : smallObstacleSprite;
+    var frameW = tall ? 75 : 51;
+    var frameH = tall ? 50 : 35;
+    obstacles.push({ x: width + 12, y: ground - frameH, w: frameW, h: frameH, sprite: sprite, frameW: frameW, frameH: frameH, frame: 0 });
     spawnIn = Math.max(.55, 1.25 - (speed - 300) / 900) + Math.random() * .55;
   }
 
   function draw() {
     ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--card').trim() || '#111';
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--game-surface').trim() || '#f1f1f1';
     ctx.fillRect(0, 0, width, height);
-    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border').trim() || '#222';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(0, ground + .5); ctx.lineTo(width, ground + .5); ctx.stroke();
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-dim').trim() || '#999';
-    for (var i = 0; i < 18; i++) {
-      var dashX = (i * 67 + Math.floor(score * 3) % 67) % width;
-      ctx.fillRect(dashX, ground + 13, 26, 1);
+    if (horizonSprite.complete && horizonSprite.naturalWidth) {
+      ctx.drawImage(horizonSprite, 0, 0, 1200, 12, 0, ground, width, 12);
+    } else {
+      ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border').trim() || '#222';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, ground + .5); ctx.lineTo(width, ground + .5); ctx.stroke();
     }
     if (trexSprite.complete && trexSprite.naturalWidth) {
       var spriteFrame = state === 'running' ? Math.floor(score * 1.5) % 6 : 0;
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(trexSprite, spriteFrame * 24, 0, 24, 28, player.x, player.y + 4, player.w, player.h - 4);
+      ctx.drawImage(trexSprite, spriteFrame * 44, 0, 44, 47, player.x, player.y, player.w, player.h);
     } else {
       ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#eee';
       ctx.fillRect(player.x, player.y, player.w, player.h);
@@ -1467,10 +1480,14 @@ function initDinoGame() {
       ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--card').trim() || '#111';
       ctx.fillRect(player.x + 25, player.y - 4, 3, 3);
     }
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--up').trim() || '#4a9e5c';
     obstacles.forEach(function(obstacle) {
-      ctx.fillRect(obstacle.x, obstacle.y, obstacle.w, obstacle.h);
-      if (obstacle.tall) { ctx.fillRect(obstacle.x - 7, obstacle.y + 11, 7, 4); ctx.fillRect(obstacle.x + obstacle.w, obstacle.y + 20, 7, 4); }
+      if (obstacle.sprite.complete && obstacle.sprite.naturalWidth) {
+        obstacle.frame = Math.floor(score * 1.2) % 2;
+        ctx.drawImage(obstacle.sprite, obstacle.frame * obstacle.frameW, 0, obstacle.frameW, obstacle.frameH, obstacle.x, obstacle.y, obstacle.w, obstacle.h);
+      } else {
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#555';
+        ctx.fillRect(obstacle.x, obstacle.y, obstacle.w, obstacle.h);
+      }
     });
     if (state === 'idle' || state === 'gameover') {
       ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-dim').trim() || '#999';
