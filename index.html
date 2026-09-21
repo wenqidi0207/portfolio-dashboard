@@ -18,7 +18,7 @@
     .header-actions{display:flex;align-items:center;gap:8px}
     .refresh-btn,.theme-btn{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 11px;font-size:13px;cursor:pointer;color:var(--text);font-family:inherit}
     .refresh-btn:hover,.theme-btn:hover{border-color:#999}
-    .theme-btn{font-size:16px;line-height:1;padding:6px 9px}
+    .theme-btn{width:34px;height:34px;padding:0;display:inline-grid;place-items:center;font-size:17px;line-height:1}
     .status-dot{width:7px;height:7px;border-radius:50%;background:var(--neutral);display:inline-block}
     .status-dot.live{background:var(--up);animation:pulse 2s infinite}
     .status-dot.error{background:var(--down)}
@@ -503,7 +503,7 @@ input[type=number]{-moz-appearance:textfield}
     .profit-trend { margin: 0; }
     .profit-trend-header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
     .profit-trend-meta { color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .08em; }
-    .profit-trend-frame { border: 1px solid var(--border); border-radius: 6px; padding: 18px 20px 16px; background: var(--card); }
+    .profit-trend-frame { position: relative; border: 1px solid var(--border); border-radius: 6px; padding: 18px 20px 16px; background: var(--card); }
     .profit-trend-summary { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 8px; }
     .profit-trend-caption { color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .08em; text-transform: uppercase; }
     .profit-trend-chart { width: 100%; height: 250px; display: block; overflow: visible; }
@@ -515,6 +515,13 @@ input[type=number]{-moz-appearance:textfield}
     .profit-trend-line.down { stroke: var(--down); }
     .profit-trend-dot { fill: var(--card); stroke: var(--text); stroke-width: 2; vector-effect: non-scaling-stroke; }
     .profit-trend-dot.latest { fill: var(--text); }
+    .profit-trend-hit { fill: transparent; cursor: crosshair; }
+    .profit-trend-hit:focus, .profit-trend-hit:hover { fill: var(--text); opacity: .08; outline: none; }
+    .profit-trend-tooltip { position: absolute; z-index: 2; min-width: 176px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 5px; background: var(--card); box-shadow: 0 8px 24px rgba(0,0,0,.14); pointer-events: none; opacity: 0; transform: translate(-50%, -100%); transition: opacity .12s ease; }
+    .profit-trend-tooltip.visible { opacity: 1; }
+    .profit-trend-tooltip-date { color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .04em; text-transform: uppercase; }
+    .profit-trend-tooltip-value { margin-top: 4px; color: var(--text); font: 14px var(--data-font); }
+    .profit-trend-tooltip-change { margin-top: 3px; color: var(--text-dim); font: 10px var(--label-font); }
     .profit-trend-area { opacity: .08; }
     .profit-trend-area.up { fill: var(--up); }
     .profit-trend-area.down { fill: var(--down); }
@@ -540,6 +547,7 @@ input[type=number]{-moz-appearance:textfield}
     .dino-game-score { color: var(--text); font: 12px var(--data-font); }
     .dino-game-btn { border: 1px solid var(--border); border-radius: 4px; background: transparent; color: var(--text); font: 10px var(--label-font); letter-spacing: .05em; padding: 5px 8px; cursor: pointer; }
     .dino-game-btn:hover { border-color: var(--text); }
+    .dino-game-btn:focus-visible, .theme-btn:focus-visible, .refresh-btn:focus-visible, .fx-market-refresh:focus-visible { outline: 2px solid var(--up); outline-offset: 2px; }
     .dino-game-body { display: grid; grid-template-columns: minmax(0, 1fr) 170px; gap: 16px; padding: 16px 18px 18px; background: var(--bg); }
     .dino-game-stage { min-width: 0; }
     .dino-game-canvas { display: block; width: 100%; height: auto; min-height: 150px; border: 1px solid var(--border); background: var(--card); cursor: pointer; image-rendering: pixelated; }
@@ -550,6 +558,7 @@ input[type=number]{-moz-appearance:textfield}
     .dino-leaderboard-rank { color: var(--text-dim); }
     .dino-leaderboard-row.current .dino-leaderboard-score { color: var(--up); }
     .dino-leaderboard-empty { color: var(--text-dim); font: 10px var(--label-font); line-height: 1.5; }
+    .dino-game-note { color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .03em; }
     @media (max-width: 680px) { .dino-game-body { grid-template-columns: 1fr; gap: 14px; } .dino-leaderboard { border-left: 0; border-top: 1px solid var(--border); padding: 14px 0 0; } .dino-leaderboard-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 520px) { .dino-game-header { padding: 12px 14px; } .dino-game-body { padding: 12px; } .dino-game-status { display: none; } .dino-game-canvas { min-height: 130px; } }
     .best-stock-name { font-family: 'Space Grotesk', sans-serif !important; font-size: 18px !important; font-weight: 500 !important; line-height: 1.25; }
@@ -579,7 +588,7 @@ input[type=number]{-moz-appearance:textfield}
         <span class="last-update" id="lastUpdate">--</span>
         <span class="status-dot" id="statusDot"></span>
         <div class="header-actions">
-          <button class="theme-btn" id="themeBtn" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">○</button>
+          <button class="theme-btn" id="themeBtn" type="button" aria-label="Switch to dark mode" title="Switch to dark mode">&#9790;</button>
           <button class="refresh-btn" id="refreshBtn" type="button" title="重新获取行情、汇率并刷新页面数据">Refresh</button>
         </div>
       </div>
@@ -603,7 +612,7 @@ input[type=number]{-moz-appearance:textfield}
       </section>
       <section class="dino-game" aria-labelledby="dinoGameTitle">
         <div class="dino-game-header">
-          <span class="dino-game-title" id="dinoGameTitle">Market Runner</span>
+          <span class="dino-game-title" id="dinoGameTitle">T-Rex Market Runner</span>
           <span class="dino-game-status" id="dinoGameStatus">SPACE / TAP TO START</span>
           <div class="dino-game-actions"><span class="dino-game-score" id="dinoGameScore">00000</span><button class="dino-game-btn" id="dinoGameRestart" type="button">Restart</button></div>
         </div>
@@ -659,7 +668,7 @@ input[type=number]{-moz-appearance:textfield}
         <div class="fx-market-status"><span class="fx-market-live">● Live</span><span id="fxSnapshotSync">Sync --</span><button class="fx-market-refresh" id="fxSnapshotRefresh" type="button">Refresh</button></div>
       </div>
       <div class="fx-market-list" id="fxMarketList"></div>
-      <div class="fx-market-footer"><span>Reference rates • 30 min cache</span><span id="fxSnapshotSource">Source: --</span></div>
+      <div class="fx-market-footer"><span>Reference rates - history builds after each sync</span><span id="fxSnapshotSource">Source: --</span></div>
     </section>
   </div>
 
@@ -815,10 +824,12 @@ function hasQuoteChange(d) {
 
 function applyTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
-  document.getElementById("themeBtn").textContent = theme === "dark" ? "Light" : "Dark";
-  /*
-  document.getElementById("themeBtn").textContent = theme === "dark" ? "◐" : "○";
-  */
+  var themeButton = document.getElementById("themeBtn");
+  if (themeButton) {
+    themeButton.textContent = String.fromCharCode(theme === "dark" ? 0x2600 : 0x263e);
+    themeButton.setAttribute("aria-label", theme === "dark" ? "Switch to light mode" : "Switch to dark mode");
+    themeButton.title = theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
+  }
   localStorage.setItem("portfolio-theme", theme);
 }
 function initTheme() {
@@ -1108,7 +1119,7 @@ function renderFXSnapshot() {
       '<div class="fx-market-label">' + pair.label + '</div><div class="fx-market-data">' +
       '<div>' +
       '<div class="fx-market-rate">' + (current != null ? fmt(current, 4) : "--") + '</div>' +
-      '<div class="fx-market-change ' + direction + '">' + (changePct != null ? sign + fmt(changePct, 2) + '% vs last sync' : '▲ 0.00%') + '</div>' +
+      '<div class="fx-market-change ' + direction + '">' + (changePct != null ? sign + fmt(changePct, 2) + '% vs last sync' : 'Collecting history - ' + values.length + ' sync') + '</div>' +
       '</div>' + fxSparkline(values, direction) + '</div></article>';
   });
   list.innerHTML = hasData ? html : '<div class="profit-trend-status" style="grid-column:1/-1;min-height:120px">[WAITING FOR LIVE RATES]</div>';
@@ -1273,6 +1284,7 @@ function renderProfitTrend(holdings, results) {
       return point ? total + (point.close - Number(result.item.cost || 0)) * Number(result.item.quantity || 0) : total;
     }, 0);
   });
+  var changes = values.map(function(value, index) { return index ? value - values[index - 1] : null; });
   var liveTotal = 0;
   var hasLiveTotal = false;
   holdings.forEach(function(item) {
@@ -1304,10 +1316,49 @@ function renderProfitTrend(holdings, results) {
     var radius = index === values.length - 1 ? 4 : 2;
     return '<circle class="profit-trend-dot' + latestClass + '" cx="' + x(index).toFixed(1) + '" cy="' + y(value).toFixed(1) + '" r="' + radius + '"><title>' + dates[index] + ': ' + formatTrendValue(value) + '</title></circle>';
   }).join('');
+  var hitAreas = values.map(function(value, index) {
+    var hitWidth = values.length === 1 ? plotW : Math.max(22, plotW / values.length);
+    var hitX = Math.max(left, x(index) - hitWidth / 2);
+    if (index === 0) hitX = left;
+    if (index === values.length - 1) hitX = width - right - hitWidth;
+    return '<rect class="profit-trend-hit" tabindex="0" role="button" aria-label="' + dates[index] + ' total profit ' + formatTrendValue(value) + '" data-index="' + index + '" x="' + hitX.toFixed(1) + '" y="' + top + '" width="' + hitWidth.toFixed(1) + '" height="' + plotH + '" />';
+  }).join('');
   var latest = values[values.length - 1];
-  frame.innerHTML = '<div class="profit-trend-summary"><span class="profit-trend-caption">Latest total profit</span><div class="profit-trend-value ' + (latest >= 0 ? 'up' : 'down') + '">' + formatTrendValue(latest) + '</div></div>' +
+  frame.innerHTML = '<div class="profit-trend-summary"><span class="profit-trend-caption">Latest total profit - hover a point for details</span><div class="profit-trend-value ' + (latest >= 0 ? 'up' : 'down') + '">' + formatTrendValue(latest) + '</div></div>' +
+    '<div class="profit-trend-tooltip" role="status" aria-live="polite"><div class="profit-trend-tooltip-date"></div><div class="profit-trend-tooltip-value"></div><div class="profit-trend-tooltip-change"></div></div>' +
     '<svg class="profit-trend-chart" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Total portfolio profit trend">' +
-    grid + '<path class="profit-trend-area ' + lineClass + '" d="' + areaPath + '" />' + '<path class="profit-trend-line ' + lineClass + '" d="' + path + '" />' + dots + '</svg>';
+    grid + '<path class="profit-trend-area ' + lineClass + '" d="' + areaPath + '" />' + '<path class="profit-trend-line ' + lineClass + '" d="' + path + '" />' + dots + hitAreas + '</svg>';
+  var chart = frame.querySelector('.profit-trend-chart');
+  var tooltip = frame.querySelector('.profit-trend-tooltip');
+  var tooltipDate = tooltip && tooltip.querySelector('.profit-trend-tooltip-date');
+  var tooltipValue = tooltip && tooltip.querySelector('.profit-trend-tooltip-value');
+  var tooltipChange = tooltip && tooltip.querySelector('.profit-trend-tooltip-change');
+  function hideProfitTooltip() { if (tooltip) tooltip.classList.remove('visible'); }
+  function showProfitTooltip(index, event) {
+    if (!tooltip || !chart) return;
+    var chartRect = chart.getBoundingClientRect();
+    var frameRect = frame.getBoundingClientRect();
+    var clientX = event && isFinite(event.clientX) ? event.clientX : chartRect.left + (x(index) / width) * chartRect.width;
+    var clientY = event && isFinite(event.clientY) ? event.clientY : chartRect.top + (y(values[index]) / height) * chartRect.height;
+    var leftPos = Math.max(92, Math.min(frameRect.width - 92, clientX - frameRect.left));
+    var topPos = Math.max(64, clientY - frameRect.top - 10);
+    tooltipDate.textContent = dates[index];
+    tooltipValue.textContent = 'Total profit ' + formatTrendValue(values[index]);
+    tooltipChange.textContent = changes[index] == null ? 'First recorded session' : 'Change vs prior close ' + formatTrendValue(changes[index]);
+    tooltip.style.left = leftPos + 'px';
+    tooltip.style.top = topPos + 'px';
+    tooltip.classList.add('visible');
+  }
+  if (chart) {
+    chart.querySelectorAll('.profit-trend-hit').forEach(function(hit) {
+      var index = Number(hit.getAttribute('data-index'));
+      hit.addEventListener('pointerenter', function(event) { showProfitTooltip(index, event); });
+      hit.addEventListener('pointermove', function(event) { showProfitTooltip(index, event); });
+      hit.addEventListener('pointerdown', function(event) { showProfitTooltip(index, event); });
+      hit.addEventListener('focus', function() { showProfitTooltip(index); });
+    });
+    chart.addEventListener('pointerleave', hideProfitTooltip);
+  }
 }
 
 function initDinoGame() {
@@ -1318,6 +1369,9 @@ function initDinoGame() {
   var leaderboardEl = document.getElementById('dinoLeaderboardList');
   if (!canvas || !canvas.getContext) return;
   var ctx = canvas.getContext('2d');
+  var trexSprite = new Image();
+  trexSprite.src = 'trex-runner.png';
+  trexSprite.onload = function() { draw(); };
   var width = canvas.width, height = canvas.height, ground = 184;
   var player, obstacles, score, speed, spawnIn, state, lastTime;
   var leaderboardKey = 'portfolio-dino-leaderboard-v1';
@@ -1402,11 +1456,17 @@ function initDinoGame() {
       var dashX = (i * 67 + Math.floor(score * 3) % 67) % width;
       ctx.fillRect(dashX, ground + 13, 26, 1);
     }
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#eee';
-    ctx.fillRect(player.x, player.y, player.w, player.h);
-    ctx.fillRect(player.x + 18, player.y - 7, 13, 12);
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--card').trim() || '#111';
-    ctx.fillRect(player.x + 25, player.y - 4, 3, 3);
+    if (trexSprite.complete && trexSprite.naturalWidth) {
+      var spriteFrame = state === 'running' ? Math.floor(score * 1.5) % 6 : 0;
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(trexSprite, spriteFrame * 24, 0, 24, 28, player.x, player.y + 4, player.w, player.h - 4);
+    } else {
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#eee';
+      ctx.fillRect(player.x, player.y, player.w, player.h);
+      ctx.fillRect(player.x + 18, player.y - 7, 13, 12);
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--card').trim() || '#111';
+      ctx.fillRect(player.x + 25, player.y - 4, 3, 3);
+    }
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--up').trim() || '#4a9e5c';
     obstacles.forEach(function(obstacle) {
       ctx.fillRect(obstacle.x, obstacle.y, obstacle.w, obstacle.h);
@@ -1416,7 +1476,7 @@ function initDinoGame() {
       ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-dim').trim() || '#999';
       ctx.font = '12px Space Mono, monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(state === 'gameover' ? 'GAME OVER • TAP TO RESTART' : 'MARKET RUNNER', width / 2, 84);
+      ctx.fillText(state === 'gameover' ? 'GAME OVER - TAP TO RESTART' : 'T-REX RUNNER', width / 2, 84);
       ctx.textAlign = 'start';
     }
   }
