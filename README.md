@@ -27,8 +27,9 @@ git commit -m "init dashboard"
 git branch -M main
 git remote add origin https://github.com/<you>/<repo>.git
 git push -u origin main
-# GitHub → Settings → Pages → Source: main, root
 ```
+
+After pushing, open the repository on GitHub and set **Settings → Pages → Build and deployment → Source** to **GitHub Actions**. Then run **Actions → Deploy portfolio dashboard → Run workflow** and wait for the **Deploy to Pages** step to finish successfully. Use the `page_url` shown in that job; for a project repository it normally looks like `https://<owner>.github.io/<repo>/`.
 
 ## Deploy to Cloudflare (later)
 
@@ -45,3 +46,5 @@ Update `portfolio.json`:
 - `fx_pairs` — `from` (USD/EUR/HKD...), `to`
 
 Refresh interval: 45s.
+
+Market data workflow schedule: 21:30 through 04:00 Beijing time, every 15 minutes. GitHub Actions runs these schedules in UTC.
