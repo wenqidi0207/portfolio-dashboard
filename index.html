@@ -506,14 +506,15 @@ input[type=number]{-moz-appearance:textfield}
     .profit-trend-frame { position: relative; border: 1px solid var(--border); border-radius: 6px; padding: 18px 20px 16px; background: var(--card); }
     .profit-trend-summary { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 8px; }
     .profit-trend-caption { color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .08em; text-transform: uppercase; }
-    .profit-trend-chart { width: 100%; height: 250px; display: block; overflow: visible; }
+    .profit-trend-chart { width: 100%; height: 280px; display: block; overflow: visible; }
     .profit-trend-grid { stroke: var(--border); stroke-width: 1; vector-effect: non-scaling-stroke; }
     .profit-trend-zero { stroke: var(--text-dim); stroke-width: 1; vector-effect: non-scaling-stroke; }
     .profit-trend-axis { fill: var(--text-dim); font: 10px var(--label-font); letter-spacing: .03em; }
     .profit-trend-line { fill: none; stroke: var(--text); stroke-width: 2.5; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
     .profit-trend-line.up { stroke: var(--up); }
     .profit-trend-line.down { stroke: var(--down); }
-    .profit-trend-dot { fill: var(--card); stroke: var(--text); stroke-width: 2; vector-effect: non-scaling-stroke; }
+    .profit-trend-dot { fill: var(--card); stroke: var(--text); stroke-width: 2; vector-effect: non-scaling-stroke; transition: stroke-width .12s; }
+    .profit-trend-dot.focus { stroke-width: 4; }
     .profit-trend-dot.latest { fill: var(--text); }
     .profit-trend-hit { fill: transparent; cursor: crosshair; }
     .profit-trend-hit:focus, .profit-trend-hit:hover { fill: var(--text); opacity: .08; outline: none; }
@@ -522,6 +523,7 @@ input[type=number]{-moz-appearance:textfield}
     .profit-trend-tooltip-date { color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .04em; text-transform: uppercase; }
     .profit-trend-tooltip-value { margin-top: 4px; color: var(--text); font: 14px var(--data-font); }
     .profit-trend-tooltip-change { margin-top: 3px; color: var(--text-dim); font: 10px var(--label-font); }
+    .profit-trend-crosshair { stroke: var(--text-dim); stroke-width: 1; stroke-dasharray: 3 3; opacity: .7; pointer-events: none; }
     .profit-trend-area { opacity: .08; }
     .profit-trend-area.up { fill: var(--up); }
     .profit-trend-area.down { fill: var(--down); }
@@ -1259,6 +1261,10 @@ function formatTrendValue(value) {
   var sign = value >= 0 ? '+' : '-';
   return sign + '$' + Math.abs(value).toLocaleString('en-US', { maximumFractionDigits: 0 });
 }
+function formatTrendDetail(value) {
+  var sign = value >= 0 ? '+' : '-';
+  return sign + '$' + Math.abs(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
 function renderProfitTrend(holdings, results) {
   var frame = document.getElementById('profitTrendFrame');
@@ -1286,7 +1292,6 @@ function renderProfitTrend(holdings, results) {
       return point ? total + (point.close - Number(result.item.cost || 0)) * Number(result.item.quantity || 0) : total;
     }, 0);
   });
-  var changes = values.map(function(value, index) { return index ? value - values[index - 1] : null; });
   var liveTotal = 0;
   var hasLiveTotal = false;
   holdings.forEach(function(item) {
@@ -1296,9 +1301,22 @@ function renderProfitTrend(holdings, results) {
     hasLiveTotal = true;
   });
   if (hasLiveTotal) values[values.length - 1] = liveTotal;
+  var sourceSessionCount = values.length;
+  var maxVisibleSessions = 32;
+  if (values.length > maxVisibleSessions) {
+    var sampledDates = [], sampledValues = [];
+    for (var sampleIndex = 0; sampleIndex < maxVisibleSessions; sampleIndex++) {
+      var sourceIndex = Math.round(sampleIndex * (values.length - 1) / (maxVisibleSessions - 1));
+      sampledDates.push(dates[sourceIndex]);
+      sampledValues.push(values[sourceIndex]);
+    }
+    dates = sampledDates;
+    values = sampledValues;
+  }
+  var changes = values.map(function(value, index) { return index ? value - values[index - 1] : null; });
   var meta = document.getElementById('profitTrendMeta');
-  if (meta) meta.textContent = 'TOTAL PROFIT • ' + values.length + ' SESSIONS';
-  var width = 760, height = 250, left = 70, right = 18, top = 18, bottom = 18;
+  if (meta) meta.textContent = 'TOTAL PROFIT · ' + values.length + (sourceSessionCount > values.length ? ' VISIBLE / ' + sourceSessionCount : '') + ' SESSIONS';
+  var width = 760, height = 280, left = 70, right = 18, top = 18, bottom = 34;
   var plotW = width - left - right, plotH = height - top - bottom;
   var min = Math.min.apply(Math, values), max = Math.max.apply(Math, values);
   var spread = max - min || Math.max(Math.abs(max), 1);
@@ -1309,6 +1327,9 @@ function renderProfitTrend(holdings, results) {
   var grid = ticks.map(function(value) {
     return '<line class="profit-trend-grid" x1="' + left + '" x2="' + (width - right) + '" y1="' + y(value).toFixed(1) + '" y2="' + y(value).toFixed(1) + '" />' +
       '<text class="profit-trend-axis" text-anchor="end" x="' + (left - 10) + '" y="' + (y(value) + 3).toFixed(1) + '">' + formatTrendValue(value) + '</text>';
+  }).join('');
+  var xLabels = [0, Math.floor((values.length - 1) / 2), values.length - 1].filter(function(index, position, list) { return list.indexOf(index) === position; }).map(function(index) {
+    return '<text class="profit-trend-axis" text-anchor="' + (index === 0 ? 'start' : (index === values.length - 1 ? 'end' : 'middle')) + '" x="' + x(index).toFixed(1) + '" y="' + (height - 10) + '">' + dates[index] + '</text>';
   }).join('');
   var path = values.map(function(value, index){ return (index ? 'L' : 'M') + x(index).toFixed(1) + ' ' + y(value).toFixed(1); }).join(' ');
   var lineClass = values[values.length - 1] >= values[0] ? 'up' : 'down';
@@ -1326,16 +1347,22 @@ function renderProfitTrend(holdings, results) {
     return '<rect class="profit-trend-hit" tabindex="0" role="button" aria-label="' + dates[index] + ' total profit ' + formatTrendValue(value) + '" data-index="' + index + '" x="' + hitX.toFixed(1) + '" y="' + top + '" width="' + hitWidth.toFixed(1) + '" height="' + plotH + '" />';
   }).join('');
   var latest = values[values.length - 1];
-  frame.innerHTML = '<div class="profit-trend-summary"><span class="profit-trend-caption">Latest total profit - hover a point for details</span><div class="profit-trend-value ' + (latest >= 0 ? 'up' : 'down') + '">' + formatTrendValue(latest) + '</div></div>' +
+  frame.innerHTML = '<div class="profit-trend-summary"><span class="profit-trend-caption">Latest total profit · hover or focus a point</span><div class="profit-trend-value ' + (latest >= 0 ? 'up' : 'down') + '">' + formatTrendValue(latest) + '</div></div>' +
     '<div class="profit-trend-tooltip" role="status" aria-live="polite"><div class="profit-trend-tooltip-date"></div><div class="profit-trend-tooltip-value"></div><div class="profit-trend-tooltip-change"></div></div>' +
     '<svg class="profit-trend-chart" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Total portfolio profit trend">' +
-    grid + '<path class="profit-trend-area ' + lineClass + '" d="' + areaPath + '" />' + '<path class="profit-trend-line ' + lineClass + '" d="' + path + '" />' + dots + hitAreas + '</svg>';
+    grid + xLabels + '<path class="profit-trend-area ' + lineClass + '" d="' + areaPath + '" />' + '<path class="profit-trend-line ' + lineClass + '" d="' + path + '" />' + '<line class="profit-trend-crosshair" id="profitTrendCrosshair" x1="' + x(values.length - 1).toFixed(1) + '" x2="' + x(values.length - 1).toFixed(1) + '" y1="' + top + '" y2="' + (height - bottom) + '" visibility="hidden" />' + dots + hitAreas + '</svg>';
   var chart = frame.querySelector('.profit-trend-chart');
   var tooltip = frame.querySelector('.profit-trend-tooltip');
   var tooltipDate = tooltip && tooltip.querySelector('.profit-trend-tooltip-date');
   var tooltipValue = tooltip && tooltip.querySelector('.profit-trend-tooltip-value');
   var tooltipChange = tooltip && tooltip.querySelector('.profit-trend-tooltip-change');
-  function hideProfitTooltip() { if (tooltip) tooltip.classList.remove('visible'); }
+  var crosshair = frame.querySelector('#profitTrendCrosshair');
+  var chartDots = chart ? chart.querySelectorAll('.profit-trend-dot') : [];
+  function hideProfitTooltip() {
+    if (tooltip) tooltip.classList.remove('visible');
+    if (crosshair) crosshair.setAttribute('visibility', 'hidden');
+    chartDots.forEach(function(dot) { dot.classList.remove('focus'); });
+  }
   function showProfitTooltip(index, event) {
     if (!tooltip || !chart) return;
     var chartRect = chart.getBoundingClientRect();
@@ -1345,11 +1372,17 @@ function renderProfitTrend(holdings, results) {
     var leftPos = Math.max(92, Math.min(frameRect.width - 92, clientX - frameRect.left));
     var topPos = Math.max(64, clientY - frameRect.top - 10);
     tooltipDate.textContent = dates[index];
-    tooltipValue.textContent = 'Total profit ' + formatTrendValue(values[index]);
-    tooltipChange.textContent = changes[index] == null ? 'First recorded session' : 'Change vs prior close ' + formatTrendValue(changes[index]);
+    tooltipValue.textContent = 'Total profit ' + formatTrendDetail(values[index]);
+    tooltipChange.textContent = changes[index] == null ? 'First recorded session' : 'Change vs prior close ' + formatTrendDetail(changes[index]);
     tooltip.style.left = leftPos + 'px';
     tooltip.style.top = topPos + 'px';
     tooltip.classList.add('visible');
+    if (crosshair) {
+      crosshair.setAttribute('x1', x(index).toFixed(1));
+      crosshair.setAttribute('x2', x(index).toFixed(1));
+      crosshair.setAttribute('visibility', 'visible');
+    }
+    chartDots.forEach(function(dot, dotIndex) { dot.classList.toggle('focus', dotIndex === index); });
   }
   if (chart) {
     chart.querySelectorAll('.profit-trend-hit').forEach(function(hit) {
