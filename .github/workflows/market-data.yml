@@ -3,7 +3,10 @@ name: Update market data
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 * * * *'
+    # GitHub cron uses UTC. These entries are 21:30-04:00 Beijing time (UTC+8).
+    - cron: '30,45 13 * * *'
+    - cron: '*/15 14-19 * * *'
+    - cron: '0 20 * * *'
 
 concurrency:
   group: market-data
