@@ -98,6 +98,82 @@ function yahooHistory(result, timeZone) {
   return points.slice(-60);
 }
 
+function parseMarketNumber(value) {
+  if (value == null) return NaN;
+  const parsed = Number(String(value).replace(/[$,%+,]/g, '').trim());
+  return Number.isFinite(parsed) ? parsed : NaN;
+}
+
+function nasdaqDate(value) {
+  const parts = String(value || '').split('/');
+  if (parts.length !== 3) return null;
+  const month = parts[0].padStart(2, '0');
+  const day = parts[1].padStart(2, '0');
+  const year = parts[2].padStart(4, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function nasdaqHistory(payload) {
+  const rows = payload?.data?.tradesTable?.rows || [];
+  return rows.map(row => ({ date: nasdaqDate(row.date), close: parseMarketNumber(row.close) }))
+    .filter(point => point.date && Number.isFinite(point.close))
+    .sort((left, right) => left.date.localeCompare(right.date))
+    .slice(-60);
+}
+
+async function nasdaqQuoteWithClass(symbol, assetClass) {
+  const headers = {
+    'User-Agent': 'Mozilla/5.0',
+    Accept: 'application/json,text/plain,*/*',
+    Origin: 'https://www.nasdaq.com',
+    Referer: 'https://www.nasdaq.com/'
+  };
+  const encoded = encodeURIComponent(symbol);
+  const info = JSON.parse(await get(`https://api.nasdaq.com/api/quote/${encoded}/info?assetclass=${assetClass}`, headers));
+  const primary = info.data?.primaryData;
+  if (!primary) throw new Error(`empty Nasdaq quote ${symbol}`);
+
+  const price = parseMarketNumber(primary.lastSalePrice);
+  if (!Number.isFinite(price)) throw new Error(`invalid Nasdaq quote ${symbol}`);
+  const change = parseMarketNumber(primary.netChange);
+  const changePct = parseMarketNumber(primary.percentageChange);
+  let history = [];
+  try {
+    const fromDate = new Date(Date.now() - 100 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const toDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const body = await get(`https://api.nasdaq.com/api/quote/${encoded}/historical?assetclass=${assetClass}&fromdate=${fromDate}&todate=${toDate}&limit=500`, headers);
+    history = nasdaqHistory(JSON.parse(body));
+  } catch (error) {
+    console.warn(`${symbol}: Nasdaq history unavailable (${error.message})`);
+  }
+  let previous = Number.isFinite(change) ? price - change : NaN;
+  if (!(Number.isFinite(previous) && previous > 0) && history.length >= 2) {
+    previous = history[history.length - 2].close;
+  }
+  const changeAvailable = Number.isFinite(previous) && previous > 0;
+  return {
+    price,
+    previousClose: changeAvailable ? previous : null,
+    change: changeAvailable ? price - previous : null,
+    changePct: changeAvailable ? (Number.isFinite(changePct) ? changePct : ((price - previous) / previous) * 100) : null,
+    changeAvailable,
+    source: 'Nasdaq',
+    history
+  };
+}
+
+async function nasdaqQuote(symbol) {
+  let lastError;
+  for (const assetClass of ['stocks', 'etf']) {
+    try {
+      return await nasdaqQuoteWithClass(symbol, assetClass);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError || new Error(`empty Nasdaq quote ${symbol}`);
+}
+
 async function yahooQuote(symbol, timeZone) {
   const headers = { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' };
   const encoded = encodeURIComponent(symbol);
@@ -163,11 +239,20 @@ async function main() {
   if (cnItems.length) {
     try { Object.assign(quotes, await sinaQuotes(cnItems)); } catch (error) { console.warn(`A-share source: ${error.message}`); }
   }
-  const yahooResults = await Promise.all(items.filter(item => !quotes[item.code]).map(async item => {
+  const remainingResults = await Promise.all(items.filter(item => !quotes[item.code]).map(async item => {
+    const errors = [];
+    if (item.market === 'US') {
+      try { return [item.code, await nasdaqQuote(item.code)]; }
+      catch (error) { errors.push(`Nasdaq: ${error.message}`); }
+    }
     try { return [item.code, await yahooQuote(yahooSymbol(item), marketTimeZone(item.market))]; }
-    catch (error) { console.warn(`${item.code}: ${error.message}`); return [item.code, null]; }
+    catch (error) {
+      errors.push(`Yahoo: ${error.message}`);
+      console.warn(`${item.code}: ${errors.join('; ')}`);
+      return [item.code, null];
+    }
   }));
-  yahooResults.forEach(([code, quote]) => { if (quote) quotes[code] = quote; });
+  remainingResults.forEach(([code, quote]) => { if (quote) quotes[code] = quote; });
   const fx = {};
   for (const pair of portfolio.fx_pairs || []) {
     const key = `${pair.from}${pair.to}`;
