@@ -4,15 +4,15 @@
                          "market":  "US",
                          "code":  "VTI",
                          "name":  "Vanguard Total Stock Market ETF",
-                         "quantity":  30,
-                         "cost":  368.15
+                         "quantity":  37,
+                         "cost":  370.9938
                      },
                      {
                          "market":  "US",
                          "code":  "VXUS",
                          "name":  "Vanguard Total International Stock ETF",
-                         "quantity":  46,
-                         "cost":  84.64
+                         "quantity":  0,
+                         "cost":  84.6391
                      },
                      {
                          "market":  "US",
@@ -25,22 +25,15 @@
                          "market":  "US",
                          "code":  "QQQM",
                          "name":  "Invesco NASDAQ 100 ETF",
-                         "quantity":  19,
-                         "cost":  288.63
+                         "quantity":  23,
+                         "cost":  292.9191
                      },
                      {
                          "market":  "US",
                          "code":  "DRAM",
                          "name":  "Roundhill Memory ETF",
-                         "quantity":  27,
-                         "cost":  62.79
-                     },
-                     {
-                         "market":  "US",
-                         "code":  "TQQQ",
-                         "name":  "Invesco NASDAQ 100 ETF",
-                         "quantity":  4.087,
-                         "cost":  64.88
+                         "quantity":  16,
+                         "cost":  55.3775
                      }
                  ],
     "watchlist":  [
