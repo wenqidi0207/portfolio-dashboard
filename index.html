@@ -569,6 +569,33 @@ input[type=number]{-moz-appearance:textfield}
     .best-code { color: var(--text-dim); font: 11px var(--data-font); letter-spacing: .06em; margin-top: 3px; }
     :root[data-theme="dark"] .error-banner { background: transparent; border-color: var(--down); }
     .error-banner { background: transparent; border-color: var(--down); border-radius: 4px; font-family: var(--label-font); }
+    /* Dashboard refinement */
+    .container { max-width: 1280px; padding-top: 30px; }
+    .header { margin-bottom: 22px; padding-bottom: 16px; }
+    .header h1 { font-size: 22px; letter-spacing: -.5px; }
+    .summary-row { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 26px; }
+    .summary-card { min-height: 122px; padding: 18px 20px; border-radius: 10px; }
+    .summary-card .value { font-size: 25px; }
+    .dashboard-insights { gap: 14px; margin-bottom: 28px; }
+    .profit-trend, .dino-game { border-radius: 10px; }
+    .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin: 4px 0 14px; }
+    .section-heading .section-title { margin-bottom: 0; }
+    .section-caption { color: var(--text-dim); font-size: 11px; letter-spacing: .04em; }
+    .holdings-grid { grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px; margin-bottom: 34px; }
+    .stock-card { padding: 18px 19px; border-radius: 10px; }
+    .stock-card:hover { transform: translateY(-2px); transition: transform .18s ease, box-shadow .18s ease; }
+    .watchlist-header { border-top: 1px solid var(--border); padding-top: 22px; margin-top: 4px; }
+    .fx-converter-card { margin-top: 4px; border-radius: 10px; }
+    .fx-market-board { border-radius: 10px; margin-top: 18px; }
+    @media (max-width: 980px) { .summary-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 560px) {
+      .container { padding: 18px 14px 36px; }
+      .summary-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+      .summary-card { min-height: 106px; padding: 14px; }
+      .summary-card .value { font-size: 20px; }
+      .section-heading { align-items: flex-start; flex-direction: column; gap: 3px; }
+      .section-caption { font-size: 10px; }
+    }
     @media (max-width: 768px) {
       .container { padding: 24px 16px 48px; }
       .header h1 { font-size: 26px; }
@@ -623,7 +650,10 @@ input[type=number]{-moz-appearance:textfield}
         <div class="dino-game-body"><div class="dino-game-stage"><canvas class="dino-game-canvas" id="dinoGameCanvas" width="900" height="220" tabindex="0" aria-label="Official T-Rex Runner mini game"></canvas></div><aside class="dino-leaderboard" aria-label="Market Runner high scores"><div class="dino-leaderboard-title">Top Runs</div><div class="dino-game-note">Official sprite - local scores</div><div class="dino-leaderboard-list" id="dinoLeaderboardList"></div></aside></div>
       </section>
     </div>
-    <div class="section-title">Holdings</div>
+    <div class="section-heading">
+      <div class="section-title">Holdings</div>
+      <span class="section-caption" id="holdingsCaption">ACTIVE POSITIONS</span>
+    </div>
     <div class="holdings-grid" id="holdingsGrid"></div>
     
     <div class="watchlist-header">
@@ -1892,6 +1922,8 @@ async function fetchSnapshot() {
   }
   restoreWatchlistQuoteCache();
   try {
+    var holdingsCaption = document.getElementById("holdingsCaption");
+    if (holdingsCaption) holdingsCaption.textContent = holdings.length + " ACTIVE POSITION" + (holdings.length === 1 ? "" : "S");
     document.getElementById("holdingsGrid").innerHTML = holdings.map(function(s) { return renderStockCard(s, true); }).join("");
     renderWatchlistSection();
     renderSummary(holdings);

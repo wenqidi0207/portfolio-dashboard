@@ -9,13 +9,6 @@
                      },
                      {
                          "market":  "US",
-                         "code":  "VXUS",
-                         "name":  "Vanguard Total International Stock ETF",
-                         "quantity":  0,
-                         "cost":  84.6391
-                     },
-                     {
-                         "market":  "US",
                          "code":  "SGOV",
                          "name":  "iShares 0-3 Month Treasury Bond ETF",
                          "quantity":  51,
