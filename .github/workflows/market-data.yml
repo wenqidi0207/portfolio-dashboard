@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
   schedule:
     # GitHub cron uses UTC. These entries are 21:30-04:00 Beijing time (UTC+8).
-    - cron: '30,45 13 * * *'
-    - cron: '*/15 14-19 * * *'
-    - cron: '0 20 * * *'
+    - cron: '30,45 13 * * 1-5'
+    - cron: '*/15 14-19 * * 1-5'
+    - cron: '0 20 * * 1-5'
 
 concurrency:
   group: market-data
