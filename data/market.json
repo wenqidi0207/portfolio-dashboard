@@ -1,11 +1,11 @@
 {
-  "updatedAt": "2026-10-09T00:12:21.376Z",
+  "updatedAt": "2026-10-09T16:45:25.798Z",
   "quotes": {
     "VTI": {
-      "price": 380.1,
-      "previousClose": 379.53000000000003,
-      "change": 0.5699999999999932,
-      "changePct": 0.15,
+      "price": 381.66,
+      "previousClose": 379.56,
+      "change": 2.1000000000000227,
+      "changePct": 0.55,
       "changeAvailable": true,
       "source": "Nasdaq"
     },
@@ -18,26 +18,26 @@
       "source": "Nasdaq"
     },
     "SGOV": {
-      "price": 100.48,
-      "previousClose": 100.47500000000001,
-      "change": 0.0049999999999954525,
-      "changePct": 0,
+      "price": 100.51,
+      "previousClose": 100.47,
+      "change": 0.04000000000000625,
+      "changePct": 0.04,
       "changeAvailable": true,
       "source": "Nasdaq"
     },
     "QQQM": {
-      "price": 307.91,
+      "price": 308.97,
       "previousClose": 307.85,
-      "change": 0.060000000000002274,
-      "changePct": 0.02,
+      "change": 1.1200000000000045,
+      "changePct": 0.36,
       "changeAvailable": true,
       "source": "Nasdaq"
     },
     "DRAM": {
-      "price": 56.9946,
-      "previousClose": 56.949999999999996,
-      "change": 0.04460000000000264,
-      "changePct": 0.08,
+      "price": 57.02,
+      "previousClose": 56.93,
+      "change": 0.09000000000000341,
+      "changePct": 0.16,
       "changeAvailable": true,
       "source": "Nasdaq"
     },
@@ -50,44 +50,40 @@
       "source": "Nasdaq"
     },
     "NVDA": {
-      "price": 230.75,
+      "price": 229.4485,
       "previousClose": 230.48,
-      "change": 0.27000000000001023,
-      "changePct": 0.12,
+      "change": -1.031499999999994,
+      "changePct": -0.45,
       "changeAvailable": true,
       "source": "Nasdaq"
     },
     "AAPL": {
-      "price": 340.5961,
-      "previousClose": 340.41999999999996,
-      "change": 0.17610000000001946,
-      "changePct": 0.05,
+      "price": 334.75,
+      "previousClose": 340.42,
+      "change": -5.670000000000016,
+      "changePct": -1.67,
       "changeAvailable": true,
       "source": "Nasdaq"
     },
     "MSFT": {
-      "price": 522.64,
+      "price": 535.105,
       "previousClose": 522.61,
-      "change": 0.029999999999972715,
-      "changePct": 0.01,
+      "change": 12.495000000000005,
+      "changePct": 2.39,
       "changeAvailable": true,
       "source": "Nasdaq"
     },
     "ORCL": {
-      "price": 136.02,
-      "previousClose": 135.56,
-      "change": 0.46000000000000796,
-      "changePct": 0.34,
+      "price": 141.66,
+      "previousClose": 135.19,
+      "change": 6.469999999999999,
+      "changePct": 4.79,
       "changeAvailable": true,
       "source": "Nasdaq"
     }
   },
   "history": {
     "VTI": [
-      {
-        "date": "2026-07-15",
-        "close": 372.42
-      },
       {
         "date": "2026-07-16",
         "close": 370.58
@@ -323,6 +319,10 @@
       {
         "date": "2026-10-07",
         "close": 381.03
+      },
+      {
+        "date": "2026-10-08",
+        "close": 379.56
       }
     ],
     "VXUS": [
@@ -569,10 +569,6 @@
     ],
     "SGOV": [
       {
-        "date": "2026-07-15",
-        "close": 100.54
-      },
-      {
         "date": "2026-07-16",
         "close": 100.55
       },
@@ -807,13 +803,13 @@
       {
         "date": "2026-10-07",
         "close": 100.47
+      },
+      {
+        "date": "2026-10-08",
+        "close": 100.47
       }
     ],
     "QQQM": [
-      {
-        "date": "2026-07-15",
-        "close": 295.56
-      },
       {
         "date": "2026-07-16",
         "close": 290.68
@@ -1049,13 +1045,13 @@
       {
         "date": "2026-10-07",
         "close": 311.94
+      },
+      {
+        "date": "2026-10-08",
+        "close": 307.85
       }
     ],
     "DRAM": [
-      {
-        "date": "2026-07-15",
-        "close": 57.4
-      },
       {
         "date": "2026-07-16",
         "close": 52.34
@@ -1291,6 +1287,10 @@
       {
         "date": "2026-10-07",
         "close": 60.01
+      },
+      {
+        "date": "2026-10-08",
+        "close": 56.93
       }
     ],
     "TQQQ": [
@@ -1537,10 +1537,6 @@
     ],
     "NVDA": [
       {
-        "date": "2026-07-15",
-        "close": 212.5
-      },
-      {
         "date": "2026-07-16",
         "close": 207.4
       },
@@ -1775,13 +1771,13 @@
       {
         "date": "2026-10-07",
         "close": 237.47
+      },
+      {
+        "date": "2026-10-08",
+        "close": 230.48
       }
     ],
     "AAPL": [
-      {
-        "date": "2026-07-15",
-        "close": 327.5
-      },
       {
         "date": "2026-07-16",
         "close": 333.26
@@ -2017,13 +2013,13 @@
       {
         "date": "2026-10-07",
         "close": 336.67
+      },
+      {
+        "date": "2026-10-08",
+        "close": 340.42
       }
     ],
     "MSFT": [
-      {
-        "date": "2026-07-15",
-        "close": 395.63
-      },
       {
         "date": "2026-07-16",
         "close": 401.1
@@ -2259,13 +2255,13 @@
       {
         "date": "2026-10-07",
         "close": 529.76
+      },
+      {
+        "date": "2026-10-08",
+        "close": 522.61
       }
     ],
     "ORCL": [
-      {
-        "date": "2026-07-15",
-        "close": 132.49
-      },
       {
         "date": "2026-07-16",
         "close": 124.21
@@ -2501,12 +2497,16 @@
       {
         "date": "2026-10-07",
         "close": 143.56
+      },
+      {
+        "date": "2026-10-08",
+        "close": 135.69
       }
     ]
   },
   "fx": {
     "USDCNY": {
-      "rate": 6.7023,
+      "rate": 6.6921,
       "changePct": 0,
       "source": "ECB reference rates"
     },
@@ -2516,12 +2516,12 @@
       "source": "ECB reference rates"
     },
     "EURCNY": {
-      "rate": 7.4972,
+      "rate": 7.4992,
       "changePct": 0,
       "source": "ECB reference rates"
     },
     "HKDCNY": {
-      "rate": 0.85406,
+      "rate": 0.85276,
       "changePct": 0,
       "source": "ECB reference rates"
     }
