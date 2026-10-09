@@ -47,4 +47,4 @@ Update `portfolio.json`:
 
 Refresh interval: 45s.
 
-Market data workflow schedule: Monday-Friday, 21:30 through 04:00 Beijing time, every 15 minutes. GitHub Actions runs these schedules in UTC. The dashboard only warns about delayed snapshots during this scheduled market window; outside it, the latest snapshot is shown as expected.
+Market data workflow schedule: Monday-Friday, 21:30 through 04:00 Beijing time, every 15 minutes. GitHub Actions runs these schedules in UTC. Failed data requests are retried automatically, and overlapping scheduled runs are queued instead of cancelling an update already in progress. The dashboard always shows the latest successful snapshot and its actual update time.

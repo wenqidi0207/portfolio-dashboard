@@ -995,24 +995,6 @@ async function readMarketSnapshot() {
   throw new Error("Market snapshot is unavailable");
 }
 
-function beijingScheduleState(date) {
-  var now = date || new Date();
-  var parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Shanghai",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false
-  }).formatToParts(now);
-  var values = {};
-  parts.forEach(function(part) { values[part.type] = part.value; });
-  var minutes = Number(values.hour) * 60 + Number(values.minute);
-  var inWindow = minutes >= 21 * 60 + 30 || minutes <= 4 * 60;
-  var sessionDate = new Date(now.getTime() - 4 * 60 * 60 * 1000);
-  var weekday = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Shanghai", weekday: "short" }).format(sessionDate);
-  var active = inWindow && weekday !== "Sat" && weekday !== "Sun";
-  return { active: active, minutes: minutes, weekday: weekday };
-}
-
 async function fetchAllLiveRates() {
   try {
     var res = await fetch("https://open.er-api.com/v6/latest/USD");
@@ -1920,20 +1902,11 @@ async function fetchSnapshot() {
     snapshotHistory = snapshot.history || {};
     if (snapshot.fx) fxCache = snapshot.fx;
     var snapshotDate = snapshot.updatedAt ? new Date(snapshot.updatedAt) : null;
-    var scheduleState = beijingScheduleState();
-    var snapshotAge = snapshotDate && isFinite(snapshotDate.getTime()) ? Date.now() - snapshotDate.getTime() : Infinity;
-    // During the configured update window, a snapshot older than 90 minutes
-    // indicates a failed or delayed workflow. Outside that window, the last
-    // market snapshot is expected to be several hours old while markets are closed.
-    var snapshotStale = scheduleState.active && snapshotAge > 90 * 60 * 1000;
     document.getElementById("lastUpdate").textContent = snapshotDate && isFinite(snapshotDate.getTime())
-      ? (snapshotStale ? "Update delayed - " : (scheduleState.active ? "Updated - " : "Market closed - Updated ")) + snapshotDate.toLocaleString() : "Waiting for snapshot";
+      ? "Updated - " + snapshotDate.toLocaleString() : "Latest snapshot loaded";
     setStatus("live");
     var banner = document.getElementById("errorBanner");
-    if (banner) {
-      banner.style.display = snapshotStale ? "block" : "none";
-      if (snapshotStale) banner.textContent = "Scheduled market data update is delayed. Showing the latest available values.";
-    }
+    if (banner) banner.style.display = "none";
   } catch(e) {
     console.warn("Snapshot not yet available", e);
     setStatus("error");
