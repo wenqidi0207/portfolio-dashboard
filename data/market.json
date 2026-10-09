@@ -1,11 +1,11 @@
 {
-  "updatedAt": "2026-10-08T22:27:31.277Z",
+  "updatedAt": "2026-10-09T00:12:21.376Z",
   "quotes": {
     "VTI": {
-      "price": 380.3122,
+      "price": 380.1,
       "previousClose": 379.53000000000003,
-      "change": 0.7821999999999889,
-      "changePct": 0.21,
+      "change": 0.5699999999999932,
+      "changePct": 0.15,
       "changeAvailable": true,
       "source": "Nasdaq"
     },
@@ -26,18 +26,18 @@
       "source": "Nasdaq"
     },
     "QQQM": {
-      "price": 308.48,
+      "price": 307.91,
       "previousClose": 307.85,
-      "change": 0.6299999999999955,
-      "changePct": 0.2,
+      "change": 0.060000000000002274,
+      "changePct": 0.02,
       "changeAvailable": true,
       "source": "Nasdaq"
     },
     "DRAM": {
-      "price": 57.33,
+      "price": 56.9946,
       "previousClose": 56.949999999999996,
-      "change": 0.38000000000000256,
-      "changePct": 0.67,
+      "change": 0.04460000000000264,
+      "changePct": 0.08,
       "changeAvailable": true,
       "source": "Nasdaq"
     },
@@ -50,34 +50,34 @@
       "source": "Nasdaq"
     },
     "NVDA": {
-      "price": 231.37,
-      "previousClose": 230.48000000000002,
-      "change": 0.8899999999999864,
-      "changePct": 0.39,
+      "price": 230.75,
+      "previousClose": 230.48,
+      "change": 0.27000000000001023,
+      "changePct": 0.12,
       "changeAvailable": true,
       "source": "Nasdaq"
     },
     "AAPL": {
-      "price": 340.52,
+      "price": 340.5961,
       "previousClose": 340.41999999999996,
-      "change": 0.10000000000002274,
-      "changePct": 0.03,
+      "change": 0.17610000000001946,
+      "changePct": 0.05,
       "changeAvailable": true,
       "source": "Nasdaq"
     },
     "MSFT": {
-      "price": 523.1,
+      "price": 522.64,
       "previousClose": 522.61,
-      "change": 0.4900000000000091,
-      "changePct": 0.09,
+      "change": 0.029999999999972715,
+      "changePct": 0.01,
       "changeAvailable": true,
       "source": "Nasdaq"
     },
     "ORCL": {
-      "price": 136.37,
+      "price": 136.02,
       "previousClose": 135.56,
-      "change": 0.8100000000000023,
-      "changePct": 0.6,
+      "change": 0.46000000000000796,
+      "changePct": 0.34,
       "changeAvailable": true,
       "source": "Nasdaq"
     }
