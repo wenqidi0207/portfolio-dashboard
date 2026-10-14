@@ -14,7 +14,6 @@ concurrency:
 
 permissions:
   contents: write
-  actions: write
 
 jobs:
   update:
@@ -28,8 +27,6 @@ jobs:
         with:
           node-version: 24
       - name: Generate and publish snapshot
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -49,7 +46,7 @@ jobs:
             fi
             git commit -m "chore: update market snapshot"
             if git push origin HEAD:main; then
-              gh workflow run pages.yml --ref main
+              echo "Market snapshot committed; Pages will deploy after this workflow succeeds"
               exit 0
             fi
             echo "Remote changed during attempt ${attempt}; retrying"
