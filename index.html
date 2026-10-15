@@ -708,7 +708,9 @@ input[type=number]{-moz-appearance:textfield}
 
   <script>
 var PORTFOLIO_FILE = "portfolio.json";
-var REFRESH_INTERVAL = 3600000;
+// Keep the dashboard responsive to the half-hour Actions updates without
+// hammering the static Pages endpoint.
+var REFRESH_INTERVAL = 5 * 60 * 1000;
 var portfolio = null;
 var priceCache = {};
 var HISTORY_CACHE_KEY = "portfolio-history-v1";
