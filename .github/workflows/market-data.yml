@@ -2,6 +2,12 @@ name: Update market data
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'portfolio.json'
+      - 'update-market.js'
+      - '.github/workflows/market-data.yml'
   schedule:
     # GitHub cron uses UTC. These entries are 21:30-04:00 Beijing time (UTC+8), every 30 minutes.
     - cron: '30 13 * * 1-5'
@@ -36,6 +42,11 @@ jobs:
             node --check update-market.js
             if ! node update-market.js; then
               echo "Market data request failed on attempt ${attempt}; retrying"
+              sleep 20
+              continue
+            fi
+            if ! node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('data/market.json','utf8')); if (!data.updatedAt || !data.quotes || Object.keys(data.quotes).length === 0) process.exit(1);"; then
+              echo "Generated snapshot failed validation on attempt ${attempt}; retrying"
               sleep 20
               continue
             fi
