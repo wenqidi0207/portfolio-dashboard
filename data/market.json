@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-19T19:25:19.516Z",
+  "updatedAt": "2026-10-19T19:37:19.948Z",
   "quotes": {
     "VTI": {
       "price": 376.35,
@@ -26,18 +26,18 @@
       "source": "Nasdaq"
     },
     "QQQM": {
-      "price": 296.91,
-      "previousClose": 292.26000000000005,
-      "change": 4.649999999999977,
-      "changePct": 1.59,
+      "price": 296.75,
+      "previousClose": 292.26,
+      "change": 4.490000000000009,
+      "changePct": 1.54,
       "changeAvailable": true,
       "source": "Nasdaq"
     },
     "DRAM": {
-      "price": 48.63,
+      "price": 48.625,
       "previousClose": 46.45,
-      "change": 2.1799999999999997,
-      "changePct": 4.69,
+      "change": 2.174999999999997,
+      "changePct": 4.68,
       "changeAvailable": true,
       "source": "Nasdaq"
     },
@@ -50,34 +50,34 @@
       "source": "Nasdaq"
     },
     "NVDA": {
-      "price": 218.3,
-      "previousClose": 214.13000000000002,
-      "change": 4.1699999999999875,
-      "changePct": 1.95,
+      "price": 218.26,
+      "previousClose": 214.13,
+      "change": 4.1299999999999955,
+      "changePct": 1.93,
       "changeAvailable": true,
       "source": "Nasdaq"
     },
     "AAPL": {
-      "price": 342.9313,
+      "price": 342.66,
       "previousClose": 343.46000000000004,
-      "change": -0.5287000000000148,
-      "changePct": -0.15,
+      "change": -0.8000000000000114,
+      "changePct": -0.23,
       "changeAvailable": true,
       "source": "Nasdaq"
     },
     "MSFT": {
-      "price": 534.59,
+      "price": 534.48,
       "previousClose": 529.0500000000001,
-      "change": 5.539999999999964,
-      "changePct": 1.05,
+      "change": 5.42999999999995,
+      "changePct": 1.03,
       "changeAvailable": true,
       "source": "Nasdaq"
     },
     "ORCL": {
-      "price": 130.5933,
-      "previousClose": 128.23,
-      "change": 2.3633000000000095,
-      "changePct": 1.84,
+      "price": 130.49,
+      "previousClose": 128.23000000000002,
+      "change": 2.259999999999991,
+      "changePct": 1.76,
       "changeAvailable": true,
       "source": "Nasdaq"
     }
