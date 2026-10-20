@@ -1,1970 +1,1205 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Portfolio Monitor</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portfolio — US Equity & Historical P&L</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            serif: ['Newsreader', 'Georgia', 'serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Doto:wght@400;600&family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    :root{--bg:#f5f5f5;--card:#fff;--border:#e8e8e8;--text:#1a1a1a;--text-dim:#666;--muted-surface:#f0f0f0;--up:#4a9e5c;--down:#d71921;--neutral:#666;--tag-us:#1a1a1a;--tag-cn:#1a1a1a;--tag-hk:#1a1a1a;--radius:8px;--shadow:none}
-    :root[data-theme="dark"]{--bg:#000;--card:#111;--border:#222;--text:#e8e8e8;--text-dim:#999;--muted-surface:#1a1a1a;--shadow:none}
-    body{font-family:'Space Grotesk',-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh;transition:background .2s,color .2s}
-    .container{max-width:1400px;margin:0 auto;padding:24px 24px 48px}
-    .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border)}
-    .header h1{font-size:20px;font-weight:600;letter-spacing:-.3px}
-    .header-right{display:flex;align-items:center;gap:16px}
-    .last-update{font-size:12px;color:var(--text-dim)}
-    .header-actions{display:flex;align-items:center;gap:8px}
-    .refresh-btn,.theme-btn{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 11px;font-size:13px;cursor:pointer;color:var(--text);font-family:inherit}
-    .refresh-btn:hover,.theme-btn:hover{border-color:#999}
-    .theme-btn{width:34px;height:34px;padding:0;display:inline-grid;place-items:center;font-size:17px;line-height:1}
-    .status-dot{width:7px;height:7px;border-radius:50%;background:var(--neutral);display:inline-block}
-    .status-dot.live{background:var(--up);animation:pulse 2s infinite}
-    .status-dot.error{background:var(--down)}
-    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-    .summary-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:24px}
-    .summary-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;box-shadow:var(--shadow)}
-    .summary-card .label{font-size:11px;font-weight:500;color:var(--text-dim);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
-    .summary-card .value{font-size:26px;font-weight:700;letter-spacing:-.5px}
-    .summary-card .sub{font-size:12px;color:var(--text-dim);margin-top:4px}
-    .summary-card .sub.up,.summary-card .value.up{color:var(--up)}
-    .summary-card .sub.down,.summary-card .value.down{color:var(--down)}
-    .section-title{font-size:13px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;padding-left:2px}
-    .holdings-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-bottom:28px}
-    .holdings-grid-narrow{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
-    .stock-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);transition:box-shadow .2s}
-    .stock-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.08)}
-    .stock-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
-    .stock-name{font-size:14px;font-weight:600}
-    .stock-code{font-size:11px;color:var(--text-dim);font-family:monospace;margin-top:2px}
-    .market-tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;color:#fff;margin-bottom:4px;display:inline-block}
-    .market-tag.us{background:var(--tag-us)}
-    .market-tag.cn{background:var(--tag-cn)}
-    .market-tag.hk{background:var(--tag-hk)}
-    .stock-price-wrap{text-align:right}
-    .stock-price{font-size:18px;font-weight:700}
-    .stock-change{font-size:12px;font-weight:500}
-    .stock-change.up{color:var(--up)}
-    .stock-change.down{color:var(--down)}
-    .stock-change.neutral{color:var(--neutral)}
-    .stock-divider{height:1px;background:var(--border);margin:10px 0}
-    .stock-metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-    .metric{display:flex;flex-direction:column;gap:2px}
-    .metric-label{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px}
-    .metric-value{font-size:13px;font-weight:600}
-    .metric-value.up{color:var(--up)}
-    .metric-value.down{color:var(--down)}
-    .fx-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:28px}
-    .fx-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow)}
-    .fx-pair{font-size:13px;font-weight:600;margin-bottom:4px;font-family:monospace}
-    .fx-rate{font-size:22px;font-weight:700}
-    .fx-change{font-size:12px;font-weight:500;margin-top:2px}
-    .fx-change.up{color:var(--up)}
-    .fx-change.down{color:var(--down)}
-    .skeleton{background:linear-gradient(90deg,var(--muted-surface) 25%,var(--border) 50%,var(--muted-surface) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:4px}
-    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-    .skeleton-price{height:22px;width:70%}
-    .error-banner{background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:10px 14px;font-size:12px;color:var(--down);margin-bottom:16px;display:none}
-    :root[data-theme="dark"] .error-banner{background:#321b1b;border-color:#743333}
-    .fx-card{position:relative}
-    .fx-meta{font-size:10px;color:var(--text-dim);margin-top:7px}
-    .fx-source{font-size:10px;color:var(--text-dim);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .fx-toolbar{display:flex;align-items:end;gap:12px;margin:-2px 0 14px;padding:12px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
-    .fx-control{display:flex;flex-direction:column;gap:4px;min-width:140px}
-    .fx-control span,.fx-converted span{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.6px}
-    .fx-control input,.fx-control select{height:34px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font:inherit;padding:0 9px;outline:none}
-    .fx-control input:focus,.fx-control select:focus{border-color:var(--text-dim)}
-    .fx-converted{display:flex;flex-direction:column;gap:3px;margin-left:auto;min-width:160px}
-    .fx-converted strong{font-size:18px}
-    .fx-inverse{font-size:11px;color:var(--text-dim);margin-top:5px}
-    @media(max-width:768px){.container{padding:16px}.summary-card .value{font-size:20px}.holdings-grid{grid-template-columns:1fr}.header{flex-direction:column;align-items:flex-start;gap:12px}.header-right{width:100%;justify-content:space-between}.header-actions{margin-left:auto}.last-update{max-width:125px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fx-toolbar{align-items:stretch;flex-wrap:wrap}.fx-control{flex:1;min-width:120px}.fx-converted{width:100%;margin-left:0}}
-  /* Hide number spinners */
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
-input[type=number]{-moz-appearance:textfield}
-.watchlist-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:12px}
-.watchlist-search-wrap{display:flex;align-items:center;gap:8px;position:relative}
-.watchlist-input{height:34px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font:inherit;padding:0 10px;width:190px;text-transform:uppercase;outline:none}
-.watchlist-input:focus{border-color:var(--text-dim)}
-.star-btn{height:34px;width:36px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:#f59e0b;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s,border-color .2s}
-.star-btn:hover{border-color:#f59e0b;background:rgba(245,158,11,0.1)}
-.search-suggestions{position:absolute;top:38px;left:0;width:290px;background:var(--card);border:1px solid var(--border);border-radius:6px;box-shadow:0 6px 16px rgba(0,0,0,0.18);z-index:100;max-height:240px;overflow-y:auto;display:none}
-.suggestion-item{padding:8px 12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)}
-.suggestion-item:last-child{border-bottom:none}
-.suggestion-item:hover{background:var(--muted-surface)}
-.suggestion-code{font-weight:600;font-size:13px}
-.suggestion-name{font-size:11px;color:var(--text-dim);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.unfollow-btn{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:16px;line-height:1;padding:2px 5px;border-radius:4px;margin-left:6px}
-.unfollow-btn:hover{color:var(--down);background:rgba(239,68,68,0.12)}
-.fx-pair-selects{display:flex;align-items:center;gap:6px}
-  
-    /* Modern FX Converter Widget */
-    .fx-converter-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 20px 24px;
-      margin-bottom: 24px;
-    }
-    .fx-converter-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-    }
-    .fx-converter-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-dim);
-      text-transform: uppercase;
-      letter-spacing: .8px;
-    }
-    .fx-rate-pill {
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--up);
-      background: rgba(34, 197, 94, 0.1);
-      padding: 4px 10px;
-      border-radius: 20px;
-      border: 1px solid rgba(34, 197, 94, 0.2);
-      font-family: monospace;
-    }
-    .fx-converter-body {
-      display: grid;
-      grid-template-columns: 1fr auto 1fr;
-      gap: 16px;
-      align-items: center;
-    }
-    .fx-box {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 14px;
-      transition: border-color .2s;
-    }
-    .fx-box:focus-within {
-      border-color: var(--tag-us);
-      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
-    }
-    .fx-box-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .fx-box-label {
-      font-size: 11px;
-      font-weight: 500;
-      color: var(--text-dim);
-      text-transform: uppercase;
-    }
-    .fx-select-custom {
-      background: var(--card);
-      border: 1px solid var(--border);
-      color: var(--text);
-      font-weight: 600;
-      font-size: 13px;
-      padding: 3px 8px;
-      border-radius: 5px;
-      cursor: pointer;
-      outline: none;
-    }
-    .fx-input-custom {
-      background: transparent;
-      border: none;
-      outline: none;
-      font-size: 24px;
-      font-weight: 700;
-      color: var(--text);
-      width: 100%;
-      font-family: inherit;
-    }
-    .fx-swap-btn {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      border: 1px solid var(--border);
-      background: var(--card);
-      color: var(--text-dim);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 18px;
-      transition: all .2s;
-      align-self: center;
-      margin: 0 auto;
-    }
-    .fx-swap-btn:hover {
-      color: var(--text);
-      border-color: var(--text-dim);
-      transform: rotate(180deg);
-    }
-    @media (max-width: 640px) {
-      .fx-converter-body {
-        grid-template-columns: 1fr;
-        gap: 10px;
-      }
-      .fx-swap-btn {
-        transform: rotate(90deg);
-        margin: 4px auto;
-      }
-      .fx-swap-btn:hover {
-        transform: rotate(270deg);
-      }
+    :root {
+      --bg-canvas: #FAF9F5;
+      --bg-subtle: #F2F0E8;
+      --bg-card: #FFFFFF;
+      --ink-primary: #121211;
+      --ink-secondary: #5A5955;
+      --ink-muted: #91908B;
+      --line-hairline: rgba(18, 18, 17, 0.085);
+      --line-strong: rgba(18, 18, 17, 0.22);
+      --up-color: #0D7A5F;
+      --up-soft: rgba(13, 122, 95, 0.08);
+      --down-color: #C83E3B;
+      --down-soft: rgba(200, 62, 59, 0.08);
     }
 
-  
-    /* Drag & Drop Styles for Watchlist */
-    .stock-card.draggable {
-      cursor: grab;
+    html.dark {
+      --bg-canvas: #0B0B0A;
+      --bg-subtle: #141413;
+      --bg-card: #171715;
+      --ink-primary: #F5F4F0;
+      --ink-secondary: #A3A29D;
+      --ink-muted: #666560;
+      --line-hairline: rgba(245, 244, 240, 0.085);
+      --line-strong: rgba(245, 244, 240, 0.24);
+      --up-color: #2DD4BF;
+      --up-soft: rgba(45, 212, 191, 0.11);
+      --down-color: #FB7185;
+      --down-soft: rgba(251, 113, 133, 0.11);
+    }
+
+    html.cn-color {
+      --up-color: #C83E3B;
+      --up-soft: rgba(200, 62, 59, 0.08);
+      --down-color: #0D7A5F;
+      --down-soft: rgba(13, 122, 95, 0.08);
+    }
+
+    html.dark.cn-color {
+      --up-color: #FB7185;
+      --up-soft: rgba(251, 113, 133, 0.11);
+      --down-color: #2DD4BF;
+      --down-soft: rgba(45, 212, 191, 0.11);
+    }
+
+    body {
+      background-color: var(--bg-canvas);
+      color: var(--ink-primary);
+      font-family: 'Inter', -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 0.35s ease, color 0.35s ease;
+    }
+
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum" 1, "zero" 1;
+    }
+
+    .hairline-t { border-top: 1px solid var(--line-hairline); }
+    .hairline-b { border-bottom: 1px solid var(--line-hairline); }
+    .hairline-l { border-left: 1px solid var(--line-hairline); }
+    .hairline-r { border-right: 1px solid var(--line-hairline); }
+    .hairline-box { border: 1px solid var(--line-hairline); }
+
+    .text-up { color: var(--up-color); }
+    .text-down { color: var(--down-color); }
+    .pill-up { background-color: var(--up-soft); color: var(--up-color); }
+    .pill-down { background-color: var(--down-soft); color: var(--down-color); }
+
+    .privacy-blur {
+      filter: blur(9px);
       user-select: none;
-      transition: transform .2s, box-shadow .2s, opacity .2s;
+      transition: filter 0.25s ease;
     }
-    .stock-card.draggable:active {
-      cursor: grabbing;
-    }
-    .stock-card.dragging {
-      opacity: 0.4;
-      transform: scale(0.98);
-      border: 2px dashed var(--tag-us);
-    }
-    .drag-handle {
-      cursor: grab;
-      color: var(--text-dim);
-      margin-right: 6px;
-      font-size: 14px;
-    }
-    /* Section reorder toggle button */
-    .section-move-btn {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 4px 8px;
-      font-size: 12px;
-      cursor: pointer;
-      color: var(--text);
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      margin-left: 8px;
-    }
-    .section-move-btn:hover {
-      border-color: var(--text-dim);
-    }
-    .crown-icon {
-      font-size: 24px;
-      display: inline-block;
-      filter: drop-shadow(0 2px 4px rgba(234, 179, 8, 0.4));
-      margin-right: 4px;
-      vertical-align: middle;
-      animation: crownBounce 2s infinite ease-in-out;
-    }
-    @keyframes crownBounce {
-      0%, 100% { transform: translateY(0) rotate(0deg); }
-      50% { transform: translateY(-3px) rotate(4deg); }
+    .privacy-blur:hover {
+      filter: blur(3px);
     }
 
-  
-    /* Modern FX Card Styling matching the dashboard theme */
-    .fx-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 16px;
-      margin-bottom: 28px;
-    }
-    .fx-card-modern {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 18px 20px;
-      box-shadow: var(--shadow);
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      transition: transform .2s, box-shadow .2s;
-    }
-    .fx-card-modern:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(0,0,0,0.08);
-    }
-    .fx-card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-    .fx-pair-badge {
-      font-size: 13px;
-      font-weight: 700;
-      font-family: monospace;
-      color: var(--text);
-      background: var(--muted-surface);
-      padding: 3px 8px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-    }
-    .fx-pair-name {
-      font-size: 11px;
-      color: var(--text-dim);
-    }
-    .fx-rate-val {
-      font-size: 26px;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: -.5px;
-      margin-bottom: 8px;
-    }
-    .fx-details-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 11px;
-      color: var(--text-dim);
-      padding-top: 10px;
-      border-top: 1px solid var(--border);
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
     }
 
-    /* Draggable Watchlist Cards */
-    .stock-card[draggable="true"] {
-      cursor: grab;
-      position: relative;
-      transition: all .2s ease;
-    }
-    .stock-card[draggable="true"]:active {
-      cursor: grabbing;
-    }
-    .stock-card.dragging {
-      opacity: 0.35;
-      transform: scale(0.96);
-      border: 2px dashed var(--tag-us) !important;
-    }
-    .stock-card.drag-over {
-      border: 2px solid var(--tag-us) !important;
-      transform: translateY(-4px);
-    }
-    .drag-hint {
-      font-size: 10px;
-      color: var(--text-dim);
-      display: inline-flex;
-      align-items: center;
-      gap: 3px;
-      margin-left: 8px;
-      opacity: 0.8;
-    }
-
-  
-    /* Modern FX & Drag Styles */
-    input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-    input[type=number] { -moz-appearance: textfield; }
-    
-    .crown-icon { font-size: 20px; display: inline-block; vertical-align: middle; margin-left: 4px; animation: crownAnim 2s infinite ease-in-out; }
-    @keyframes crownAnim { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-3px) rotate(5deg); } }
-
-    .watchlist-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 12px; }
-    .watchlist-search-wrap { display: flex; align-items: center; gap: 8px; position: relative; }
-    .watchlist-input { height: 34px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--text); font: inherit; padding: 0 10px; width: 220px; text-transform: uppercase; outline: none; }
-    .watchlist-input:focus { border-color: var(--text-dim); }
-    .star-btn { height: 34px; width: 36px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: #f59e0b; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-    .star-btn:hover { border-color: #f59e0b; background: rgba(245,158,11,0.1); }
-    .search-suggestions { position: absolute; top: 38px; left: 0; width: 280px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 6px 16px rgba(0,0,0,0.18); z-index: 100; max-height: 240px; overflow-y: auto; display: none; }
-    .suggestion-item { padding: 8px 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
-    .suggestion-item:last-child { border-bottom: none; }
-    .suggestion-item:hover { background: var(--muted-surface); }
-    .suggestion-code { font-weight: 600; font-size: 13px; }
-    .suggestion-name { font-size: 11px; color: var(--text-dim); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    
-    .stock-card[draggable="true"] { cursor: grab; user-select: none; transition: transform .15s, box-shadow .15s; }
-    .stock-card[draggable="true"]:active { cursor: grabbing; }
-    .stock-card.dragging { opacity: 0.35; transform: scale(0.96); border: 2px dashed var(--tag-us) !important; }
-    .unfollow-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 12px; padding: 2px 6px; border-radius: 4px; }
-    .unfollow-btn:hover { color: var(--down); background: rgba(239,68,68,0.12); }
-    .drag-hint { font-size: 11px; color: var(--text-dim); margin-left: 8px; }
-
-    /* Modern FX Converter */
-    .fx-converter-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px 24px; margin-bottom: 20px; }
-    .fx-converter-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-    .fx-converter-title { font-size: 12px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: .8px; }
-    .fx-rate-pill { font-size: 12px; font-weight: 500; color: var(--up); background: rgba(34, 197, 94, 0.1); padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(34, 197, 94, 0.2); font-family: monospace; }
-    .fx-converter-body { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: center; }
-    .fx-box { display: flex; flex-direction: column; gap: 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
-    .fx-box:focus-within { border-color: var(--tag-us); }
-    .fx-box-top { display: flex; justify-content: space-between; align-items: center; }
-    .fx-box-label { font-size: 11px; font-weight: 500; color: var(--text-dim); text-transform: uppercase; }
-    .fx-select-custom { background: var(--card); border: 1px solid var(--border); color: var(--text); font-weight: 600; font-size: 13px; padding: 3px 8px; border-radius: 5px; outline: none; cursor: pointer; }
-    .fx-input-custom { background: transparent; border: none; outline: none; font-size: 24px; font-weight: 700; color: var(--text); width: 100%; font-family: inherit; }
-    .fx-swap-btn { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--border); background: var(--card); color: var(--text-dim); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; transition: all .2s; margin: 0 auto; }
-    .fx-swap-btn:hover { color: var(--text); border-color: var(--text-dim); transform: rotate(180deg); }
-
-    .fx-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 28px; }
-    .fx-card-modern { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow); transition: transform .2s, box-shadow .2s; }
-    .fx-card-modern:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
-    .fx-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    .fx-pair-badge { font-size: 13px; font-weight: 700; font-family: monospace; background: var(--muted-surface); padding: 2px 7px; border-radius: 5px; border: 1px solid var(--border); }
-    .fx-pair-name { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
-    .fx-rate-val { font-size: 24px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
-    .fx-details-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); padding-top: 8px; border-top: 1px solid var(--border); }
-
-    @media (max-width: 640px) {
-      .fx-converter-body { grid-template-columns: 1fr; gap: 8px; }
-      .fx-swap-btn { transform: rotate(90deg); }
-      .fx-swap-btn:hover { transform: rotate(270deg); }
-    }
-
-    /* Nothing-inspired final tokens. */
-    :root, :root[data-theme="dark"] {
-      --shadow: none;
-      --label-font: 'Space Mono', monospace;
-      --data-font: 'Space Mono', monospace;
-      --ease-mechanical: cubic-bezier(.25,.1,.25,1);
-    }
-    .container { max-width: 1280px; padding: 32px 32px 64px; }
-    .header { margin-bottom: 40px; padding-bottom: 24px; border-bottom-color: var(--border); }
-    .header h1 { font-family: 'Doto', 'Space Mono', monospace; font-size: 32px; font-weight: 600; letter-spacing: 0; }
-    .last-update, .status-dot, .section-title, .summary-card .label, .metric-label, .fx-box-label,
-    .fx-converter-title, .fx-pair-name, .fx-details-row, .fx-rate-pill { font-family: var(--label-font); }
-    .last-update { font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
-    .refresh-btn, .theme-btn, .star-btn, .section-move-btn { border-radius: 6px; box-shadow: none; transition: border-color .2s var(--ease-mechanical), color .2s var(--ease-mechanical); }
-    .refresh-btn:hover, .theme-btn:hover, .star-btn:hover, .section-move-btn:hover { border-color: var(--text); }
-    .summary-row { gap: 24px; margin-bottom: 40px; }
-    .summary-card, .stock-card, .fx-converter-card, .fx-card-modern, .fx-box { border-radius: 6px; box-shadow: none; }
-    .summary-card { padding: 24px; }
-    .summary-card .value { font-family: var(--data-font); font-size: 30px; font-weight: 400; letter-spacing: 0; }
-    .summary-card .label, .section-title { letter-spacing: .08em; }
-    .section-title { color: var(--text-dim); font-size: 11px; margin-bottom: 16px; }
-    .holdings-grid, .fx-grid { gap: 16px; margin-bottom: 40px; }
-    .stock-card { padding: 20px; transition: border-color .2s var(--ease-mechanical); }
-    .stock-card:hover, .fx-card-modern:hover { box-shadow: none; transform: none; border-color: var(--text-dim); }
-    .stock-card-header { display: grid; grid-template-columns: minmax(0, 1fr) max-content; gap: 18px; align-items: start; }
-    .stock-card-header > div:first-child { min-width: 0; }
-    .stock-name { font-size: 15px; font-weight: 500; line-height: 1.35; }
-    .stock-code, .stock-price, .stock-change, .metric-value, .fx-rate-val, .fx-pair-badge, .fx-input-custom { font-family: var(--data-font); }
-    .stock-code { letter-spacing: .04em; }
-    .market-tag { color: var(--text); background: transparent !important; border: 1px solid var(--border-visible, var(--border)); border-radius: 4px; font-family: var(--label-font); letter-spacing: .06em; }
-    .stock-price-wrap { min-width: max-content; display: flex; flex-direction: column; align-items: flex-end; }
-    .stock-price { font-size: 22px; font-weight: 400; white-space: nowrap; }
-    .stock-change { font-size: 11px; white-space: nowrap; line-height: 1.35; }
-    .stock-divider { background: var(--border); margin: 16px 0; }
-    .metric-label { font-size: 10px; letter-spacing: .08em; }
-    .metric-value { font-size: 13px; font-weight: 400; }
-    .skeleton { background: var(--muted-surface); animation: none; }
-    .fx-converter-card { padding: 24px; margin-bottom: 24px; }
-    .fx-converter-title { font-size: 11px; letter-spacing: .08em; }
-    .fx-rate-pill { color: var(--text); background: transparent; border: 1px solid var(--border); border-radius: 4px; font-size: 11px; }
-    .fx-box { background: var(--bg); padding: 16px; }
-    .fx-input-custom { font-size: 28px; font-weight: 400; }
-    .fx-swap-btn { border-radius: 6px; box-shadow: none; }
-    .fx-card-modern { padding: 20px; }
-    .fx-pair-badge { background: transparent; border: 0; padding: 0; font-size: 15px; font-weight: 400; }
-    .fx-rate-val { font-size: 20px; font-weight: 400; line-height: 1.25; white-space: nowrap; letter-spacing: 0; }
-    .fx-details-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
-    .fx-details-row span { white-space: nowrap; }
-    .fx-market-board { margin: 24px 0 40px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); }
-    .fx-market-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--border); }
-    .fx-market-title { color: var(--text); font: 11px var(--label-font); letter-spacing: .08em; text-transform: uppercase; }
-    .fx-market-status { display: flex; align-items: center; gap: 10px; color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .04em; text-transform: uppercase; }
-    .fx-market-live { color: var(--up); }
-    .fx-market-refresh { border: 1px solid var(--border); border-radius: 4px; background: transparent; color: var(--text); font: 10px var(--label-font); letter-spacing: .05em; padding: 5px 8px; cursor: pointer; }
-    .fx-market-refresh:hover { border-color: var(--text); }
-    .fx-market-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .fx-market-row { min-width: 0; padding: 16px 18px 14px; border-right: 1px solid var(--border); }
-    .fx-market-row:last-child { border-right: 0; }
-    .fx-market-pair { font: 12px var(--data-font); font-weight: 700; letter-spacing: .05em; }
-    .fx-market-label { color: var(--text-dim); font: 10px var(--label-font); margin-top: 4px; }
-    .fx-market-data { display: grid; grid-template-columns: minmax(0, 1fr) 76px; gap: 8px; align-items: center; margin-top: 12px; }
-    .fx-market-rate { font: 22px var(--data-font); white-space: nowrap; }
-    .fx-market-change { font: 10px var(--data-font); margin-top: 5px; }
-    .fx-market-change.up { color: var(--up); }
-    .fx-market-change.down { color: var(--down); }
-    .fx-market-change.neutral { color: var(--text-dim); }
-    .fx-market-spark { width: 76px; height: 34px; overflow: visible; }
-    .fx-market-spark-line { fill: none; stroke: var(--text); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
-    .fx-market-spark-line.up { stroke: var(--up); }
-    .fx-market-spark-line.down { stroke: var(--down); }
-    .fx-market-footer { display: flex; justify-content: space-between; gap: 12px; padding: 10px 20px; border-top: 1px solid var(--border); color: var(--text-dim); font: 10px var(--label-font); }
-    @media (max-width: 820px) { .fx-market-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fx-market-row:nth-child(2) { border-right: 0; } .fx-market-row:nth-child(-n+2) { border-bottom: 1px solid var(--border); } }
-    @media (max-width: 520px) { .fx-market-header, .fx-market-footer { padding-left: 14px; padding-right: 14px; } .fx-market-row { padding: 14px 12px; } .fx-market-rate { font-size: 18px; } .fx-market-data { grid-template-columns: minmax(0, 1fr) 64px; } .fx-market-spark { width: 64px; } }
-    .search-suggestions { box-shadow: none; border-radius: 6px; }
-    .watchlist-input, .fx-select-custom, .fx-control input, .fx-control select { border-radius: 6px; font-family: var(--data-font); }
-    .watchlist-input::placeholder { font-family: 'Space Grotesk', sans-serif; color: var(--text-dim); }
-    .watchlist-empty, .watchlist-quote-state { color: var(--text-dim); font-family: var(--label-font); font-size: 11px; letter-spacing: .03em; }
-    .watchlist-quote-state { margin-top: 6px; }
-    @media (max-width: 520px) {
-      .stock-card { padding: 16px; }
-      .stock-card-header { gap: 10px; }
-      .stock-price { font-size: 20px; }
-      .stock-change { font-size: 10px; }
-    }
-    .dashboard-insights { display: flex; flex-direction: column; gap: 30px; margin: 0 0 40px; }
-    .profit-trend { margin: 0; }
-    .profit-trend-header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
-    .profit-trend-meta { color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .08em; }
-    .profit-trend-frame { position: relative; border: 1px solid var(--border); border-radius: 6px; padding: 18px 20px 16px; background: var(--card); }
-    .profit-trend-summary { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 8px; }
-    .profit-trend-caption { color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .08em; text-transform: uppercase; }
-    .profit-trend-chart { width: 100%; height: 280px; display: block; overflow: visible; }
-    .profit-trend-grid { stroke: var(--border); stroke-width: 1; vector-effect: non-scaling-stroke; }
-    .profit-trend-zero { stroke: var(--text-dim); stroke-width: 1; vector-effect: non-scaling-stroke; }
-    .profit-trend-axis { fill: var(--text-dim); font: 10px var(--label-font); letter-spacing: .03em; }
-    .profit-trend-line { fill: none; stroke: var(--text); stroke-width: 2.5; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
-    .profit-trend-line.up { stroke: var(--up); }
-    .profit-trend-line.down { stroke: var(--down); }
-    .profit-trend-dot { fill: var(--card); stroke: var(--text); stroke-width: 2; vector-effect: non-scaling-stroke; transition: stroke-width .12s; }
-    .profit-trend-dot.focus { stroke-width: 4; }
-    .profit-trend-dot.latest { fill: var(--text); }
-    .profit-trend-hit { fill: transparent; cursor: crosshair; }
-    .profit-trend-hit:focus, .profit-trend-hit:hover { fill: var(--text); opacity: .08; outline: none; }
-    .profit-trend-tooltip { position: absolute; z-index: 2; min-width: 176px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 5px; background: var(--card); box-shadow: 0 8px 24px rgba(0,0,0,.14); pointer-events: none; opacity: 0; transform: translate(-50%, -100%); transition: opacity .12s ease; }
-    .profit-trend-tooltip.visible { opacity: 1; }
-    .profit-trend-tooltip-date { color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .04em; text-transform: uppercase; }
-    .profit-trend-tooltip-value { margin-top: 4px; color: var(--text); font: 14px var(--data-font); }
-    .profit-trend-tooltip-change { margin-top: 3px; color: var(--text-dim); font: 10px var(--label-font); }
-    .profit-trend-crosshair { stroke: var(--text-dim); stroke-width: 1; stroke-dasharray: 3 3; opacity: .7; pointer-events: none; }
-    .profit-trend-area { opacity: .08; }
-    .profit-trend-area.up { fill: var(--up); }
-    .profit-trend-area.down { fill: var(--down); }
-    .profit-trend-bar { opacity: .88; }
-    .profit-trend-bar.up { fill: var(--up); }
-    .profit-trend-bar.down { fill: var(--down); }
-    .profit-trend-bar:hover { opacity: 1; }
-    .profit-trend-sessions { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding-top: 12px; border-top: 1px solid var(--border); }
-    .profit-trend-session { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-    .profit-trend-session-date { color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .03em; }
-    .profit-trend-session-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 12px var(--data-font); }
-    .profit-trend-session-value.up { color: var(--up); }
-    .profit-trend-session-value.down { color: var(--down); }
-    .profit-trend-status { min-height: 250px; display: grid; place-items: center; color: var(--text-dim); font: 11px var(--label-font); letter-spacing: .06em; }
-    .profit-trend-value { font: 20px var(--data-font); }
-    .profit-trend-value.up { color: var(--up); }
-    .profit-trend-value.down { color: var(--down); }
-    .dino-game { border: 1px solid var(--border); border-radius: 6px; background: var(--card); overflow: hidden; }
-    .dino-game-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 18px; border-bottom: 1px solid var(--border); }
-    .dino-game-title { font: 11px var(--label-font); letter-spacing: .08em; text-transform: uppercase; }
-    .dino-game-status { color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .05em; }
-    .dino-game-actions { display: flex; align-items: center; gap: 10px; }
-    .dino-game-score { color: var(--text); font: 12px var(--data-font); }
-    .dino-game-btn { border: 1px solid var(--border); border-radius: 4px; background: transparent; color: var(--text); font: 10px var(--label-font); letter-spacing: .05em; padding: 5px 8px; cursor: pointer; }
-    .dino-game-btn:hover { border-color: var(--text); }
-    .dino-game-btn:focus-visible, .theme-btn:focus-visible, .refresh-btn:focus-visible, .fx-market-refresh:focus-visible { outline: 2px solid var(--up); outline-offset: 2px; }
-    .dino-game-body { display: grid; grid-template-columns: minmax(0, 1fr) 170px; gap: 16px; padding: 16px 18px 18px; background: var(--bg); }
-    .dino-game-stage { min-width: 0; }
-    .dino-game-canvas { display: block; width: 100%; height: auto; min-height: 150px; border: 1px solid var(--border); background: var(--game-surface); cursor: pointer; image-rendering: pixelated; }
-    .dino-leaderboard { border-left: 1px solid var(--border); padding-left: 16px; }
-    .dino-leaderboard-title { color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 10px; }
-    .dino-leaderboard-list { display: flex; flex-direction: column; gap: 8px; }
-    .dino-leaderboard-row { display: grid; grid-template-columns: 20px 1fr auto; gap: 6px; align-items: center; font: 11px var(--data-font); }
-    .dino-leaderboard-rank { color: var(--text-dim); }
-    .dino-leaderboard-row.current .dino-leaderboard-score { color: var(--up); }
-    .dino-leaderboard-empty { color: var(--text-dim); font: 10px var(--label-font); line-height: 1.5; }
-    .dino-game-note { color: var(--text-dim); font: 10px var(--label-font); letter-spacing: .03em; }
-    :root { --game-surface: #f1f1f1; }
-    :root[data-theme="dark"] { --game-surface: #1a1a1a; }
-    @media (max-width: 680px) { .dino-game-body { grid-template-columns: 1fr; gap: 14px; } .dino-leaderboard { border-left: 0; border-top: 1px solid var(--border); padding: 14px 0 0; } .dino-leaderboard-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    @media (max-width: 520px) { .dino-game-header { padding: 12px 14px; } .dino-game-body { padding: 12px; } .dino-game-status { display: none; } .dino-game-canvas { min-height: 130px; } }
-    .best-stock-name { font-family: 'Space Grotesk', sans-serif !important; font-size: 18px !important; font-weight: 500 !important; line-height: 1.25; }
-    .best-code { color: var(--text-dim); font: 11px var(--data-font); letter-spacing: .06em; margin-top: 3px; }
-    :root[data-theme="dark"] .error-banner { background: transparent; border-color: var(--down); }
-    .error-banner { background: transparent; border-color: var(--down); border-radius: 4px; font-family: var(--label-font); }
-    /* Dashboard refinement */
-    .container { max-width: 1280px; padding-top: 30px; }
-    .header { margin-bottom: 22px; padding-bottom: 16px; }
-    .header h1 { font-size: 22px; letter-spacing: -.5px; }
-    .summary-row { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 26px; }
-    .summary-card { min-height: 122px; padding: 18px 20px; border-radius: 10px; }
-    .summary-card .value { font-size: 25px; }
-    .dashboard-insights { gap: 14px; margin-bottom: 28px; }
-    .profit-trend, .dino-game { border-radius: 10px; }
-    .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin: 4px 0 14px; }
-    .section-heading .section-title { margin-bottom: 0; }
-    .section-caption { color: var(--text-dim); font-size: 11px; letter-spacing: .04em; }
-    .holdings-grid { grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px; margin-bottom: 34px; }
-    .stock-card { padding: 18px 19px; border-radius: 10px; }
-    .stock-card:hover { transform: translateY(-2px); transition: transform .18s ease, box-shadow .18s ease; }
-    .watchlist-header { border-top: 1px solid var(--border); padding-top: 22px; margin-top: 4px; }
-    .fx-converter-card { margin-top: 4px; border-radius: 10px; }
-    .fx-market-board { border-radius: 10px; margin-top: 18px; }
-    @media (max-width: 980px) { .summary-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    @media (max-width: 560px) {
-      .container { padding: 18px 14px 36px; }
-      .summary-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
-      .summary-card { min-height: 106px; padding: 14px; }
-      .summary-card .value { font-size: 20px; }
-      .section-heading { align-items: flex-start; flex-direction: column; gap: 3px; }
-      .section-caption { font-size: 10px; }
-    }
-    @media (max-width: 768px) {
-      .container { padding: 24px 16px 48px; }
-      .header h1 { font-size: 26px; }
-      .summary-row { gap: 12px; margin-bottom: 32px; }
-      .summary-card { padding: 18px; }
-      .fx-rate-val { font-size: 19px; }
-      .fx-details-row { gap: 6px; font-size: 10px; }
-      .profit-trend-frame { padding: 14px 10px 8px; }
-      .profit-trend-chart { height: 220px; }
-      .profit-trend-sessions { gap: 4px; }
-      .profit-trend-session-value { font-size: 10px; }
-    }
-
-</style>
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--line-strong); }
+  </style>
 </head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>Portfolio Monitor</h1>
-      <div class="header-right">
-        <span class="last-update" id="lastUpdate">--</span>
-        <span class="status-dot" id="statusDot"></span>
-        <div class="header-actions">
-          <button class="theme-btn" id="themeBtn" type="button" aria-label="Switch to dark mode" title="Switch to dark mode">&#9790;</button>
-          <button class="refresh-btn" id="refreshBtn" type="button" title="重新获取行情、汇率并刷新页面数据">Refresh</button>
-        </div>
+<body class="min-h-screen selection:bg-neutral-900 selection:text-white dark:selection:bg-white dark:selection:text-neutral-900">
+
+  <!-- 顶栏 (Minimalist Editorial Masthead) -->
+  <header class="max-w-6xl mx-auto px-6 sm:px-12 pt-9 pb-6 flex flex-wrap items-center justify-between gap-4 hairline-b">
+    <div class="flex items-baseline gap-4">
+      <span class="font-serif italic text-2xl sm:text-3xl tracking-tight">Portfolio.</span>
+      <span class="text-[11px] font-mono uppercase tracking-[0.2em] text-[var(--ink-muted)]">US Equity & P&L Ledger</span>
+    </div>
+
+    <!-- 右侧工具控制栏 -->
+    <div class="flex flex-wrap items-center gap-5 text-xs">
+      <!-- 实时行情同步 -->
+      <div class="flex items-center gap-2 text-[var(--ink-muted)] font-mono text-[11px]">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+        <span id="sync-time">LIVE</span>
+        <button onclick="refreshQuotes(true)" class="hover:text-[var(--ink-primary)] transition underline underline-offset-4">刷新</button>
       </div>
-    </div>
-    <div class="error-banner" id="errorBanner"></div>
-    <div class="summary-row">
-      <div class="summary-card"><div class="label">Total Value</div><div class="value" id="totalValue">--</div><div class="sub" id="totalPL">--</div></div>
-      <div class="summary-card"><div class="label">Unrealized P/L</div><div class="value" id="totalPLValue">--</div><div class="sub" id="totalPLPct">--</div></div>
-      <div class="summary-card"><div class="label">Today P/L</div><div class="value" id="todayPLValue">--</div><div class="sub" id="todayPLPct">--</div></div>
-      <div class="summary-card"><div class="label">Best Today <span class="crown-icon">👑</span></div><div class="value best-stock-name" id="bestStock">--</div><div class="best-code" id="bestCode">--</div><div class="sub" id="bestPct">--</div></div>
-    </div>
-    <div class="dashboard-insights">
-      <section class="profit-trend" aria-labelledby="profitTrendTitle">
-        <div class="profit-trend-header">
-          <div class="section-title" id="profitTrendTitle" style="margin-bottom:0">Total Profit</div>
-          <span class="profit-trend-meta" id="profitTrendMeta">TOTAL PROFIT TREND</span>
-        </div>
-        <div class="profit-trend-frame" id="profitTrendFrame">
-          <div class="profit-trend-status" id="profitTrendStatus">[LOADING...]</div>
-        </div>
-      </section>
-      <section class="dino-game" aria-labelledby="dinoGameTitle">
-        <div class="dino-game-header">
-          <span class="dino-game-title" id="dinoGameTitle">T-Rex Market Runner</span>
-          <span class="dino-game-status" id="dinoGameStatus">SPACE / TAP TO START</span>
-          <div class="dino-game-actions"><span class="dino-game-score" id="dinoGameScore">00000</span><button class="dino-game-btn" id="dinoGameRestart" type="button">Restart</button></div>
-        </div>
-        <div class="dino-game-body"><div class="dino-game-stage"><canvas class="dino-game-canvas" id="dinoGameCanvas" width="900" height="220" tabindex="0" aria-label="Official T-Rex Runner mini game"></canvas></div><aside class="dino-leaderboard" aria-label="Market Runner high scores"><div class="dino-leaderboard-title">Top Runs</div><div class="dino-game-note">Official sprite - local scores</div><div class="dino-leaderboard-list" id="dinoLeaderboardList"></div></aside></div>
-      </section>
-    </div>
-    <div class="section-heading">
-      <div class="section-title">Holdings</div>
-      <span class="section-caption" id="holdingsCaption">ACTIVE POSITIONS</span>
-    </div>
-    <div class="holdings-grid" id="holdingsGrid"></div>
-    
-    <div class="watchlist-header">
-      <div style="display:flex;align-items:center;">
-        <div class="section-title" style="margin-bottom:0">Watchlist</div>
-        <span class="drag-hint">DRAG TO REORDER</span>
+
+      <span class="text-[var(--line-strong)]">|</span>
+
+      <!-- 币种切换 -->
+      <div class="flex items-center gap-2.5 font-mono text-[11px]">
+        <button onclick="setCurrency('USD')" id="curr-USD" class="font-semibold underline underline-offset-4">USD</button>
+        <button onclick="setCurrency('CNY')" id="curr-CNY" class="text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition">CNY</button>
+        <button onclick="setCurrency('HKD')" id="curr-HKD" class="text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition">HKD</button>
       </div>
-      <div class="watchlist-search-wrap">
-        <input type="text" id="watchlistInput" class="watchlist-input" placeholder="输入美股代码 (如 AAPL, SNDK)" autocomplete="off">
-        <button id="watchlistStarBtn" class="star-btn" title="Follow / 关注" type="button">★</button>
-        <div id="watchlistSuggestions" class="search-suggestions"></div>
-      </div>
+
+      <span class="text-[var(--line-strong)]">|</span>
+
+      <!-- 涨跌配色切换 -->
+      <button onclick="toggleColorScheme()" id="scheme-btn" class="text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] transition font-mono text-[11px]">
+        绿涨红跌
+      </button>
+
+      <!-- 隐私模糊 -->
+      <button onclick="togglePrivacy()" id="privacy-btn" class="text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] transition font-mono text-[11px]" title="快捷键 P">
+        隐私
+      </button>
+
+      <!-- 主题切换 -->
+      <button onclick="toggleTheme()" id="theme-btn" class="text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] transition font-mono text-[11px]">
+        深色
+      </button>
+
+      <!-- JSON 配置导出 -->
+      <button onclick="openConfigModal()" class="px-3.5 py-1 rounded-full hairline-box hover:border-[var(--ink-primary)] transition font-mono text-[11px]">
+        JSON ↗
+      </button>
     </div>
-    <div class="holdings-grid holdings-grid-narrow" id="watchlistGrid"></div>
-    
-    <div class="section-title">Exchange</div>
-    <div class="fx-converter-card">
-      <div class="fx-converter-header">
-        <span class="fx-converter-title">LIVE EXCHANGE</span>
-        <span class="fx-rate-pill" id="fxRateLabel">[LOADING...]</span>
-      </div>
-      <div class="fx-converter-body">
-        <div class="fx-box">
-          <div class="fx-box-top">
-            <span class="fx-box-label">FROM</span>
-            <select id="fxFromSelect" class="fx-select-custom"></select>
+  </header>
+
+  <!-- 主画布：四段黄金留白架构 -->
+  <main class="max-w-6xl mx-auto px-6 sm:px-12 py-16 space-y-24">
+
+    <!-- SECTION 01 / 核心总净值与盈亏总览 -->
+    <section class="space-y-12">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-end">
+        <!-- 左侧 7 列：核心大字号总净值 -->
+        <div class="lg:col-span-7 space-y-4">
+          <span class="font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--ink-muted)] block">01 / Net Liquidation Value · 账户总净值</span>
+          <h1 id="hero-net-worth" class="font-serif font-normal text-5xl sm:text-7xl tracking-tight tabular-nums privacy-target leading-none">$0.00</h1>
+          <div class="flex flex-wrap items-center gap-3 pt-2">
+            <span id="hero-day-pill" class="px-3 py-1 rounded-full text-xs font-mono tabular-nums">+0.00%</span>
+            <span id="hero-cost-note" class="text-xs font-mono text-[var(--ink-muted)] tabular-nums privacy-target">持仓总成本 $0.00</span>
           </div>
-          <input id="fxFromAmount" class="fx-input-custom" type="number" min="0" step="any" value="1" placeholder="1.00">
         </div>
 
-        <button class="fx-swap-btn" id="fxSwapBtn" type="button" title="切换货币对">⇄</button>
-
-        <div class="fx-box">
-          <div class="fx-box-top">
-            <span class="fx-box-label">TO</span>
-            <select id="fxToSelect" class="fx-select-custom"></select>
+        <!-- 右侧 5 列：极简无框历史曲线 -->
+        <div class="lg:col-span-5 space-y-3">
+          <div class="flex items-center justify-between text-[11px] font-mono text-[var(--ink-muted)]">
+            <span>PORTFOLIO TRAJECTORY</span>
+            <div class="flex items-center gap-4">
+              <button onclick="switchHeroChartMode('equity')" id="tab-chart-equity" class="text-[var(--ink-primary)] underline underline-offset-4">净值走势</button>
+              <button onclick="switchHeroChartMode('pnl')" id="tab-chart-pnl" class="hover:text-[var(--ink-primary)] transition">历史盈亏走势</button>
+            </div>
           </div>
-          <input id="fxToAmount" class="fx-input-custom" type="number" min="0" step="any" value="" placeholder="0.00">
+          <div class="h-28 w-full">
+            <svg id="hero-sparkline" class="w-full h-full overflow-visible" viewBox="0 0 500 100" preserveAspectRatio="none"></svg>
+          </div>
         </div>
       </div>
-    </div>
-    <div class="fx-grid" id="fxGrid"></div>
-    <section class="fx-market-board" aria-labelledby="fxMarketTitle">
-      <div class="fx-market-header">
-        <span class="fx-market-title" id="fxMarketTitle">FX Market Snapshot</span>
-        <div class="fx-market-status"><span class="fx-market-live">● Live</span><span id="fxSnapshotSync">Sync --</span><button class="fx-market-refresh" id="fxSnapshotRefresh" type="button">Refresh</button></div>
+
+      <!-- 四维盈亏核心数据栏 -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 hairline-t hairline-b py-8 gap-y-8">
+        <div class="pr-6">
+          <span class="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--ink-muted)]">Day P&L · 今日盈亏</span>
+          <p id="metric-day-pnl" class="mt-2.5 font-mono text-2xl font-medium tabular-nums privacy-target">$0.00</p>
+          <p id="metric-day-pct" class="mt-1 font-mono text-xs text-[var(--ink-muted)] tabular-nums">0.00%</p>
+        </div>
+
+        <div class="lg:hairline-l lg:pl-8 pr-6">
+          <span class="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--ink-muted)]">Unrealized · 当前持仓浮盈亏</span>
+          <p id="metric-unrealized-pnl" class="mt-2.5 font-mono text-2xl font-medium tabular-nums privacy-target">$0.00</p>
+          <p id="metric-unrealized-pct" class="mt-1 font-mono text-xs text-[var(--ink-muted)] tabular-nums">0.00%</p>
+        </div>
+
+        <div class="lg:hairline-l lg:pl-8 pr-6">
+          <span class="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--ink-muted)]">Realized · 历史已实现盈亏</span>
+          <p id="metric-realized-pnl" class="mt-2.5 font-mono text-2xl font-medium tabular-nums privacy-target">$0.00</p>
+          <p id="metric-realized-sub" class="mt-1 font-mono text-xs text-[var(--ink-muted)] tabular-nums">累计落袋收益</p>
+        </div>
+
+        <div class="lg:hairline-l lg:pl-8">
+          <span class="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--ink-muted)]">Total Historical P&L · 历史总盈亏</span>
+          <p id="metric-total-pnl" class="mt-2.5 font-mono text-2xl font-medium tabular-nums privacy-target">$0.00</p>
+          <p id="metric-total-pct" class="mt-1 font-mono text-xs text-[var(--ink-muted)] tabular-nums">历史总回报率 0.00%</p>
+        </div>
       </div>
-      <div class="fx-market-list" id="fxMarketList"></div>
-      <div class="fx-market-footer"><span>Reference rates - history builds after each sync</span><span id="fxSnapshotSource">Source: --</span></div>
     </section>
+
+    <!-- SECTION 02 / 仓位结构光谱 (Asset Allocation Spectrum) -->
+    <section class="space-y-6">
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <div class="flex items-baseline gap-3">
+          <span class="font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--ink-muted)]">02 / Allocation Spectrum · 仓位结构</span>
+        </div>
+        <span id="sgov-buffer-label" class="font-mono text-xs text-[var(--ink-secondary)]">SGOV 现金防守垫 22.4%</span>
+      </div>
+
+      <!-- 极简线性比例条 -->
+      <div id="allocation-bar" class="h-3 w-full rounded-full overflow-hidden flex gap-0.5 bg-[var(--bg-subtle)]"></div>
+
+      <!-- 五大持仓结构卡片 -->
+      <div id="allocation-legend" class="grid grid-cols-2 sm:grid-cols-5 gap-4 pt-2"></div>
+    </section>
+
+    <!-- SECTION 03 / 美股持仓明细 (Open Positions) -->
+    <section class="space-y-6">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <span class="font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--ink-muted)]">03 / Open Positions</span>
+          <h2 class="font-serif text-3xl mt-1">美股持仓与实时盈亏</h2>
+        </div>
+
+        <!-- 极简分类切换 -->
+        <div class="flex items-center gap-5 text-xs font-mono">
+          <button onclick="filterCategory('ALL')" id="cat-ALL" class="text-[var(--ink-primary)] underline underline-offset-8 font-medium">全部 (5)</button>
+          <button onclick="filterCategory('CORE')" id="cat-CORE" class="text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition">美股核心</button>
+          <button onclick="filterCategory('DEFENSE')" id="cat-DEFENSE" class="text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition">国债防守</button>
+          <button onclick="filterCategory('SATELLITE')" id="cat-SATELLITE" class="text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition">卫星仓位</button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="hairline-t hairline-b text-[10px] font-mono uppercase tracking-[0.16em] text-[var(--ink-muted)]">
+              <th class="py-4 pr-4 cursor-pointer hover:text-[var(--ink-primary)]" onclick="setSort('symbol')">标的 / 定位 ↕</th>
+              <th class="py-4 px-4 text-right cursor-pointer hover:text-[var(--ink-primary)]" onclick="setSort('price')">最新现价 ↕</th>
+              <th class="py-4 px-4 text-right cursor-pointer hover:text-[var(--ink-primary)]" onclick="setSort('shares')">持仓股数 / 成本均价 ↕</th>
+              <th class="py-4 px-4 text-right cursor-pointer hover:text-[var(--ink-primary)]" onclick="setSort('marketValue')">持仓市值 / 总成本 ↕</th>
+              <th class="py-4 px-4 text-right cursor-pointer hover:text-[var(--ink-primary)]" onclick="setSort('dayPnl')">今日盈亏 ↕</th>
+              <th class="py-4 px-4 text-right cursor-pointer hover:text-[var(--ink-primary)]" onclick="setSort('totalPnl')">持仓浮盈亏 ↕</th>
+              <th class="py-4 pl-4 text-right cursor-pointer hover:text-[var(--ink-primary)]" onclick="setSort('weight')">仓位占比 ↕</th>
+            </tr>
+          </thead>
+          <tbody id="holdings-tbody" class="divide-y divide-[var(--line-hairline)] text-sm"></tbody>
+        </table>
+      </div>
+      <p class="text-[11px] font-mono text-[var(--ink-muted)]">提示：点击任意一行持仓，可在右侧抽屉中模拟补仓摊平成本或修改持仓股数与成本。</p>
+    </section>
+
+    <!-- SECTION 04 / 历史盈亏 (Historical P&L — 纯粹、清晰的全宽双栏画廊布局) -->
+    <section class="space-y-10 hairline-t pt-16">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <span class="font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--ink-muted)]">04 / Historical P&L</span>
+          <h2 class="font-serif text-3xl mt-1">历史盈亏</h2>
+        </div>
+        <button onclick="openAddHistoryModal()" class="px-4 py-2 rounded-full hairline-box text-xs font-mono hover:border-[var(--ink-primary)] transition">
+          + 新增历史盈亏记录
+        </button>
+      </div>
+
+      <!-- 历史盈亏核心概览条 -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 p-6 rounded-2xl bg-[var(--bg-subtle)]/65 hairline-box">
+        <div>
+          <span class="text-[11px] font-mono text-[var(--ink-muted)] block">历史累计总盈亏 (含浮盈+已实现)</span>
+          <span id="hist-overview-total" class="font-mono text-xl font-semibold mt-1.5 block tabular-nums privacy-target">$0.00</span>
+        </div>
+        <div class="lg:hairline-l lg:pl-6">
+          <span class="text-[11px] font-mono text-[var(--ink-muted)] block">历史已实现盈亏总额</span>
+          <span id="hist-overview-realized" class="font-mono text-xl font-semibold mt-1.5 block tabular-nums privacy-target">$0.00</span>
+        </div>
+        <div class="lg:hairline-l lg:pl-6">
+          <span class="text-[11px] font-mono text-[var(--ink-muted)] block">月度盈利胜率</span>
+          <span id="hist-overview-winrate" class="font-mono text-xl font-semibold mt-1.5 block tabular-nums">83% (5/6月)</span>
+        </div>
+        <div class="lg:hairline-l lg:pl-6">
+          <span class="text-[11px] font-mono text-[var(--ink-muted)] block">最佳单月盈亏</span>
+          <span id="hist-overview-best" class="font-mono text-xl font-semibold mt-1.5 block tabular-nums privacy-target text-up">+$542.80</span>
+        </div>
+      </div>
+
+      <!-- 左右分栏：左侧 7 列月度历史盈亏矩阵，右侧 5 列历史盈亏记录明细 -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+
+        <!-- 左侧 7 列：月度历史盈亏表现 -->
+        <div class="lg:col-span-7 space-y-4">
+          <div class="flex items-center justify-between text-xs font-mono text-[var(--ink-muted)]">
+            <span>MONTHLY P&L ARCHIVE · 月度盈亏表现</span>
+            <span>2026 年度</span>
+          </div>
+          <div id="monthly-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3.5"></div>
+        </div>
+
+        <!-- 右侧 5 列：历史盈亏流水账本 -->
+        <div class="lg:col-span-5 space-y-4">
+          <div class="flex items-center justify-between text-xs font-mono text-[var(--ink-muted)]">
+            <span>HISTORICAL P&L RECORDS · 历史盈亏明细</span>
+            <span id="ledger-count">0 条记录</span>
+          </div>
+          <div id="ledger-list" class="divide-y divide-[var(--line-hairline)] hairline-t hairline-b max-h-80 overflow-y-auto"></div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 页脚 -->
+  <footer class="max-w-6xl mx-auto px-6 sm:px-12 py-12 hairline-t text-xs font-mono text-[var(--ink-muted)] flex flex-wrap items-center justify-between gap-4">
+    <span>PORTFOLIO · SWISS EDITORIAL EDITION</span>
+    <span>SHORTCUTS: [P] 隐私模糊 · [ESC] 关闭面板</span>
+  </footer>
+
+  <!-- 右侧滑出：单标的深度抽屉与补仓均价计算器 -->
+  <div id="drawer-backdrop" onclick="closeHoldingDrawer()" class="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-50 hidden opacity-0 transition-opacity"></div>
+  <aside id="holding-drawer" class="fixed top-0 right-0 h-full w-full max-w-md bg-[var(--bg-canvas)] hairline-l z-50 transform translate-x-full transition-transform duration-300 ease-out p-8 flex flex-col justify-between overflow-y-auto">
+    <div class="space-y-8">
+      <div class="flex items-start justify-between hairline-b pb-5">
+        <div>
+          <span id="drawer-role" class="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-muted)]">CORE EQUITY</span>
+          <h3 id="drawer-symbol" class="font-serif text-4xl mt-1">VTI</h3>
+          <p id="drawer-name" class="text-xs text-[var(--ink-secondary)] mt-0.5">Vanguard Total Stock Market ETF</p>
+        </div>
+        <button onclick="closeHoldingDrawer()" class="text-xs font-mono text-[var(--ink-muted)] hover:text-[var(--ink-primary)]">关闭 [ESC]</button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-6 hairline-b pb-6 font-mono">
+        <div>
+          <span class="text-[10px] uppercase text-[var(--ink-muted)]">当前现价</span>
+          <p id="drawer-price" class="text-lg font-medium mt-1 tabular-nums">$0.00</p>
+        </div>
+        <div>
+          <span class="text-[10px] uppercase text-[var(--ink-muted)]">当前持仓浮盈亏</span>
+          <p id="drawer-pnl" class="text-lg font-medium mt-1 tabular-nums">$0.00</p>
+        </div>
+      </div>
+
+      <!-- 修改持仓股数与成本 -->
+      <div class="space-y-4 hairline-b pb-7">
+        <span class="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--ink-muted)] block">修改持仓参数</span>
+        <div class="grid grid-cols-2 gap-3 font-mono text-xs">
+          <div>
+            <label class="text-[10px] text-[var(--ink-muted)] block mb-1">持仓股数 (Shares)</label>
+            <input type="number" step="0.01" id="drawer-edit-shares" class="w-full px-3 py-2 bg-transparent hairline-box rounded" />
+          </div>
+          <div>
+            <label class="text-[10px] text-[var(--ink-muted)] block mb-1">平均成本价 ($)</label>
+            <input type="number" step="0.01" id="drawer-edit-cost" class="w-full px-3 py-2 bg-transparent hairline-box rounded" />
+          </div>
+        </div>
+        <button onclick="saveDrawerHoldingEdit()" class="w-full py-2.5 rounded-full bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 text-xs font-mono font-medium">
+          保存该标的修改
+        </button>
+      </div>
+
+      <!-- 补仓摊平成本模拟器 -->
+      <div class="space-y-4">
+        <span class="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--ink-muted)] block">补仓摊平成本计算器</span>
+        <div class="grid grid-cols-2 gap-3 font-mono text-xs">
+          <div>
+            <label class="text-[10px] text-[var(--ink-muted)] block mb-1">计划加仓股数</label>
+            <input type="number" step="1" id="sim-buy-shares" value="10" oninput="runAvgCostSimulator()" class="w-full px-3 py-2 bg-transparent hairline-box rounded" />
+          </div>
+          <div>
+            <label class="text-[10px] text-[var(--ink-muted)] block mb-1">计划买入价 ($)</label>
+            <input type="number" step="0.01" id="sim-buy-price" oninput="runAvgCostSimulator()" class="w-full px-3 py-2 bg-transparent hairline-box rounded" />
+          </div>
+        </div>
+        <div class="p-4 rounded-xl bg-[var(--bg-subtle)] font-mono text-xs space-y-2 tabular-nums">
+          <div class="flex justify-between"><span class="text-[var(--ink-muted)]">所需新增资金：</span><span id="sim-needed-cash" class="font-medium">$0.00</span></div>
+          <div class="flex justify-between"><span class="text-[var(--ink-muted)]">加仓后总股数：</span><span id="sim-new-shares">0</span></div>
+          <div class="flex justify-between"><span class="text-[var(--ink-muted)]">加仓后新均价：</span><span id="sim-new-avg" class="font-semibold">$0.00</span></div>
+          <div class="flex justify-between"><span class="text-[var(--ink-muted)]">加仓后新浮盈率：</span><span id="sim-new-pnl-pct">0.00%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pt-6 hairline-t text-[11px] font-mono text-[var(--ink-muted)]">
+      修改将自动保存至本地并支持导出至 portfolio.json
+    </div>
+  </aside>
+
+  <!-- 新增历史盈亏弹窗 -->
+  <div id="history-modal" class="fixed inset-0 bg-black/50 backdrop-blur-[2px] z-50 hidden items-center justify-center p-4">
+    <div class="bg-[var(--bg-canvas)] hairline-box rounded-2xl max-w-md w-full p-7 space-y-5">
+      <div class="flex items-center justify-between hairline-b pb-3">
+        <h3 class="font-serif text-xl">新增历史盈亏记录</h3>
+        <button onclick="closeAddHistoryModal()" class="text-xs font-mono text-[var(--ink-muted)]">✕</button>
+      </div>
+      <div class="space-y-4 text-xs font-mono">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-[var(--ink-muted)] block mb-1">日期</label>
+            <input type="date" id="hist-input-date" value="2026-10-21" class="w-full px-3 py-2 bg-transparent hairline-box rounded" />
+          </div>
+          <div>
+            <label class="text-[var(--ink-muted)] block mb-1">关联标的</label>
+            <select id="hist-input-symbol" class="w-full px-3 py-2 bg-[var(--bg-canvas)] hairline-box rounded">
+              <option value="VTI">VTI</option>
+              <option value="QQQM">QQQM</option>
+              <option value="SGOV">SGOV</option>
+              <option value="VXUS">VXUS</option>
+              <option value="DRAM">DRAM</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="text-[var(--ink-muted)] block mb-1">盈亏金额 (USD，正数为盈利，负数为亏损)</label>
+          <input type="number" step="0.01" id="hist-input-amount" placeholder="例如 142.60 或 -35.00" class="w-full px-3 py-2 bg-transparent hairline-box rounded" />
+        </div>
+        <div>
+          <label class="text-[var(--ink-muted)] block mb-1">备注说明</label>
+          <input type="text" id="hist-input-note" placeholder="例如：阶段止盈 / 历史已实现收益" class="w-full px-3 py-2 bg-transparent hairline-box rounded font-sans" />
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 pt-2 font-mono text-xs">
+        <button onclick="closeAddHistoryModal()" class="px-4 py-2 rounded-full hairline-box">取消</button>
+        <button onclick="submitHistoryRecord()" class="px-5 py-2 rounded-full bg-neutral-900 text-white dark:bg-white dark:text-neutral-900">保存记录</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 管理与导出 portfolio.json 弹窗 -->
+  <div id="config-modal" class="fixed inset-0 bg-black/50 backdrop-blur-[2px] z-50 hidden items-center justify-center p-4">
+    <div class="bg-[var(--bg-canvas)] hairline-box rounded-2xl max-w-2xl w-full p-7 space-y-5">
+      <div class="flex items-center justify-between hairline-b pb-3">
+        <div>
+          <h3 class="font-serif text-xl">管理持仓与历史盈亏 JSON</h3>
+          <p class="text-xs text-[var(--ink-muted)] mt-0.5">直接编辑或下载 `portfolio.json` 后提交至 GitHub 仓库根目录</p>
+        </div>
+        <button onclick="closeConfigModal()" class="text-xs font-mono text-[var(--ink-muted)]">✕</button>
+      </div>
+      <textarea id="json-editor-textarea" rows="13" class="w-full p-4 bg-[var(--bg-subtle)] hairline-box rounded-xl font-mono text-xs leading-relaxed focus:outline-none"></textarea>
+      <div class="flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
+        <button onclick="resetToDefaultHoldings()" class="px-3.5 py-2 rounded-full hairline-box text-rose-600 dark:text-rose-400">
+          恢复默认初始数据
+        </button>
+        <div class="flex items-center gap-2.5">
+          <button onclick="downloadPortfolioJson()" class="px-4 py-2 rounded-full hairline-box">
+            下载 portfolio.json
+          </button>
+          <button onclick="applyJsonEditorChanges()" class="px-5 py-2 rounded-full bg-neutral-900 text-white dark:bg-white dark:text-neutral-900">
+            应用并保存
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
-var PORTFOLIO_FILE = "portfolio.json";
-// Keep the dashboard responsive to the half-hour Actions updates without
-// hammering the static Pages endpoint.
-var REFRESH_INTERVAL = 5 * 60 * 1000;
-var portfolio = null;
-var priceCache = {};
-var HISTORY_CACHE_KEY = "portfolio-history-v1";
-var HISTORY_CACHE_TTL = 10 * 60 * 1000;
-var WATCHLIST_QUOTE_CACHE_KEY = "portfolio-watchlist-quotes-v1";
-var historyCache = {};
-var historyRefreshInFlight = null;
-var watchlistQuoteCache = {};
-var SNAPSHOT_CACHE_KEY = "portfolio-market-snapshot-v1";
-var lastSnapshot = null;
-var snapshotHistory = {};
-try { historyCache = JSON.parse(localStorage.getItem(HISTORY_CACHE_KEY) || "{}"); } catch (e) { historyCache = {}; }
-try { watchlistQuoteCache = JSON.parse(localStorage.getItem(WATCHLIST_QUOTE_CACHE_KEY) || "{}"); } catch (e) { watchlistQuoteCache = {}; }
-try { lastSnapshot = JSON.parse(localStorage.getItem(SNAPSHOT_CACHE_KEY) || "null"); } catch (e) { lastSnapshot = null; }
-if (lastSnapshot && lastSnapshot.history) snapshotHistory = lastSnapshot.history;
-var fetchErrors = [];
-var fxCache = {};
-var fxLiveRates = {};
-var allUsdRates = {};
-var currentPairRate = 1;
-var FX_SNAPSHOT_KEY = "portfolio-fx-snapshot-v1";
-var fxSnapshotHistory = {};
-try { fxSnapshotHistory = JSON.parse(localStorage.getItem(FX_SNAPSHOT_KEY) || "{}"); } catch (e) { fxSnapshotHistory = {}; }
-
-var CURRENCY_LIST = ["USD","CNY","HKD","EUR","GBP","JPY","KRW","AUD","CAD","SGD","CHF","NZD","INR","THB","MYR","PHP","IDR","VND","BRL","MXN","RUB","TRY","ZAR","SAR","AED"];
-
-var POPULAR_US_STOCKS = [
-  {symbol:"AAPL",name:"Apple Inc."},{symbol:"MSFT",name:"Microsoft Corporation"},
-  {symbol:"NVDA",name:"NVIDIA Corporation"},{symbol:"GOOGL",name:"Alphabet Inc."},
-  {symbol:"AMZN",name:"Amazon.com Inc."},{symbol:"META",name:"Meta Platforms Inc."},
-  {symbol:"TSLA",name:"Tesla Inc."},{symbol:"AVGO",name:"Broadcom Inc."},
-  {symbol:"ORCL",name:"Oracle Corporation"},{symbol:"CRM",name:"Salesforce Inc."},
-  {symbol:"AMD",name:"Advanced Micro Devices"},{symbol:"INTC",name:"Intel Corporation"},
-  {symbol:"QCOM",name:"Qualcomm Inc."},{symbol:"TXN",name:"Texas Instruments"},
-  {symbol:"ADBE",name:"Adobe Inc."},{symbol:"NFLX",name:"Netflix Inc."},
-  {symbol:"JPM",name:"JPMorgan Chase & Co."},{symbol:"BAC",name:"Bank of America Corp."},
-  {symbol:"WFC",name:"Wells Fargo & Company"},{symbol:"GS",name:"Goldman Sachs Group"},
-  {symbol:"MS",name:"Morgan Stanley"},{symbol:"AXP",name:"American Express"},
-  {symbol:"V",name:"Visa Inc."},{symbol:"MA",name:"Mastercard Inc."},
-  {symbol:"BLK",name:"BlackRock Inc."},{symbol:"LLY",name:"Eli Lilly and Company"},
-  {symbol:"UNH",name:"UnitedHealth Group"},{symbol:"JNJ",name:"Johnson & Johnson"},
-  {symbol:"PFE",name:"Pfizer Inc."},{symbol:"ABBV",name:"AbbVie Inc."},
-  {symbol:"MRK",name:"Merck & Co."},{symbol:"WMT",name:"Walmart Inc."},
-  {symbol:"HD",name:"Home Depot Inc."},{symbol:"PG",name:"Procter & Gamble"},
-  {symbol:"COST",name:"Costco Wholesale"},{symbol:"KO",name:"Coca-Cola Company"},
-  {symbol:"PEP",name:"PepsiCo Inc."},{symbol:"MCD",name:"McDonalds Corporation"},
-  {symbol:"NKE",name:"Nike Inc."},{symbol:"SBUX",name:"Starbucks Corporation"},
-  {symbol:"TGT",name:"Target Corporation"},{symbol:"LOW",name:"Lowes Companies"},
-  {symbol:"DIS",name:"Walt Disney Company"},{symbol:"CMCSA",name:"Comcast Corporation"},
-  {symbol:"VZ",name:"Verizon Communications"},{symbol:"T",name:"AT&T Inc."},
-  {symbol:"CAT",name:"Caterpillar Inc."},{symbol:"GE",name:"General Electric"},
-  {symbol:"BA",name:"Boeing Company"},{symbol:"HON",name:"Honeywell International"},
-  {symbol:"UPS",name:"United Parcel Service"},{symbol:"RTX",name:"RTX Corporation"},
-  {symbol:"LMT",name:"Lockheed Martin"},{symbol:"NOC",name:"Northrop Grumman"},
-  {symbol:"GD",name:"General Dynamics"},{symbol:"MMM",name:"3M Company"},
-  {symbol:"DE",name:"Deere & Company"},{symbol:"XOM",name:"Exxon Mobil Corp."},
-  {symbol:"CVX",name:"Chevron Corporation"},{symbol:"COP",name:"ConocoPhillips"},
-  {symbol:"SLB",name:"Schlumberger Limited"},{symbol:"EOG",name:"EOG Resources"},
-  {symbol:"MPC",name:"Marathon Petroleum"},{symbol:"OXY",name:"Occidental Petroleum"},
-  {symbol:"NEE",name:"NextEra Energy"},{symbol:"LIN",name:"Linde plc"},
-  {symbol:"APD",name:"Air Products & Chemicals"},{symbol:"SPGI",name:"S&P Global Inc."},
-  {symbol:"PLD",name:"Prologis Inc."},{symbol:"AMT",name:"American Tower Corp."},
-  {symbol:"EQIX",name:"Equinix Inc."},{symbol:"PSA",name:"Public Storage"},
-  {symbol:"SPY",name:"SPDR S&P 500 ETF Trust"},{symbol:"QQQ",name:"Invesco QQQ Trust"},
-  {symbol:"VTI",name:"Vanguard Total Stock Market ETF"},{symbol:"VOO",name:"Vanguard S&P 500 ETF"},
-  {symbol:"VEA",name:"Vanguard FTSE Developed Markets ETF"},{symbol:"VWO",name:"Vanguard FTSE Emerging Markets ETF"},
-  {symbol:"AGG",name:"iShares Core US Aggregate Bond ETF"},{symbol:"BND",name:"Vanguard Total Bond Market ETF"},
-  {symbol:"GLD",name:"SPDR Gold Shares"},{symbol:"SLV",name:"iShares Silver Trust"},
-  {symbol:"TQQQ",name:"ProShares UltraPro QQQ"},{symbol:"SQQQ",name:"ProShares UltraPro Short QQQ"},
-  {symbol:"SOXL",name:"Direxion Daily Semiconductor Bull 3X"},{symbol:"SOXS",name:"Direxion Daily Semiconductor Bear"},
-  {symbol:"TLT",name:"iShares 20+ Year Treasury Bond ETF"},{symbol:"IEF",name:"iShares 7-10 Year Treasury Bond ETF"},
-  {symbol:"SHY",name:"iShares 1-3 Year Treasury Bond ETF"},{symbol:"LQD",name:"iShares Investment Grade Corporate Bond"},
-  {symbol:"BABA",name:"Alibaba Group Holding"},{symbol:"JD",name:"JD.com Inc."},
-  {symbol:"PDD",name:"PDD Holdings (Pinduoduo)"},{symbol:"BIDU",name:"Baidu Inc."},
-  {symbol:"NTES",name:"NetEase Inc."},{symbol:"TCEHY",name:"Tencent Holdings Ltd"},
-  {symbol:"NIO",name:"NIO Inc."},{symbol:"LI",name:"Li Auto Inc."},
-  {symbol:"XPEV",name:"XPeng Inc."},{symbol:"BYD",name:"BYD Company Limited"},
-  {symbol:"GME",name:"GameStop Corp."},{symbol:"AMC",name:"AMC Entertainment Holdings"},
-  {symbol:"PLTR",name:"Palantir Technologies"},{symbol:"RIVN",name:"Rivian Automotive"},
-  {symbol:"LCID",name:"Lucid Group"},{symbol:"F",name:"Ford Motor Company"},
-  {symbol:"GM",name:"General Motors"},{symbol:"TM",name:"Toyota Motor Corporation"},
-  {symbol:"COIN",name:"Coinbase Global Inc."},{symbol:"MSTR",name:"MicroStrategy Inc."},
-  {symbol:"HOOD",name:"Robinhood Markets"},{symbol:"SOFI",name:"SoFi Technologies"},
-  {symbol:"SQ",name:"Block Inc."},{symbol:"AFRM",name:"Affirm Holdings"},
-  {symbol:"WDC",name:"Western Digital Corporation"},{symbol:"SNDK",name:"SanDisk Corporation (WDC)"},
-  {symbol:"MU",name:"Micron Technology"},{symbol:"NXPI",name:"NXP Semiconductors"},
-  {symbol:"ON",name:"ON Semiconductor"},{symbol:"MRVL",name:"Marvell Technology"},
-  {symbol:"SWKS",name:"Skyworks Solutions"},{symbol:"QRVO",name:"Qorvo Inc."},
-  {symbol:"SMCI",name:"Super Micro Computer Inc."},{symbol:"DELL",name:"Dell Technologies"},
-  {symbol:"HPE",name:"Hewlett Packard Enterprise"},{symbol:"HPQ",name:"HP Inc."},
-  {symbol:"IBM",name:"IBM Corporation"},{symbol:"ARM",name:"Arm Holdings plc"},
-  {symbol:"PATH",name:"UiPath Inc."},{symbol:"SNOW",name:"Snowflake Inc."},
-  {symbol:"DDOG",name:"Datadog Inc."},{symbol:"CRWD",name:"CrowdStrike Holdings"},
-  {symbol:"PANW",name:"Palo Alto Networks"},{symbol:"NET",name:"Cloudflare Inc."},
-  {symbol:"ZS",name:"Zscaler Inc."},{symbol:"NOW",name:"ServiceNow Inc."},
-  {symbol:"WDAY",name:"Workday Inc."},{symbol:"OKTA",name:"Okta Inc."},
-  {symbol:"TEAM",name:"Atlassian Corporation"},{symbol:"MDB",name:"MongoDB Inc."},
-  {symbol:"GTLB",name:"GitLab Inc."},{symbol:"U",name:"Unity Software Inc."},
-  {symbol:"APP",name:"AppLovin Corporation"},{symbol:"RBLX",name:"Roblox Corporation"},
-  {symbol:"DOCU",name:"DocuSign Inc."},{symbol:"ZM",name:"Zoom Video Communications"},
-  {symbol:"TWLO",name:"Twilio Inc."},{symbol:"ABNB",name:"Airbnb Inc."},
-  {symbol:"UBER",name:"Uber Technologies"},{symbol:"LYFT",name:"Lyft Inc."},
-  {symbol:"DASH",name:"DoorDash Inc."},{symbol:"PYPL",name:"PayPal Holdings"},
-  {symbol:"SHOP",name:"Shopify Inc."},{symbol:"ETSY",name:"Etsy Inc."},
-  {symbol:"MELI",name:"MercadoLibre Inc."},{symbol:"SE",name:"Sea Limited"}
-];
-
-function fmt(v, d) { d = d == null ? 2 : d; if (v == null || isNaN(v)) return "--"; return v.toFixed(d); }
-function fmtMoney(v) { if (v == null || isNaN(v)) return "--"; return (v >= 0 ? "+" : "-") + "$" + Math.abs(v).toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2}); }
-function pClass(v) { return v >= 0 ? "up" : "down"; }
-function currencySign(c) {
-  var map = { CNY: "CNY", HKD: "HKD", USD: "USD", EUR: "EUR", GBP: "GBP", JPY: "JPY", KRW: "KRW", AUD: "AUD", CAD: "CAD", SGD: "SGD", CHF: "CHF" };
-  return map[c] || (c + " ");
-}
-function logError(msg) { fetchErrors.push(msg); }
-function normalizeQuote(d) {
-  if (!d || d.price == null || !isFinite(Number(d.price))) return d;
-  var quote = Object.assign({}, d);
-  var price = Number(quote.price);
-  var previous = quote.previousClose != null ? Number(quote.previousClose) : NaN;
-  if (isFinite(previous) && previous > 0) {
-    quote.previousClose = previous;
-    quote.change = price - previous;
-    quote.changePct = (quote.change / previous) * 100;
-    quote.changeAvailable = true;
-    return quote;
-  }
-  // Some cached snapshots only contain change fields. Derive a reference
-  // close when the source explicitly marked the change as available.
-  var change = quote.change != null ? Number(quote.change) : NaN;
-  if (quote.changeAvailable === true && isFinite(change)) {
-    previous = price - change;
-    if (isFinite(previous) && previous > 0) {
-      quote.previousClose = previous;
-      quote.change = change;
-      quote.changePct = (change / previous) * 100;
-      return quote;
-    }
-  }
-  return quote;
-}
-function hasQuoteChange(d) {
-  if (!d || d.change == null || d.changePct == null) return false;
-  if (d.changeAvailable === true) return isFinite(Number(d.change)) && isFinite(Number(d.changePct));
-  return isFinite(Number(d.change)) && isFinite(Number(d.changePct)) && (Number(d.change) !== 0 || Number(d.changePct) !== 0);
-}
-
-function applyTheme(theme) {
-  document.documentElement.setAttribute("data-theme", theme);
-  var themeButton = document.getElementById("themeBtn");
-  if (themeButton) {
-    themeButton.textContent = String.fromCharCode(theme === "dark" ? 0x2600 : 0x263e);
-    themeButton.setAttribute("aria-label", theme === "dark" ? "Switch to light mode" : "Switch to dark mode");
-    themeButton.title = theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
-  }
-  localStorage.setItem("portfolio-theme", theme);
-}
-function initTheme() {
-  applyTheme(localStorage.getItem("portfolio-theme") || "light");
-}
-
-async function loadPortfolio() {
-  var res = await fetch(PORTFOLIO_FILE + "?t=" + Date.now());
-  if (!res.ok) throw new Error("Failed to load portfolio.json");
-  portfolio = await res.json();
-}
-
-function renderStockCard(sym, isHolding) {
-  var d = normalizeQuote(priceCache[sym.code]);
-  var price = d && d.price != null && isFinite(Number(d.price)) ? Number(d.price) : null;
-  var changeAvailable = hasQuoteChange(d);
-  var chg = changeAvailable && d.change != null && isFinite(Number(d.change)) ? Number(d.change) : null;
-  var pct = changeAvailable && d.changePct != null && isFinite(Number(d.changePct)) ? Number(d.changePct) : null;
-  var isUp = pct != null && pct >= 0;
-  var csym = sym.market === "CN" ? "¥" : (sym.market === "HK" ? "HK$" : "$");
-  var dec = sym.market === "CN" ? 3 : 2;
-
-  var plHtml = "";
-  if (isHolding && price != null) {
-    var plv = (price - sym.cost) * sym.quantity;
-    var plp = ((price - sym.cost) / sym.cost) * 100;
-    var mv = price * sym.quantity;
-    plHtml = "<div class=\"metric\"><span class=\"metric-label\">Unrealized P/L</span><span class=\"metric-value " + pClass(plv) + "\">" + fmtMoney(plv) + "</span></div>" +
-             "<div class=\"metric\"><span class=\"metric-label\">Unrealized Return</span><span class=\"metric-value " + pClass(plv) + "\">" + fmt(plp) + "%</span></div>" +
-             (changeAvailable ? "<div class=\"metric\"><span class=\"metric-label\">Today P/L</span><span class=\"metric-value " + pClass(chg * sym.quantity) + "\">" + fmtMoney(chg * sym.quantity) + "</span></div>" : "") +
-             "<div class=\"metric\"><span class=\"metric-label\">Mkt Value</span><span class=\"metric-value\">" + csym + fmt(mv, 0) + "</span></div>";
-  }
-
-  var priceHtml = price == null
-    ? "<div class=\"skeleton skeleton-price\" style=\"margin-top:4px\"></div>"
-    : "<div class=\"stock-price\">" + csym + fmt(price, dec) + "</div>" +
-      (pct == null ? "<div class=\"stock-change neutral\">Daily move --</div>" : "<div class=\"stock-change " + (isUp ? "up" : "down") + "\">Daily move " + (isUp ? "+" : "") + fmt(chg) + " (" + (isUp ? "+" : "") + fmt(pct) + "%)</div>");
-
-  var bottomHtml = isHolding
-    ? "<div class=\"stock-divider\"></div><div class=\"stock-metrics\">" +
-        "<div class=\"metric\"><span class=\"metric-label\">Shares</span><span class=\"metric-value\">" + sym.quantity.toLocaleString() + "</span></div>" +
-        "<div class=\"metric\"><span class=\"metric-label\">Avg Cost</span><span class=\"metric-value\">" + csym + fmt(sym.cost, 3) + "</span></div>" +
-        plHtml + "</div>"
-    : "<div class=\"stock-divider\"></div><div class=\"stock-metrics\"><div class=\"metric\" style=\"grid-column:1 / -1;\"><button class=\"unfollow-btn\" onclick=\"unfollowStock('" + sym.code + "')\">★ 取消关注</button></div></div>";
-
-  return "<div class=\"stock-card\">" +
-    "<div class=\"stock-card-header\">" +
-      "<div><div class=\"stock-name\">" + sym.name + "</div><div class=\"stock-code\">" + sym.code + "</div></div>" +
-      "<div class=\"stock-price-wrap\">" +
-        "<div class=\"market-tag " + sym.market.toLowerCase() + "\">" + sym.market + "</div>" +
-        priceHtml +
-      "</div>" +
-    "</div>" + bottomHtml +
-  "</div>";
-}
-
-function renderSummary(holdings) {
-  var tv = 0, tc = 0, tpl = 0, todayPL = 0, todayBase = 0, bestD = null;
-  for (var i = 0; i < holdings.length; i++) {
-    var item = holdings[i];
-    var d = normalizeQuote(priceCache[item.code]);
-    if (!d || d.price == null) continue;
-    var v = d.price * item.quantity, c = item.cost * item.quantity;
-    tv += v; tc += c; tpl += v - c;
-    var changeAvailable = hasQuoteChange(d);
-    if (!changeAvailable) continue;
-    var dayDollar = Number(d.change) * item.quantity;
-    var pct = Number(d.changePct);
-    todayPL += dayDollar;
-    var previousClose = d.previousClose != null && isFinite(Number(d.previousClose))
-      ? Number(d.previousClose)
-      : Number(d.price) - Number(d.change);
-    if (isFinite(previousClose) && previousClose > 0) todayBase += previousClose * item.quantity;
-    if (!bestD || pct > bestD.pct) {
-      bestD = { name: item.name, code: item.code, pct: pct, change: Number(d.change) };
-    }
-  }
-  var tplp = tc > 0 ? (tpl / tc) * 100 : 0;
-  var el = function(v) { return v >= 0 ? "up" : "down"; };
-  document.getElementById("totalValue").textContent = tv > 0 ? ("$" + tv.toLocaleString("en-US", {maximumFractionDigits:0})) : "--";
-  document.getElementById("totalPL").textContent = tc > 0 ? "Cost basis $" + tc.toLocaleString("en-US", {maximumFractionDigits:0}) : "--";
-  document.getElementById("totalPL").className = "sub";
-  document.getElementById("totalPLValue").textContent = tpl !== 0 ? fmtMoney(tpl) : "--";
-  document.getElementById("totalPLValue").className = "value " + el(tpl);
-  document.getElementById("totalPLPct").textContent = tpl !== 0 ? fmt(tplp) + "% total return" : "--";
-  document.getElementById("totalPLPct").className = "sub " + el(tpl);
-  var todayPct = todayBase > 0 ? (todayPL / todayBase) * 100 : 0;
-  document.getElementById("todayPLValue").textContent = bestD ? fmtMoney(todayPL) : "--";
-  document.getElementById("todayPLValue").className = "value " + el(todayPL);
-  document.getElementById("todayPLPct").textContent = bestD ? fmt(todayPct) + "% vs previous close" : "--";
-  document.getElementById("todayPLPct").className = "sub " + el(todayPL);
-
-  var bestStockEl = document.getElementById("bestStock");
-  var bestCodeEl = document.getElementById("bestCode");
-  var bestPctEl = document.getElementById("bestPct");
-  if (bestStockEl) bestStockEl.textContent = bestD ? bestD.name : "--";
-  if (bestCodeEl) bestCodeEl.textContent = bestD ? bestD.code : "--";
-  if (bestPctEl) {
-    if (bestD) {
-      var sign = bestD.pct >= 0 ? "+" : "";
-      var ds = bestD.change >= 0 ? "+$" : "-$";
-      bestPctEl.textContent = ds + Math.abs(bestD.change).toFixed(2) + " (" + sign + fmt(bestD.pct) + "%)";
-      bestPctEl.className = "sub " + (bestD.pct >= 0 ? "up" : "down");
-    } else {
-      bestPctEl.textContent = "--";
-      bestPctEl.className = "sub";
-    }
-  }
-}
-
-function setStatus(s) {
-  var dot = document.getElementById("statusDot");
-  if (s === "live") { dot.className = "status-dot live"; dot.style.background = ""; }
-  else if (s === "error") { dot.className = "status-dot error"; }
-  else dot.className = "status-dot";
-}
-
-async function readMarketSnapshot() {
-  var endpoints = ["./api/market", "./data/market.json"];
-  for (var i = 0; i < endpoints.length; i++) {
-    try {
-      var response = await fetch(endpoints[i] + "?t=" + Date.now());
-      if (response.ok) return await response.json();
-    } catch (e) {}
-  }
-  try {
-    if (lastSnapshot && lastSnapshot.quotes) return Object.assign({}, lastSnapshot, { _cached: true });
-  } catch (e) {}
-  throw new Error("Market snapshot is unavailable");
-}
-
-async function fetchAllLiveRates() {
-  try {
-    var res = await fetch("https://open.er-api.com/v6/latest/USD");
-    if (!res.ok) return null;
-    var data = await res.json();
-    if (data && data.result === "success" && data.rates) {
-      allUsdRates = data.rates;
-      return data.rates;
-    }
-  } catch(e) {}
-  return null;
-}
-
-function getRateBetween(from, to) {
-  if (from === to) return 1;
-  if (allUsdRates[from] && allUsdRates[to]) {
-    return allUsdRates[to] / allUsdRates[from];
-  }
-  var key = from + to;
-  if (fxCache[key] && fxCache[key].rate) return Number(fxCache[key].rate);
-  return null;
-}
-
-function initFXSelectors() {
-  var fromSel = document.getElementById("fxFromSelect");
-  var toSel = document.getElementById("fxToSelect");
-  if (!fromSel || !toSel || fromSel.options.length > 0) return;
-  fromSel.innerHTML = CURRENCY_LIST.map(function(c){ return "<option value=\"" + c + "\">" + c + "</option>"; }).join("");
-  toSel.innerHTML = CURRENCY_LIST.map(function(c){ return "<option value=\"" + c + "\">" + c + "</option>"; }).join("");
-  fromSel.value = "USD";
-  toSel.value = "CNY";
-}
-
-async function refreshFXData() {
-  initFXSelectors();
-  if (!Object.keys(allUsdRates).length) {
-    await fetchAllLiveRates();
-  }
-  var from = document.getElementById("fxFromSelect").value || "USD";
-  var to = document.getElementById("fxToSelect").value || "CNY";
-  var rate = getRateBetween(from, to);
-  currentPairRate = rate || 1;
-  var lbl = document.getElementById("fxRateLabel");
-  if (lbl) lbl.textContent = rate ? ("1 " + from + " = " + fmt(rate, 4) + " " + to) : "[UNAVAILABLE]";
-  syncConversion("from");
-  renderAllFXCards();
-  recordFXSnapshot();
-  renderFXSnapshot();
-}
-
-function syncConversion(source) {
-  var fromIn = document.getElementById("fxFromAmount");
-  var toIn = document.getElementById("fxToAmount");
-  if (!fromIn || !toIn || !currentPairRate) return;
-  if (source === "from") {
-    var v = parseFloat(fromIn.value);
-    if (isNaN(v)) { toIn.value = ""; return; }
-    toIn.value = (v * currentPairRate).toFixed(4).replace(/\.?0+$/, "");
-  } else {
-    var v = parseFloat(toIn.value);
-    if (isNaN(v)) { fromIn.value = ""; return; }
-    fromIn.value = (v / currentPairRate).toFixed(4).replace(/\.?0+$/, "");
-  }
-}
-
-function renderAllFXCards() {
-  var grid = document.getElementById("fxGrid");
-  if (!grid) return;
-  var pairs = (portfolio && portfolio.fx_pairs && portfolio.fx_pairs.length) ? portfolio.fx_pairs : [
-    {from:"USD", to:"CNY"}, {from:"USD", to:"HKD"}, {from:"EUR", to:"CNY"}, {from:"HKD", to:"CNY"}
-  ];
-  var currencyNames = {
-    USD:"美元 USD",CNY:"人民币 CNY",HKD:"港币 HKD",EUR:"欧元 EUR",
-    GBP:"英镑 GBP",JPY:"日元 JPY",KRW:"韩元 KRW",AUD:"澳元 AUD",CAD:"加元 CAD"
-  };
-  var html = "";
-  for (var i = 0; i < pairs.length; i++) {
-    var p = pairs[i];
-    var rate = getRateBetween(p.from, p.to);
-    var inverse = rate ? (1 / rate) : null;
-    var fromName = currencyNames[p.from] || p.from;
-    var toName = currencyNames[p.to] || p.to;
-    html += "<div class=\"fx-card-modern\">" +
-      "<div class=\"fx-card-header\">" +
-        "<div>" +
-          "<div class=\"fx-pair-badge\">" + p.from + "/" + p.to + "</div>" +
-          "<div class=\"fx-pair-name\">" + fromName + " / " + toName + "</div>" +
-        "</div>" +
-      "</div>" +
-      (rate != null ? (
-        "<div class=\"fx-rate-val\">1 " + p.from + " = " + fmt(rate, 4) + " " + p.to + "</div>" +
-        "<div class=\"fx-details-row\">" +
-          "<span>1 " + p.from + " = " + fmt(rate, 4) + " " + p.to + "</span>" +
-          "<span>1 " + p.to + " = " + (inverse ? fmt(inverse, 4) : "--") + " " + p.from + "</span>" +
-        "</div>"
-      ) : "<div class=\"skeleton skeleton-price\" style=\"margin-top:12px;height:28px;width:60%;\"></div>") +
-    "</div>";
-  }
-  grid.innerHTML = html;
-}
-
-function fxSnapshotPairs() {
-  return [
-    { from: "EUR", to: "CNY", label: "1 欧元" },
-    { from: "USD", to: "CNY", label: "1 美元" },
-    { from: "JPY", to: "CNY", label: "100 日元", multiplier: 100 },
-    { from: "KRW", to: "CNY", label: "100 韩元", multiplier: 100 }
-  ];
-}
-
-function recordFXSnapshot() {
-  var now = new Date();
-  var stamp = now.toISOString();
-  fxSnapshotPairs().forEach(function(pair) {
-    var rate = getRateBetween(pair.from, pair.to);
-    if (!isFinite(rate) || rate <= 0) return;
-    var displayRate = rate * (pair.multiplier || 1);
-    var key = pair.from + pair.to;
-    var series = Array.isArray(fxSnapshotHistory[key]) ? fxSnapshotHistory[key] : [];
-    series.push({ t: stamp, value: displayRate });
-    fxSnapshotHistory[key] = series.slice(-24);
-  });
-  try { localStorage.setItem(FX_SNAPSHOT_KEY, JSON.stringify(fxSnapshotHistory)); } catch (e) {}
-}
-
-function fxSparkline(values, direction) {
-  if (!values.length) return '<svg class="fx-market-spark" viewBox="0 0 76 34" aria-hidden="true"><path class="fx-market-spark-line" d="M2 17 L74 17" /></svg>';
-  var min = Math.min.apply(Math, values), max = Math.max.apply(Math, values);
-  var spread = max - min || Math.max(Math.abs(max) * 0.002, 0.0001);
-  var points = values.map(function(value, index) {
-    var x = values.length === 1 ? 38 : 2 + index * 72 / (values.length - 1);
-    var y = 29 - (value - min) * 24 / spread;
-    return x.toFixed(1) + ',' + y.toFixed(1);
-  }).join(' ');
-  return '<svg class="fx-market-spark" viewBox="0 0 76 34" aria-hidden="true"><polyline class="fx-market-spark-line ' + direction + '" points="' + points + '" /></svg>';
-}
-
-function renderFXSnapshot() {
-  var list = document.getElementById("fxMarketList");
-  if (!list) return;
-  var pairs = fxSnapshotPairs();
-  var html = "";
-  var hasData = false;
-  pairs.forEach(function(pair) {
-    var key = pair.from + pair.to;
-    var series = Array.isArray(fxSnapshotHistory[key]) ? fxSnapshotHistory[key] : [];
-    var values = series.map(function(point) { return Number(point.value); }).filter(function(value) { return isFinite(value); });
-    var current = values.length ? values[values.length - 1] : null;
-    var previous = values.length > 1 ? values[values.length - 2] : null;
-    var change = current != null && previous != null ? current - previous : null;
-    var changePct = change != null && previous ? (change / previous) * 100 : null;
-    var direction = change == null || Math.abs(change) < 1e-12 ? "neutral" : (change > 0 ? "up" : "down");
-    var sign = change != null && change >= 0 ? "+" : "";
-    if (current != null) hasData = true;
-    html += '<article class="fx-market-row"><div class="fx-market-pair">' + pair.from + ' / ' + pair.to + '</div>' +
-      '<div class="fx-market-label">' + pair.label + '</div><div class="fx-market-data">' +
-      '<div>' +
-      '<div class="fx-market-rate">' + (current != null ? fmt(current, 4) : "--") + '</div>' +
-      '<div class="fx-market-change ' + direction + '">' + (changePct != null ? sign + fmt(changePct, 2) + '% vs last sync' : 'Collecting history - ' + values.length + ' sync') + '</div>' +
-      '</div>' + fxSparkline(values, direction) + '</div></article>';
-  });
-  list.innerHTML = hasData ? html : '<div class="profit-trend-status" style="grid-column:1/-1;min-height:120px">[WAITING FOR LIVE RATES]</div>';
-  var sync = document.getElementById("fxSnapshotSync");
-  var latest = Object.keys(fxSnapshotHistory).reduce(function(found, key) {
-    var series = fxSnapshotHistory[key];
-    return Array.isArray(series) && series.length && (!found || series[series.length - 1].t > found) ? series[series.length - 1].t : found;
-  }, null);
-  if (sync) sync.textContent = latest ? "Sync " + new Date(latest).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Sync --";
-  var source = document.getElementById("fxSnapshotSource");
-  if (source) source.textContent = "Source: live exchange rates";
-}
-
-function parseYahooQuote(data) {
-  var result = data && data.chart && data.chart.result && data.chart.result[0];
-  if (!result || !result.meta) return null;
-  var meta = result.meta;
-  var chart = result.indicators && result.indicators.quote && result.indicators.quote[0];
-  var closes = chart && Array.isArray(chart.close) ? chart.close.filter(function(v){ return v != null; }) : [];
-  var price = Number(meta.regularMarketPrice != null ? meta.regularMarketPrice : closes[closes.length - 1]);
-  // chartPreviousClose refers to the close before the requested chart range,
-  // which may be several sessions old. Prefer Yahoo's explicit daily change
-  // or previous close, then use the prior daily candle as a fallback.
-  var explicitChange = Number(meta.regularMarketChange != null ? meta.regularMarketChange : meta.fulldayChange);
-  var prev = Number(meta.regularMarketPreviousClose != null ? meta.regularMarketPreviousClose : meta.previousClose);
-  if (!(isFinite(prev) && prev > 0) && isFinite(explicitChange)) prev = price - explicitChange;
-  if (!(isFinite(prev) && prev > 0)) prev = Number(closes[closes.length - 2] || price);
-  if (!isFinite(price)) return null;
-  return { price: price, previousClose: isFinite(prev) && prev > 0 ? prev : null, change: price - prev, changePct: prev ? ((price - prev) / prev) * 100 : 0, changeAvailable: isFinite(prev) && prev > 0, source: 'Yahoo Finance' };
-}
-
-function fetchQuoteEndpoint(url) {
-  var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-  var timer = setTimeout(function(){ if (controller) controller.abort(); }, 3500);
-  return fetch(url, { cache: 'no-store', signal: controller ? controller.signal : undefined })
-    .then(function(res){ return res.ok ? res.json() : null; })
-    .then(parseYahooQuote)
-    .catch(function(){ return null; })
-    .finally(function(){ clearTimeout(timer); });
-}
-
-async function fetchLiveStockQuote(symbol) {
-  if (!symbol) return null;
-  var cleanSym = symbol.trim().toUpperCase();
-  var targetUrl = "https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(cleanSym) + "?interval=1d&range=5d";
-  var backupTargetUrl = "https://query2.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(cleanSym) + "?interval=1d&range=5d";
-  var endpoints = [
-    targetUrl,
-    backupTargetUrl,
-    "https://api.allorigins.win/raw?url=" + encodeURIComponent(targetUrl),
-    "https://corsproxy.io/?" + encodeURIComponent(targetUrl)
-  ];
-  for (var i = 0; i < endpoints.length; i++) {
-    var quote = await fetchQuoteEndpoint(endpoints[i]);
-    if (quote) return quote;
-  }
-  return null;
-}
-
-function historySymbol(item) {
-  if (item.market === 'HK') return item.code + '.HK';
-  if (item.market === 'CN') return item.code + (String(item.code).charAt(0) === '6' ? '.SS' : '.SZ');
-  return item.code;
-}
-
-function formatMarketDate(timestamp, timeZone) {
-  try {
-    var parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: timeZone || 'America/New_York',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    }).formatToParts(new Date(Number(timestamp) * 1000));
-    var value = {};
-    parts.forEach(function(part) { value[part.type] = part.value; });
-    return value.year + '-' + value.month + '-' + value.day;
-  } catch (error) {
-    return new Date(Number(timestamp) * 1000).toISOString().slice(0, 10);
-  }
-}
-
-function parseYahooHistory(data) {
-  var result = data && data.chart && data.chart.result && data.chart.result[0];
-  var quote = result && result.indicators && result.indicators.quote && result.indicators.quote[0];
-  if (!result || !Array.isArray(result.timestamp) || !quote || !Array.isArray(quote.close)) return [];
-  var points = [];
-  result.timestamp.forEach(function(ts, index) {
-    var close = Number(quote.close[index]);
-    if (isFinite(close)) points.push({ date: formatMarketDate(ts, result.meta && result.meta.exchangeTimezoneName), close: close });
-  });
-  return points.slice(-60);
-}
-
-function fetchHistoryEndpoint(url) {
-  var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-  var timer = setTimeout(function(){ if (controller) controller.abort(); }, 5500);
-  return fetch(url, { cache: 'no-store', signal: controller ? controller.signal : undefined })
-    .then(function(res){ return res.ok ? res.json() : null; })
-    .then(parseYahooHistory)
-    .catch(function(){ return []; })
-    .finally(function(){ clearTimeout(timer); });
-}
-
-async function fetchHistoricalSeries(item) {
-  var key = historySymbol(item);
-  var cached = historyCache[key];
-  if (cached && cached.savedAt && Date.now() - cached.savedAt < HISTORY_CACHE_TTL && cached.points && cached.points.length) {
-    return { item: item, points: cached.points, cached: true };
-  }
-  var target = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(key) + '?interval=1d&range=3mo';
-  var backupTarget = 'https://query2.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(key) + '?interval=1d&range=3mo';
-  var endpoints = [target, backupTarget, 'https://api.allorigins.win/raw?url=' + encodeURIComponent(target), 'https://corsproxy.io/?' + encodeURIComponent(target)];
-  for (var i = 0; i < endpoints.length; i++) {
-    var points = await fetchHistoryEndpoint(endpoints[i]);
-    if (points.length) {
-      historyCache[key] = { savedAt: Date.now(), points: points };
-      try { localStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify(historyCache)); } catch (e) {}
-      return { item: item, points: points, cached: false };
-    }
-  }
-  return { item: item, points: [] };
-}
-
-function snapshotHistoricalSeries(item) {
-  var points = snapshotHistory && snapshotHistory[item.code];
-  if (!Array.isArray(points)) return [];
-  return points.filter(function(point) {
-    return point && typeof point.date === 'string' && isFinite(Number(point.close));
-  }).map(function(point) {
-    return { date: point.date, close: Number(point.close) };
-  }).slice(-60);
-}
-
-function formatTrendValue(value) {
-  var sign = value >= 0 ? '+' : '-';
-  return sign + '$' + Math.abs(value).toLocaleString('en-US', { maximumFractionDigits: 0 });
-}
-function formatTrendDetail(value) {
-  var sign = value >= 0 ? '+' : '-';
-  return sign + '$' + Math.abs(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function renderProfitTrend(holdings, results) {
-  var frame = document.getElementById('profitTrendFrame');
-  if (!frame) return;
-  var valid = results.filter(function(result){ return result.points.length; });
-  if (!valid.length) {
-    frame.innerHTML = '<div class="profit-trend-status">[HISTORY UNAVAILABLE]</div>';
-    return;
-  }
-  var dateMap = {};
-  valid.forEach(function(result) { result.points.forEach(function(point){ dateMap[point.date] = true; }); });
-  var dates = Object.keys(dateMap).sort().slice(-60);
-  if (dates.length < 2) {
-    frame.innerHTML = '<div class="profit-trend-status">[NOT ENOUGH HISTORY]</div>';
-    return;
-  }
-  var closeForDate = function(points, date) {
-    var point = null;
-    points.forEach(function(candidate) { if (candidate.date <= date) point = candidate; });
-    return point;
-  };
-  var values = dates.map(function(date) {
-    return valid.reduce(function(total, result) {
-      var point = closeForDate(result.points, date);
-      return point ? total + (point.close - Number(result.item.cost || 0)) * Number(result.item.quantity || 0) : total;
-    }, 0);
-  });
-  var liveTotal = 0;
-  var hasLiveTotal = false;
-  holdings.forEach(function(item) {
-    var quote = normalizeQuote(priceCache[item.code]);
-    if (!quote || quote.price == null || !isFinite(Number(quote.price))) return;
-    liveTotal += (Number(quote.price) - Number(item.cost || 0)) * Number(item.quantity || 0);
-    hasLiveTotal = true;
-  });
-  if (hasLiveTotal) values[values.length - 1] = liveTotal;
-  var sourceSessionCount = values.length;
-  var maxVisibleSessions = 32;
-  if (values.length > maxVisibleSessions) {
-    var sampledDates = [], sampledValues = [];
-    for (var sampleIndex = 0; sampleIndex < maxVisibleSessions; sampleIndex++) {
-      var sourceIndex = Math.round(sampleIndex * (values.length - 1) / (maxVisibleSessions - 1));
-      sampledDates.push(dates[sourceIndex]);
-      sampledValues.push(values[sourceIndex]);
-    }
-    dates = sampledDates;
-    values = sampledValues;
-  }
-  var changes = values.map(function(value, index) { return index ? value - values[index - 1] : null; });
-  var meta = document.getElementById('profitTrendMeta');
-  if (meta) meta.textContent = 'TOTAL PROFIT · ' + values.length + (sourceSessionCount > values.length ? ' VISIBLE / ' + sourceSessionCount : '') + ' SESSIONS';
-  var width = 760, height = 280, left = 70, right = 18, top = 18, bottom = 34;
-  var plotW = width - left - right, plotH = height - top - bottom;
-  var min = Math.min.apply(Math, values), max = Math.max.apply(Math, values);
-  var spread = max - min || Math.max(Math.abs(max), 1);
-  min -= spread * .12; max += spread * .12;
-  var y = function(value){ return top + (max - value) * plotH / (max - min); };
-  var x = function(index){ return left + plotW * index / (values.length - 1); };
-  var ticks = [max, (min + max) / 2, min];
-  var grid = ticks.map(function(value) {
-    return '<line class="profit-trend-grid" x1="' + left + '" x2="' + (width - right) + '" y1="' + y(value).toFixed(1) + '" y2="' + y(value).toFixed(1) + '" />' +
-      '<text class="profit-trend-axis" text-anchor="end" x="' + (left - 10) + '" y="' + (y(value) + 3).toFixed(1) + '">' + formatTrendValue(value) + '</text>';
-  }).join('');
-  var xLabels = [0, Math.floor((values.length - 1) / 2), values.length - 1].filter(function(index, position, list) { return list.indexOf(index) === position; }).map(function(index) {
-    return '<text class="profit-trend-axis" text-anchor="' + (index === 0 ? 'start' : (index === values.length - 1 ? 'end' : 'middle')) + '" x="' + x(index).toFixed(1) + '" y="' + (height - 10) + '">' + dates[index] + '</text>';
-  }).join('');
-  var path = values.map(function(value, index){ return (index ? 'L' : 'M') + x(index).toFixed(1) + ' ' + y(value).toFixed(1); }).join(' ');
-  var lineClass = values[values.length - 1] >= values[0] ? 'up' : 'down';
-  var areaPath = path + ' L ' + x(values.length - 1).toFixed(1) + ' ' + (height - bottom).toFixed(1) + ' L ' + x(0).toFixed(1) + ' ' + (height - bottom).toFixed(1) + ' Z';
-  var dots = values.map(function(value, index) {
-    var latestClass = index === values.length - 1 ? ' latest' : '';
-    var radius = index === values.length - 1 ? 4 : 2;
-    return '<circle class="profit-trend-dot' + latestClass + '" cx="' + x(index).toFixed(1) + '" cy="' + y(value).toFixed(1) + '" r="' + radius + '"><title>' + dates[index] + ': ' + formatTrendValue(value) + '</title></circle>';
-  }).join('');
-  var hitAreas = values.map(function(value, index) {
-    var hitWidth = values.length === 1 ? plotW : Math.max(22, plotW / values.length);
-    var hitX = Math.max(left, x(index) - hitWidth / 2);
-    if (index === 0) hitX = left;
-    if (index === values.length - 1) hitX = width - right - hitWidth;
-    return '<rect class="profit-trend-hit" tabindex="0" role="button" aria-label="' + dates[index] + ' total profit ' + formatTrendValue(value) + '" data-index="' + index + '" x="' + hitX.toFixed(1) + '" y="' + top + '" width="' + hitWidth.toFixed(1) + '" height="' + plotH + '" />';
-  }).join('');
-  var latest = values[values.length - 1];
-  frame.innerHTML = '<div class="profit-trend-summary"><span class="profit-trend-caption">Latest total profit · hover or focus a point</span><div class="profit-trend-value ' + (latest >= 0 ? 'up' : 'down') + '">' + formatTrendValue(latest) + '</div></div>' +
-    '<div class="profit-trend-tooltip" role="status" aria-live="polite"><div class="profit-trend-tooltip-date"></div><div class="profit-trend-tooltip-value"></div><div class="profit-trend-tooltip-change"></div></div>' +
-    '<svg class="profit-trend-chart" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Total portfolio profit trend">' +
-    grid + xLabels + '<path class="profit-trend-area ' + lineClass + '" d="' + areaPath + '" />' + '<path class="profit-trend-line ' + lineClass + '" d="' + path + '" />' + '<line class="profit-trend-crosshair" id="profitTrendCrosshair" x1="' + x(values.length - 1).toFixed(1) + '" x2="' + x(values.length - 1).toFixed(1) + '" y1="' + top + '" y2="' + (height - bottom) + '" visibility="hidden" />' + dots + hitAreas + '</svg>';
-  var chart = frame.querySelector('.profit-trend-chart');
-  var tooltip = frame.querySelector('.profit-trend-tooltip');
-  var tooltipDate = tooltip && tooltip.querySelector('.profit-trend-tooltip-date');
-  var tooltipValue = tooltip && tooltip.querySelector('.profit-trend-tooltip-value');
-  var tooltipChange = tooltip && tooltip.querySelector('.profit-trend-tooltip-change');
-  var crosshair = frame.querySelector('#profitTrendCrosshair');
-  var chartDots = chart ? chart.querySelectorAll('.profit-trend-dot') : [];
-  function hideProfitTooltip() {
-    if (tooltip) tooltip.classList.remove('visible');
-    if (crosshair) crosshair.setAttribute('visibility', 'hidden');
-    chartDots.forEach(function(dot) { dot.classList.remove('focus'); });
-  }
-  function showProfitTooltip(index, event) {
-    if (!tooltip || !chart) return;
-    var chartRect = chart.getBoundingClientRect();
-    var frameRect = frame.getBoundingClientRect();
-    var clientX = event && isFinite(event.clientX) ? event.clientX : chartRect.left + (x(index) / width) * chartRect.width;
-    var clientY = event && isFinite(event.clientY) ? event.clientY : chartRect.top + (y(values[index]) / height) * chartRect.height;
-    var leftPos = Math.max(92, Math.min(frameRect.width - 92, clientX - frameRect.left));
-    var topPos = Math.max(64, clientY - frameRect.top - 10);
-    tooltipDate.textContent = dates[index];
-    tooltipValue.textContent = 'Total profit ' + formatTrendDetail(values[index]);
-    tooltipChange.textContent = changes[index] == null ? 'First recorded session' : 'Change vs prior close ' + formatTrendDetail(changes[index]);
-    tooltip.style.left = leftPos + 'px';
-    tooltip.style.top = topPos + 'px';
-    tooltip.classList.add('visible');
-    if (crosshair) {
-      crosshair.setAttribute('x1', x(index).toFixed(1));
-      crosshair.setAttribute('x2', x(index).toFixed(1));
-      crosshair.setAttribute('visibility', 'visible');
-    }
-    chartDots.forEach(function(dot, dotIndex) { dot.classList.toggle('focus', dotIndex === index); });
-  }
-  if (chart) {
-    chart.querySelectorAll('.profit-trend-hit').forEach(function(hit) {
-      var index = Number(hit.getAttribute('data-index'));
-      hit.addEventListener('pointerenter', function(event) { showProfitTooltip(index, event); });
-      hit.addEventListener('pointermove', function(event) { showProfitTooltip(index, event); });
-      hit.addEventListener('pointerdown', function(event) { showProfitTooltip(index, event); });
-      hit.addEventListener('focus', function() { showProfitTooltip(index); });
-    });
-    chart.addEventListener('pointerleave', hideProfitTooltip);
-  }
-}
-
-function initDinoGame() {
-  var canvas = document.getElementById('dinoGameCanvas');
-  var restart = document.getElementById('dinoGameRestart');
-  var scoreEl = document.getElementById('dinoGameScore');
-  var statusEl = document.getElementById('dinoGameStatus');
-  var leaderboardEl = document.getElementById('dinoLeaderboardList');
-  if (!canvas || !canvas.getContext) return;
-  var ctx = canvas.getContext('2d');
-  var trexSprite = new Image();
-  trexSprite.src = 'trex-runner.png';
-  var smallObstacleSprite = new Image();
-  smallObstacleSprite.src = 'trex-obstacle-small.png';
-  var largeObstacleSprite = new Image();
-  largeObstacleSprite.src = 'trex-obstacle-large.png';
-  var horizonSprite = new Image();
-  horizonSprite.src = 'trex-horizon.png';
-  trexSprite.onload = function() { draw(); };
-  smallObstacleSprite.onload = function() { draw(); };
-  largeObstacleSprite.onload = function() { draw(); };
-  horizonSprite.onload = function() { draw(); };
-  var width = canvas.width, height = canvas.height, ground = 184;
-  var player, obstacles, score, speed, spawnIn, state, lastTime;
-  var leaderboardKey = 'portfolio-dino-leaderboard-v1';
-
-  function readLeaderboard() {
-    try {
-      var saved = JSON.parse(localStorage.getItem(leaderboardKey) || '[]');
-      return Array.isArray(saved) ? saved.filter(function(value) { return isFinite(Number(value)); }).map(Number).sort(function(a, b) { return b - a; }).slice(0, 5) : [];
-    } catch (error) { return []; }
-  }
-
-  function renderLeaderboard(currentScore) {
-    if (!leaderboardEl) return;
-    var scores = readLeaderboard();
-    if (currentScore > 0 && scores.indexOf(currentScore) === -1) scores = scores.concat([currentScore]).sort(function(a, b) { return b - a; }).slice(0, 5);
-    leaderboardEl.innerHTML = scores.length ? scores.map(function(value, index) {
-      var current = currentScore > 0 && value === currentScore ? ' current' : '';
-      return '<div class="dino-leaderboard-row' + current + '"><span class="dino-leaderboard-rank">' + String(index + 1).padStart(2, '0') + '</span><span>RUN</span><span class="dino-leaderboard-score">' + String(value).padStart(5, '0') + '</span></div>';
-    }).join('') : '<div class="dino-leaderboard-empty">No runs yet.<br>Start your first run.</div>';
-  }
-
-  function saveScore() {
-    var currentScore = Math.floor(score);
-    if (!currentScore) return;
-    var scores = readLeaderboard().concat([currentScore]).sort(function(a, b) { return b - a; }).slice(0, 5);
-    try { localStorage.setItem(leaderboardKey, JSON.stringify(scores)); } catch (error) {}
-    renderLeaderboard(currentScore);
-  }
-
-  function reset() {
-    player = { x: 86, y: ground - 47, w: 44, h: 47, vy: 0, grounded: true };
-    obstacles = [];
-    score = 0;
-    speed = 300;
-    spawnIn = .9;
-    state = 'idle';
-    lastTime = 0;
-    scoreEl.textContent = '00000';
-    statusEl.textContent = 'SPACE / TAP TO START';
-    renderLeaderboard(0);
-    draw();
-  }
-
-  function start() {
-    if (state === 'gameover') reset();
-    if (state === 'idle') {
-      state = 'running';
-      statusEl.textContent = 'RUNNING';
-      lastTime = performance.now();
-      requestAnimationFrame(loop);
-    }
-    jump();
-  }
-
-  function jump() {
-    if (state !== 'running') return;
-    if (player.grounded) {
-      player.vy = -560;
-      player.grounded = false;
-    }
-  }
-
-  function collide(a, b) {
-    return a.x < b.x + b.w - 3 && a.x + a.w - 3 > b.x && a.y < b.y + b.h && a.y + a.h > b.y + 2;
-  }
-
-  function spawn() {
-    var tall = Math.random() > .55;
-    var sprite = tall ? largeObstacleSprite : smallObstacleSprite;
-    var frameW = tall ? 75 : 51;
-    var frameH = tall ? 50 : 35;
-    obstacles.push({ x: width + 12, y: ground - frameH, w: frameW, h: frameH, sprite: sprite, frameW: frameW, frameH: frameH, frame: 0 });
-    spawnIn = Math.max(.55, 1.25 - (speed - 300) / 900) + Math.random() * .55;
-  }
-
-  function draw() {
-    ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--game-surface').trim() || '#f1f1f1';
-    ctx.fillRect(0, 0, width, height);
-    if (horizonSprite.complete && horizonSprite.naturalWidth) {
-      ctx.drawImage(horizonSprite, 0, 0, 1200, 12, 0, ground, width, 12);
-    } else {
-      ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border').trim() || '#222';
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(0, ground + .5); ctx.lineTo(width, ground + .5); ctx.stroke();
-    }
-    if (trexSprite.complete && trexSprite.naturalWidth) {
-      var spriteFrame = state === 'running' ? Math.floor(score * 1.5) % 6 : 0;
-      ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(trexSprite, spriteFrame * 44, 0, 44, 47, player.x, player.y, player.w, player.h);
-    } else {
-      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#eee';
-      ctx.fillRect(player.x, player.y, player.w, player.h);
-      ctx.fillRect(player.x + 18, player.y - 7, 13, 12);
-      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--card').trim() || '#111';
-      ctx.fillRect(player.x + 25, player.y - 4, 3, 3);
-    }
-    obstacles.forEach(function(obstacle) {
-      if (obstacle.sprite.complete && obstacle.sprite.naturalWidth) {
-        obstacle.frame = Math.floor(score * 1.2) % 2;
-        ctx.drawImage(obstacle.sprite, obstacle.frame * obstacle.frameW, 0, obstacle.frameW, obstacle.frameH, obstacle.x, obstacle.y, obstacle.w, obstacle.h);
-      } else {
-        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#555';
-        ctx.fillRect(obstacle.x, obstacle.y, obstacle.w, obstacle.h);
-      }
-    });
-    if (state === 'idle' || state === 'gameover') {
-      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-dim').trim() || '#999';
-      ctx.font = '12px Space Mono, monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText(state === 'gameover' ? 'GAME OVER - TAP TO RESTART' : 'T-REX RUNNER', width / 2, 84);
-      ctx.textAlign = 'start';
-    }
-  }
-
-  function loop(now) {
-    if (state !== 'running') return;
-    var dt = Math.min(.032, (now - lastTime) / 1000 || 0);
-    lastTime = now;
-    score += dt * 10;
-    speed += dt * 4;
-    spawnIn -= dt;
-    if (spawnIn <= 0) spawn();
-    player.vy += 1500 * dt;
-    player.y += player.vy * dt;
-    if (player.y >= ground - player.h) { player.y = ground - player.h; player.vy = 0; player.grounded = true; }
-    obstacles.forEach(function(obstacle) { obstacle.x -= speed * dt; });
-    obstacles = obstacles.filter(function(obstacle) { return obstacle.x + obstacle.w > -10; });
-    if (obstacles.some(function(obstacle) { return collide(player, obstacle); })) {
-      state = 'gameover';
-      statusEl.textContent = 'GAME OVER';
-      saveScore();
-    }
-    scoreEl.textContent = String(Math.floor(score)).padStart(5, '0');
-    draw();
-    if (state === 'running') requestAnimationFrame(loop);
-  }
-
-  canvas.addEventListener('click', start);
-  canvas.addEventListener('keydown', function(event) {
-    if (event.code === 'Space' || event.code === 'ArrowUp') { event.preventDefault(); start(); }
-  });
-  document.addEventListener('keydown', function(event) {
-    if ((event.code === 'Space' || event.code === 'ArrowUp') && document.activeElement !== document.getElementById('watchlistInput')) { event.preventDefault(); start(); }
-  });
-  restart.addEventListener('click', function() { reset(); canvas.focus(); });
-  reset();
-  renderLeaderboard(0);
-}
-
-async function refreshProfitTrend(holdings) {
-  var frame = document.getElementById('profitTrendFrame');
-  if (!frame || !holdings.length) return;
-  if (historyRefreshInFlight) return historyRefreshInFlight;
-  var snapshotResults = holdings.map(function(item) {
-    var points = snapshotHistoricalSeries(item);
-    return points.length ? { item: item, points: points, snapshot: true } : null;
-  }).filter(Boolean);
-  if (snapshotResults.length === holdings.length) {
-    renderProfitTrend(holdings, snapshotResults);
-    return snapshotResults;
-  }
-  var snapshotCodes = {};
-  snapshotResults.forEach(function(result) { snapshotCodes[result.item.code] = true; });
-  var cachedResults = holdings.filter(function(item) { return !snapshotCodes[item.code]; }).map(function(item) {
-    var cached = historyCache[historySymbol(item)];
-    return cached && cached.savedAt && Date.now() - cached.savedAt < HISTORY_CACHE_TTL && cached.points && cached.points.length
-      ? { item: item, points: cached.points, cached: true } : null;
-  }).filter(Boolean);
-  var initialResults = snapshotResults.concat(cachedResults);
-  if (initialResults.length) renderProfitTrend(holdings, initialResults);
-  else frame.innerHTML = '<div class="profit-trend-status">[LOADING HISTORY...]</div>';
-  var availableCodes = {};
-  initialResults.forEach(function(result) { availableCodes[result.item.code] = true; });
-  var missingHoldings = holdings.filter(function(item) { return !availableCodes[item.code]; });
-  historyRefreshInFlight = Promise.all(missingHoldings.map(fetchHistoricalSeries))
-    .then(function(results) {
-      var allResults = initialResults.concat(results);
-      renderProfitTrend(holdings, allResults);
-      return allResults;
-    })
-    .finally(function() { historyRefreshInFlight = null; });
-  return historyRefreshInFlight;
-}
-
-var watchlistQuoteStatus = {};
-var watchlistQuotesInFlight = null;
-var holdingQuotesInFlight = null;
-var lastHoldingQuoteRefresh = 0;
-var liveQuotePromises = {};
-
-function getLiveQuote(symbol) {
-  var key = (symbol || "").trim().toUpperCase();
-  if (!key) return Promise.resolve(null);
-  if (!liveQuotePromises[key]) {
-    liveQuotePromises[key] = fetchLiveStockQuote(key).finally(function() { delete liveQuotePromises[key]; });
-  }
-  return liveQuotePromises[key];
-}
-
-function rerenderHoldings() {
-  var holdings = (portfolio && portfolio.holdings) || [];
-  var grid = document.getElementById("holdingsGrid");
-  if (grid) grid.innerHTML = holdings.map(function(item) { return renderStockCard(item, true); }).join("");
-  renderSummary(holdings);
-}
-
-function restoreWatchlistQuoteCache() {
-  Object.keys(watchlistQuoteCache || {}).forEach(function(code) {
-    var entry = watchlistQuoteCache[code];
-    if (!priceCache[code] && entry && entry.quote && entry.savedAt && Date.now() - entry.savedAt < 30 * 60 * 1000) {
-      priceCache[code] = entry.quote;
-    }
-  });
-}
-
-function cacheWatchlistQuote(code, quote) {
-  watchlistQuoteCache[code] = { savedAt: Date.now(), quote: quote };
-  try { localStorage.setItem(WATCHLIST_QUOTE_CACHE_KEY, JSON.stringify(watchlistQuoteCache)); } catch (e) {}
-}
-
-function refreshHoldingQuotes(holdings) {
-  if (holdingQuotesInFlight || Date.now() - lastHoldingQuoteRefresh < 5 * 60 * 1000) return holdingQuotesInFlight;
-  lastHoldingQuoteRefresh = Date.now();
-  var unique = {}, requests = [];
-  holdings.forEach(function(item) {
-    var symbol = historySymbol(item);
-    if (!unique[symbol]) {
-      unique[symbol] = true;
-      requests.push(getLiveQuote(symbol).then(function(quote) { return { symbol: symbol, quote: quote }; }));
-    }
-  });
-  holdingQuotesInFlight = Promise.all(requests).then(function(results) {
-    var changed = false;
-    results.forEach(function(result) {
-      if (!result.quote || result.quote.price == null) return;
-      var quote = normalizeQuote(result.quote);
-      // Keep one quote per symbol across Holdings and Watchlist so their
-      // Daily move cannot show different previous-close calculations.
-      var allItems = holdings.concat(getUserWatchlist());
-      allItems.forEach(function(item) {
-        if (historySymbol(item) === result.symbol) {
-          priceCache[item.code] = quote;
-          changed = true;
+    /*************************************************************************
+     * 1. 默认持仓与历史盈亏数据 (VTI, SGOV, QQQM, VXUS, DRAM)
+     *************************************************************************/
+    const DEFAULT_PORTFOLIO_DATA = {
+      updatedAt: "2026-10-21",
+      baseCurrency: "USD",
+      holdings: [
+        {
+          symbol: "VTI",
+          name: "Vanguard Total Stock Market ETF",
+          role: "美股全市场核心",
+          category: "CORE",
+          shares: 37,
+          avgCost: 370.9938,
+          color: "#1E293B"
+        },
+        {
+          symbol: "SGOV",
+          name: "iShares 0-3 Month Treasury Bond ETF",
+          role: "超短债流动性防守",
+          category: "DEFENSE",
+          shares: 51,
+          avgCost: 100.44,
+          color: "#0D7A5F"
+        },
+        {
+          symbol: "QQQM",
+          name: "Invesco NASDAQ 100 ETF",
+          role: "纳指100科技成长",
+          category: "CORE",
+          shares: 23,
+          avgCost: 292.9191,
+          color: "#4F46E5"
+        },
+        {
+          symbol: "DRAM",
+          name: "Roundhill Memory ETF",
+          role: "存储半导体周期卫星",
+          category: "SATELLITE",
+          shares: 16,
+          avgCost: 55.3775,
+          color: "#BE185D"
         }
+      ],
+      realizedHistory: [],
+      monthlyPnl: []
+    };
+
+    const FX_RATES = { USD: 1, CNY: 7.12, HKD: 7.78 };
+    const CURRENCY_SYMBOLS = { USD: "$", CNY: "¥", HKD: "HK$" };
+
+    const PORTFOLIO_STORAGE_KEY = "portfolio-editorial-v1";
+    let portfolioData = JSON.parse(JSON.stringify(DEFAULT_PORTFOLIO_DATA));
+    let marketQuotes = {};
+    let marketHistory = {};
+    let marketSnapshotUpdatedAt = null;
+    let currentCurrency = localStorage.getItem("pos_currency") || "USD";
+    let isPrivacyMode = localStorage.getItem("pos_privacy") === "true";
+    let isCnColor = localStorage.getItem("pos_cn_color") === "true";
+    let activeCategory = "ALL";
+    let sortField = "marketValue";
+    let sortAsc = false;
+    let heroChartMode = "equity";
+    let activeDrawerSymbol = null;
+
+    /*************************************************************************
+     * 2. 初始化与 GitHub 数据同步 (./portfolio.json & ./data/market.json)
+     *************************************************************************/
+    async function initApp() {
+      applySavedPreferences();
+      await loadExternalPortfolioJson();
+      await refreshQuotes(false);
+      renderAll();
+
+      setInterval(() => refreshQuotes(false), 5 * 60 * 1000);
+
+      window.addEventListener("keydown", (e) => {
+        if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) {
+          if (e.key === "Escape") document.activeElement.blur();
+          return;
+        }
+        if (e.key.toLowerCase() === "p") togglePrivacy();
+        else if (e.key === "Escape" && activeDrawerSymbol) closeHoldingDrawer();
       });
-    });
-    if (changed) {
-      rerenderHoldings();
-      renderWatchlistSection();
     }
-    return results;
-  }).finally(function() { holdingQuotesInFlight = null; });
-  return holdingQuotesInFlight;
-}
 
-function getUserWatchlist() {
-  var defaults = (portfolio && portfolio.watchlist) ? portfolio.watchlist : [];
-  try {
-    var custom = JSON.parse(localStorage.getItem("user_watchlist"));
-    if (Array.isArray(custom)) {
-      var map = {};
-      var combined = [];
-      custom.concat(defaults).forEach(function(item) {
-        if (!map[item.code]) { map[item.code] = true; combined.push(item); }
+    async function loadExternalPortfolioJson() {
+      const savedLocal = localStorage.getItem(PORTFOLIO_STORAGE_KEY);
+      if (savedLocal) {
+        try { portfolioData = JSON.parse(savedLocal); } catch (e) {}
+      }
+      try {
+        const res = await fetch("./portfolio.json", { cache: "no-store" });
+        if (res.ok) {
+          const remoteJson = await res.json();
+          if (Array.isArray(remoteJson.holdings) && remoteJson.holdings.length > 0) {
+            const palette = ["#1E293B", "#0D7A5F", "#4F46E5", "#D97706", "#BE185D"];
+            portfolioData.holdings = remoteJson.holdings.map((h, idx) => ({
+              symbol: h.symbol || h.code,
+              name: h.name || h.symbol || h.code,
+              role: h.role || "美股持仓",
+              category: h.category || ((h.symbol || h.code) === "SGOV" ? "DEFENSE" : ["VTI", "QQQM"].includes(h.symbol || h.code) ? "CORE" : "SATELLITE"),
+              shares: Number(h.shares ?? h.quantity ?? 0),
+              avgCost: Number(h.avgCost ?? h.cost ?? 0),
+              color: h.color || palette[idx % palette.length]
+            }));
+            if (Array.isArray(remoteJson.realizedHistory)) portfolioData.realizedHistory = remoteJson.realizedHistory;
+            if (Array.isArray(remoteJson.monthlyPnl)) portfolioData.monthlyPnl = remoteJson.monthlyPnl;
+          }
+        }
+      } catch (e) {}
+    }
+
+    async function refreshQuotes(isManual) {
+      try {
+        const res = await fetch("./data/market.json?t=" + Date.now(), { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          marketSnapshotUpdatedAt = data.updatedAt || null;
+          marketHistory = data.history || {};
+          const sourceQuotes = data.quotes || data.prices || data;
+          portfolioData.holdings.forEach(h => {
+            const q = sourceQuotes[h.symbol];
+            if (q) {
+              const price = Number(q.price ?? q.regularMarketPrice ?? q);
+              const prevClose = Number(q.prevClose ?? q.previousClose ?? (Number.isFinite(Number(q.change)) ? price - Number(q.change) : NaN));
+              if (price > 0) {
+                marketQuotes[h.symbol] = {
+                  price,
+                  prevClose,
+                  change: price - prevClose,
+                  changePct: prevClose > 0 ? ((price - prevClose) / prevClose) * 100 : null
+                };
+              }
+            }
+          });
+        }
+      } catch (err) {}
+
+      const snapshotDate = marketSnapshotUpdatedAt ? new Date(marketSnapshotUpdatedAt) : null;
+      document.getElementById("sync-time").textContent = snapshotDate && isFinite(snapshotDate.getTime())
+        ? "Updated " + snapshotDate.toLocaleString() : "Snapshot unavailable";
+      renderAll();
+    }
+
+    /*************************************************************************
+     * 3. 净值与历史盈亏计算引擎
+     *************************************************************************/
+    function buildPortfolioHistory() {
+      const holdings = portfolioData.holdings || [];
+      if (!holdings.length) return [];
+      const priceMaps = {};
+      holdings.forEach(h => {
+        priceMaps[h.symbol] = {};
+        (marketHistory[h.symbol] || []).forEach(point => {
+          if (point && point.date && isFinite(Number(point.close))) priceMaps[h.symbol][point.date] = Number(point.close);
+        });
       });
-      return combined;
+      const dates = Object.keys(priceMaps[holdings[0].symbol] || {}).filter(date =>
+        holdings.every(h => priceMaps[h.symbol][date] != null)
+      ).sort();
+      return dates.map(date => {
+        const value = holdings.reduce((sum, h) => sum + priceMaps[h.symbol][date] * h.shares, 0);
+        const cost = holdings.reduce((sum, h) => sum + h.avgCost * h.shares, 0);
+        return { date, value, pnl: value - cost };
+      });
     }
-  } catch(e) {}
-  return defaults;
-}
 
-function saveUserWatchlist(list) {
-  localStorage.setItem("user_watchlist", JSON.stringify(list));
-}
-
-var draggedIndex = null;
-
-function renderWatchlistSection() {
-  var list = getUserWatchlist();
-  var grid = document.getElementById("watchlistGrid");
-  if (!grid) return;
-  if (!list.length) {
-    grid.innerHTML = "<div style=\"color:var(--text-dim);font-size:12px;padding:8px 2px;\">No stocks in watchlist. Add a symbol above.</div>";
-    /*
-    grid.innerHTML = "<div style=\"color:var(--text-dim);font-size:12px;padding:8px 2px;\">暂无关注美股。在上方输入美股代码（如 AAPL、NVDA、SNDK）并点击 ★ 关注。</div>";
-    */
-    return;
-  }
-  grid.innerHTML = list.map(function(s, idx) {
-    var card = renderStockCard(s, false);
-    return card.replace("class=\"stock-card\"", "class=\"stock-card\" draggable=\"true\" data-idx=\"" + idx + "\"");
-  }).join("");
-
-  list.forEach(function(s) {
-    if (!priceCache[s.code] || priceCache[s.code].price == null) {
-      var card = grid.querySelector('[data-idx="' + idxForCode(list, s.code) + '"]');
-      if (card) {
-        var priceWrap = card.querySelector('.stock-price-wrap');
-        if (priceWrap) priceWrap.insertAdjacentHTML('beforeend', '<div class="watchlist-quote-state">' + (watchlistQuoteStatus[s.code] || '[LOADING...]') + '</div>');
-      }
+    function summarizeMonthlyPnl(points) {
+      const months = {};
+      points.forEach(point => { months[point.date.slice(0, 7)] = point; });
+      const values = Object.keys(months).sort().map(month => ({ month, point: months[month] }));
+      return values.map((entry, index) => {
+        const prior = index ? values[index - 1].point.value : null;
+        const pnl = prior == null ? entry.point.pnl : entry.point.value - prior;
+        return { month: entry.month, pnl, returnPct: prior ? (pnl / prior) * 100 : 0 };
+      });
     }
-  });
 
-  var cards = grid.querySelectorAll(".stock-card[draggable]");
-  cards.forEach(function(card) {
-    card.addEventListener("dragstart", function(e) {
-      draggedIndex = Number(this.getAttribute("data-idx"));
-      this.classList.add("dragging");
-      e.dataTransfer.effectAllowed = "move";
-    });
-    card.addEventListener("dragend", function() {
-      this.classList.remove("dragging");
-    });
-    card.addEventListener("dragover", function(e) {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-    });
-    card.addEventListener("drop", function(e) {
-      e.preventDefault();
-      var targetIndex = Number(this.getAttribute("data-idx"));
-      if (draggedIndex !== null && draggedIndex !== targetIndex) {
-        var currentList = getUserWatchlist();
-        var moved = currentList.splice(draggedIndex, 1)[0];
-        currentList.splice(targetIndex, 0, moved);
-        saveUserWatchlist(currentList);
-        renderWatchlistSection();
+    function computePortfolioMetrics() {
+      let totalMarketValue = 0;
+      let totalCostBasis = 0;
+      let totalDayPnl = 0;
+
+      const enriched = portfolioData.holdings.map(h => {
+        const q = marketQuotes[h.symbol] || { price: h.avgCost, prevClose: h.avgCost, change: 0, changePct: 0 };
+        const marketValue = h.shares * q.price;
+        const costBasis = h.shares * h.avgCost;
+        const dayPnl = h.shares * q.change;
+        const totalPnl = marketValue - costBasis;
+        const totalPnlPct = costBasis > 0 ? (totalPnl / costBasis) * 100 : 0;
+
+        totalMarketValue += marketValue;
+        totalCostBasis += costBasis;
+        totalDayPnl += dayPnl;
+
+        return {
+          ...h,
+          price: q.price,
+          prevClose: q.prevClose,
+          dayChange: q.change,
+          dayChangePct: q.changePct,
+          marketValue,
+          costBasis,
+          dayPnl,
+          totalPnl,
+          totalPnlPct,
+          weight: 0
+        };
+      });
+
+      enriched.forEach(item => {
+        item.weight = totalMarketValue > 0 ? (item.marketValue / totalMarketValue) * 100 : 0;
+      });
+
+      const unrealizedPnl = totalMarketValue - totalCostBasis;
+      const unrealizedPct = totalCostBasis > 0 ? (unrealizedPnl / totalCostBasis) * 100 : 0;
+      const prevTotal = totalMarketValue - totalDayPnl;
+      const totalDayPct = prevTotal > 0 ? (totalDayPnl / prevTotal) * 100 : 0;
+
+      const totalRealizedPnl = (portfolioData.realizedHistory || []).reduce((sum, r) => sum + Number(r.amount || 0), 0);
+      const totalHistoricalPnl = unrealizedPnl + totalRealizedPnl;
+      const totalHistoricalPct = totalCostBasis > 0 ? (totalHistoricalPnl / totalCostBasis) * 100 : 0;
+
+      const historyPoints = buildPortfolioHistory();
+      return {
+        enriched,
+        totalMarketValue,
+        totalCostBasis,
+        totalDayPnl,
+        totalDayPct,
+        unrealizedPnl,
+        unrealizedPct,
+        totalRealizedPnl,
+        totalHistoricalPnl,
+        totalHistoricalPct,
+        historyPoints,
+        monthlyPnl: summarizeMonthlyPnl(historyPoints)
+      };
+    }
+
+    function formatMoney(usdVal, showSign = false) {
+      const rate = FX_RATES[currentCurrency] || 1;
+      const sym = CURRENCY_SYMBOLS[currentCurrency] || "$";
+      const converted = usdVal * rate;
+      const absStr = Math.abs(converted).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      if (showSign) {
+        const sign = converted > 0.0001 ? "+" : converted < -0.0001 ? "-" : "";
+        return `${sign}${sym}${absStr}`;
       }
-    });
-  });
-}
+      return `${converted < 0 ? "-" : ""}${sym}${absStr}`;
+    }
 
-function idxForCode(list, code) {
-  for (var i = 0; i < list.length; i++) if (list[i].code === code) return i;
-  return -1;
-}
+    function formatPct(pctVal, showSign = true) {
+      const sign = showSign && pctVal > 0.0001 ? "+" : "";
+      return `${sign}${pctVal.toFixed(2)}%`;
+    }
 
-function unfollowStock(code) {
-  var list = getUserWatchlist().filter(function(s){ return s.code !== code; });
-  saveUserWatchlist(list);
-  renderWatchlistSection();
-}
+    function renderAll() {
+      const m = computePortfolioMetrics();
+      renderHero(m);
+      renderAllocationSpectrum(m);
+      renderHoldingsTable(m);
+      renderHistoricalPnlSection(m);
+      applyPrivacyBlur();
+    }
 
-async function ensureWatchlistQuotes(force) {
-  if (watchlistQuotesInFlight) return watchlistQuotesInFlight;
-  var list = getUserWatchlist();
-  // Reuse quotes already fetched for Holdings. A forced second request can
-  // return a different previous close and make the two sections disagree.
-  var holdingCodes = {};
-  ((portfolio && portfolio.holdings) || []).forEach(function(item) { holdingCodes[item.code] = true; });
-  var missing = list.filter(function(s){
-    if (holdingCodes[s.code]) return !priceCache[s.code] || priceCache[s.code].price == null;
-    var cached = normalizeQuote(priceCache[s.code]);
-    return !!force || !cached || cached.price == null || !hasQuoteChange(cached);
-  });
-  if (!missing.length) return;
-  missing.forEach(function(item){ watchlistQuoteStatus[item.code] = '[LOADING...]'; });
-  renderWatchlistSection();
-  watchlistQuotesInFlight = Promise.all(missing.map(function(item){
-    return getLiveQuote(historySymbol(item)).then(function(q){ return { item: item, quote: q }; });
-  })).then(function(results) {
-    results.forEach(function(result) {
-      if (result.quote) {
-        var quote = normalizeQuote(result.quote);
-        priceCache[result.item.code] = quote;
-        cacheWatchlistQuote(result.item.code, quote);
-        delete watchlistQuoteStatus[result.item.code];
-      } else {
-        watchlistQuoteStatus[result.item.code] = '[UNAVAILABLE]';
+    /*************************************************************************
+     * 4. 四大核心板块渲染
+     *************************************************************************/
+    function renderHero(m) {
+      document.getElementById("hero-net-worth").textContent = formatMoney(m.totalMarketValue);
+      document.getElementById("hero-cost-note").textContent = `持仓总成本 ${formatMoney(m.totalCostBasis)}`;
+
+      const pill = document.getElementById("hero-day-pill");
+      pill.textContent = `${formatMoney(m.totalDayPnl, true)} (${formatPct(m.totalDayPct)}) 今日`;
+      pill.className = `px-3 py-1 rounded-full text-xs font-mono tabular-nums ${m.totalDayPnl >= 0 ? "pill-up" : "pill-down"}`;
+
+      const dPnl = document.getElementById("metric-day-pnl");
+      dPnl.textContent = formatMoney(m.totalDayPnl, true);
+      dPnl.className = `mt-2.5 font-mono text-2xl font-medium tabular-nums privacy-target ${m.totalDayPnl >= 0 ? "text-up" : "text-down"}`;
+      document.getElementById("metric-day-pct").textContent = `今日涨跌幅 ${formatPct(m.totalDayPct)}`;
+
+      const uPnl = document.getElementById("metric-unrealized-pnl");
+      uPnl.textContent = formatMoney(m.unrealizedPnl, true);
+      uPnl.className = `mt-2.5 font-mono text-2xl font-medium tabular-nums privacy-target ${m.unrealizedPnl >= 0 ? "text-up" : "text-down"}`;
+      document.getElementById("metric-unrealized-pct").textContent = `持仓浮盈率 ${formatPct(m.unrealizedPct)}`;
+
+      const rPnl = document.getElementById("metric-realized-pnl");
+      rPnl.textContent = formatMoney(m.totalRealizedPnl, true);
+      rPnl.className = `mt-2.5 font-mono text-2xl font-medium tabular-nums privacy-target ${m.totalRealizedPnl >= 0 ? "text-up" : "text-down"}`;
+      document.getElementById("metric-realized-sub").textContent = `共 ${(portfolioData.realizedHistory || []).length} 笔历史记录`;
+
+      const tPnl = document.getElementById("metric-total-pnl");
+      tPnl.textContent = formatMoney(m.totalHistoricalPnl, true);
+      tPnl.className = `mt-2.5 font-mono text-2xl font-medium tabular-nums privacy-target ${m.totalHistoricalPnl >= 0 ? "text-up" : "text-down"}`;
+      document.getElementById("metric-total-pct").textContent = `历史总回报率 ${formatPct(m.totalHistoricalPct)}`;
+
+      renderSparkline(m);
+    }
+
+    function renderSparkline(m) {
+      const svg = document.getElementById("hero-sparkline");
+      const pts = m.historyPoints.map(point => heroChartMode === "equity" ? point.value : point.pnl);
+      if (pts.length < 2) {
+        svg.innerHTML = '<text x="250" y="52" text-anchor="middle" fill="var(--ink-muted)" font-size="11">Collecting market history</text>';
+        return;
       }
-    });
-    renderWatchlistSection();
-    rerenderHoldings();
-    return results;
-  }).finally(function(){ watchlistQuotesInFlight = null; });
-  return watchlistQuotesInFlight;
-}
 
-function followStock(code, name) {
-  code = (code || "").trim().toUpperCase();
-  if (!code) return;
-  var stock = POPULAR_US_STOCKS.find(function(s){ return s.symbol === code; });
-  var displayName = stock ? stock.name : (name || code);
-  var list = getUserWatchlist();
-  if (!list.some(function(s){ return s.code === code; })) {
-    list.push({ market: "US", code: code, name: displayName });
-    saveUserWatchlist(list);
-  }
-  var inp = document.getElementById("watchlistInput");
-  if (inp) inp.value = "";
-  var sugg = document.getElementById("watchlistSuggestions");
-  if (sugg) sugg.style.display = "none";
-  renderWatchlistSection();
-  ensureWatchlistQuotes();
-}
+      const minV = Math.min(...pts);
+      const maxV = Math.max(...pts);
+      const span = Math.max(1, maxV - minV);
 
-function setupWatchlistControls() {
-  var input = document.getElementById("watchlistInput");
-  var starBtn = document.getElementById("watchlistStarBtn");
-  var sugg = document.getElementById("watchlistSuggestions");
-  if (!input || !starBtn || !sugg) return;
-  starBtn.textContent = "+";
+      const coords = pts.map((v, idx) => {
+        const x = (idx / (pts.length - 1)) * 500;
+        const y = 88 - ((v - minV) / span) * 74;
+        return [x, y];
+      });
 
-  input.addEventListener("input", function(e) {
-    var q = e.target.value.trim().toUpperCase();
-    if (!q) { sugg.style.display = "none"; return; }
-    var matches = POPULAR_US_STOCKS.filter(function(s){
-      return s.symbol.indexOf(q) === 0 || s.name.toUpperCase().indexOf(q) !== -1;
-    }).slice(0, 8);
-    if (!matches.length) {
-      sugg.innerHTML = "<div style=\"padding:8px 12px;color:var(--text-dim);font-size:12px;\">未找到匹配美股代码</div>";
-    } else {
-      sugg.innerHTML = matches.map(function(s){
-        return "<div class=\"suggestion-item\" onclick=\"followStock('" + s.symbol + "','" + s.name.replace(/'/g, "\\'") + "')\"><span class=\"suggestion-code\">" + s.symbol + "</span><span class=\"suggestion-name\">" + s.name + "</span></div>";
+      const d = coords.map((c, i) => `${i === 0 ? "M" : "L"}${c[0].toFixed(1)},${c[1].toFixed(1)}`).join(" ");
+      const stroke = pts[pts.length - 1] >= pts[0] ? "var(--up-color)" : "var(--down-color)";
+
+      svg.innerHTML = `
+        <line x1="0" y1="92" x2="500" y2="92" stroke="var(--line-hairline)" stroke-dasharray="3 3" />
+        <path d="${d}" fill="none" stroke="${stroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+        <circle cx="${coords[coords.length - 1][0]}" cy="${coords[coords.length - 1][1]}" r="3.5" fill="${stroke}" />
+      `;
+    }
+
+    function switchHeroChartMode(mode) {
+      heroChartMode = mode;
+      document.getElementById("tab-chart-equity").className = mode === "equity"
+        ? "text-[var(--ink-primary)] underline underline-offset-4"
+        : "hover:text-[var(--ink-primary)] transition";
+      document.getElementById("tab-chart-pnl").className = mode === "pnl"
+        ? "text-[var(--ink-primary)] underline underline-offset-4"
+        : "hover:text-[var(--ink-primary)] transition";
+      renderAll();
+    }
+
+    function renderAllocationSpectrum(m) {
+      const bar = document.getElementById("allocation-bar");
+      const legend = document.getElementById("allocation-legend");
+
+      const sgov = m.enriched.find(x => x.symbol === "SGOV");
+      document.getElementById("sgov-buffer-label").textContent = `SGOV 现金防守垫 ${(sgov ? sgov.weight : 0).toFixed(1)}%`;
+
+      const sorted = [...m.enriched].sort((a, b) => b.weight - a.weight);
+
+      bar.innerHTML = sorted.filter(x => x.weight > 0).map(item => `
+        <div onclick="openHoldingDrawer('${item.symbol}')"
+          style="width:${item.weight}%; background-color:${item.color}"
+          class="h-full transition-all duration-300 hover:opacity-75 cursor-pointer"
+          title="${item.symbol}: ${item.weight.toFixed(1)}%"></div>
+      `).join("");
+
+      legend.innerHTML = sorted.map(item => `
+        <div onclick="openHoldingDrawer('${item.symbol}')" class="p-3.5 rounded-xl hairline-box hover:border-[var(--ink-primary)] cursor-pointer transition">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full" style="background-color:${item.color}"></span>
+              <span class="font-mono text-xs font-semibold">${item.symbol}</span>
+            </div>
+            <span class="font-mono text-xs font-medium tabular-nums">${item.weight.toFixed(1)}%</span>
+          </div>
+          <div class="mt-2 flex items-center justify-between text-[11px] font-mono text-[var(--ink-muted)] tabular-nums">
+            <span class="truncate max-w-[90px]">${item.role}</span>
+            <span class="privacy-target">${formatMoney(item.marketValue)}</span>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function renderHoldingsTable(m) {
+      const tbody = document.getElementById("holdings-tbody");
+      let list = m.enriched.filter(item => activeCategory === "ALL" || item.category === activeCategory);
+
+      list.sort((a, b) => {
+        const vA = a[sortField];
+        const vB = b[sortField];
+        if (typeof vA === "string") return sortAsc ? vA.localeCompare(vB) : vB.localeCompare(vA);
+        return sortAsc ? vA - vB : vB - vA;
+      });
+
+      tbody.innerHTML = list.map(item => {
+        const dayCls = item.dayPnl >= 0 ? "text-up" : "text-down";
+        const totCls = item.totalPnl >= 0 ? "text-up" : "text-down";
+
+        return `
+          <tr onclick="openHoldingDrawer('${item.symbol}')" class="group hover:bg-[var(--bg-subtle)]/60 cursor-pointer transition">
+            <td class="py-5 pr-4">
+              <div class="flex items-baseline gap-3">
+                <span class="font-mono font-semibold text-base group-hover:underline underline-offset-4">${item.symbol}</span>
+                <span class="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">${item.role}</span>
+              </div>
+              <p class="text-xs text-[var(--ink-muted)] mt-0.5">${item.name}</p>
+            </td>
+            <td class="py-5 px-4 text-right font-mono tabular-nums">
+              <div class="font-medium">$${item.price.toFixed(2)}</div>
+              <div class="text-[11px] ${dayCls}">${formatPct(item.dayChangePct)}</div>
+            </td>
+            <td class="py-5 px-4 text-right font-mono tabular-nums">
+              <div>${Number(item.shares.toFixed(4))} 股</div>
+              <div class="text-[11px] text-[var(--ink-muted)]">均价 $${item.avgCost.toFixed(2)}</div>
+            </td>
+            <td class="py-5 px-4 text-right font-mono tabular-nums privacy-target">
+              <div class="font-medium">${formatMoney(item.marketValue)}</div>
+              <div class="text-[11px] text-[var(--ink-muted)]">成本 ${formatMoney(item.costBasis)}</div>
+            </td>
+            <td class="py-5 px-4 text-right font-mono tabular-nums privacy-target ${dayCls}">
+              <div>${formatMoney(item.dayPnl, true)}</div>
+              <div class="text-[11px]">${formatPct(item.dayChangePct)}</div>
+            </td>
+            <td class="py-5 px-4 text-right font-mono tabular-nums privacy-target ${totCls}">
+              <div class="font-medium">${formatMoney(item.totalPnl, true)}</div>
+              <div class="text-[11px]">${formatPct(item.totalPnlPct)}</div>
+            </td>
+            <td class="py-5 pl-4 text-right font-mono tabular-nums">
+              <div class="font-medium">${item.weight.toFixed(1)}%</div>
+              <div class="w-20 ml-auto mt-1.5 h-1 rounded-full bg-[var(--bg-subtle)] overflow-hidden">
+                <div class="h-full rounded-full" style="width:${Math.min(100, item.weight)}%; background-color:${item.color}"></div>
+              </div>
+            </td>
+          </tr>
+        `;
       }).join("");
     }
-    sugg.style.display = "block";
-  });
 
-  input.addEventListener("keydown", function(e) {
-    if (e.key === "Enter") {
-      var q = input.value.trim().toUpperCase();
-      if (q) followStock(q);
+    function renderHistoricalPnlSection(m) {
+      const totalEl = document.getElementById("hist-overview-total");
+      totalEl.textContent = formatMoney(m.totalHistoricalPnl, true);
+      totalEl.className = `font-mono text-xl font-semibold mt-1.5 block tabular-nums privacy-target ${m.totalHistoricalPnl >= 0 ? "text-up" : "text-down"}`;
+
+      const realEl = document.getElementById("hist-overview-realized");
+      realEl.textContent = formatMoney(m.totalRealizedPnl, true);
+      realEl.className = `font-mono text-xl font-semibold mt-1.5 block tabular-nums privacy-target ${m.totalRealizedPnl >= 0 ? "text-up" : "text-down"}`;
+
+      const months = m.monthlyPnl || [];
+      const wins = months.filter(x => x.pnl >= 0).length;
+      document.getElementById("hist-overview-winrate").textContent = months.length
+        ? `${Math.round((wins / months.length) * 100)}% (${wins}/${months.length}月)`
+        : "--";
+
+      if (months.length > 0) {
+        const bestMonth = [...months].sort((a, b) => b.pnl - a.pnl)[0];
+        const bestEl = document.getElementById("hist-overview-best");
+        bestEl.textContent = `${formatMoney(bestMonth.pnl, true)} (${bestMonth.month.slice(5)}月)`;
+        bestEl.className = `font-mono text-xl font-semibold mt-1.5 block tabular-nums privacy-target ${bestMonth.pnl >= 0 ? "text-up" : "text-down"}`;
+      } else {
+        document.getElementById("hist-overview-best").textContent = "--";
+      }
+
+      // 渲染月度历史盈亏矩阵
+      const maxAbsMonth = Math.max(1, ...months.map(x => Math.abs(x.pnl)));
+      document.getElementById("monthly-grid").innerHTML = months.length ? months.map(item => {
+        const isPos = item.pnl >= 0;
+        const cls = isPos ? "text-up" : "text-down";
+        const barColor = isPos ? "var(--up-color)" : "var(--down-color)";
+        const barWidth = Math.min(100, Math.round((Math.abs(item.pnl) / maxAbsMonth) * 100));
+
+        return `
+          <div class="p-4 rounded-xl hairline-box bg-[var(--bg-card)]/50 flex flex-col justify-between font-mono">
+            <div class="flex items-center justify-between text-[11px] text-[var(--ink-muted)]">
+              <span>${item.month}</span>
+              <span class="tabular-nums ${cls}">${formatPct(item.returnPct)}</span>
+            </div>
+            <div class="my-2.5 text-base font-semibold tabular-nums privacy-target ${cls}">
+              ${formatMoney(item.pnl, true)}
+            </div>
+            <div class="w-full h-1 rounded-full bg-[var(--bg-subtle)] overflow-hidden">
+              <div class="h-full rounded-full" style="width:${barWidth}%; background-color:${barColor}"></div>
+            </div>
+          </div>
+        `;
+      }).join("") : '<div class="col-span-full py-8 text-center font-mono text-xs text-[var(--ink-muted)]">Collecting market history</div>';
+
+      // 渲染历史盈亏记录列表
+      const records = portfolioData.realizedHistory || [];
+      document.getElementById("ledger-count").textContent = `${records.length} 条记录`;
+      document.getElementById("ledger-list").innerHTML = records.map(r => {
+        const cls = Number(r.amount) >= 0 ? "text-up" : "text-down";
+        return `
+          <div class="py-3.5 flex items-center justify-between gap-3 text-xs">
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="font-mono text-[11px] text-[var(--ink-muted)]">${r.date}</span>
+              <span class="font-mono font-semibold px-1.5 py-0.5 rounded bg-[var(--bg-subtle)]">${r.symbol}</span>
+              <span class="text-[var(--ink-secondary)] truncate">${r.note || "历史盈亏"}</span>
+            </div>
+            <div class="flex items-center gap-3 shrink-0 font-mono">
+              <span class="tabular-nums font-medium privacy-target ${cls}">${formatMoney(Number(r.amount), true)}</span>
+              <button onclick="deleteHistoryRecord('${r.id}')" class="text-[var(--ink-muted)] hover:text-[var(--ink-primary)]" title="删除">✕</button>
+            </div>
+          </div>
+        `;
+      }).join("");
     }
-  });
 
-  starBtn.onclick = function() {
-    var q = input.value.trim().toUpperCase();
-    if (q) {
-      var match = POPULAR_US_STOCKS.find(function(s){ return s.symbol === q; });
-      followStock(q, match ? match.name : q);
+    /*************************************************************************
+     * 5. 抽屉、弹窗与交互控制
+     *************************************************************************/
+    function openHoldingDrawer(symbol) {
+      activeDrawerSymbol = symbol;
+      const m = computePortfolioMetrics();
+      const item = m.enriched.find(x => x.symbol === symbol);
+      if (!item) return;
+
+      document.getElementById("drawer-role").textContent = item.role;
+      document.getElementById("drawer-symbol").textContent = item.symbol;
+      document.getElementById("drawer-name").textContent = item.name;
+      document.getElementById("drawer-price").textContent = `$${item.price.toFixed(2)} (${formatPct(item.dayChangePct)})`;
+
+      const pnlEl = document.getElementById("drawer-pnl");
+      pnlEl.textContent = `${formatMoney(item.totalPnl, true)} (${formatPct(item.totalPnlPct)})`;
+      pnlEl.className = `text-lg font-medium mt-1 tabular-nums ${item.totalPnl >= 0 ? "text-up" : "text-down"}`;
+
+      document.getElementById("drawer-edit-shares").value = item.shares;
+      document.getElementById("drawer-edit-cost").value = item.avgCost;
+
+      document.getElementById("sim-buy-shares").value = 10;
+      document.getElementById("sim-buy-price").value = item.price.toFixed(2);
+      runAvgCostSimulator();
+
+      const backdrop = document.getElementById("drawer-backdrop");
+      const drawer = document.getElementById("holding-drawer");
+      backdrop.classList.remove("hidden");
+      setTimeout(() => {
+        backdrop.classList.remove("opacity-0");
+        drawer.classList.remove("translate-x-full");
+      }, 10);
     }
-  };
 
-  document.addEventListener("click", function(e) {
-    if (!e.target.closest(".watchlist-search-wrap")) {
-      sugg.style.display = "none";
+    function closeHoldingDrawer() {
+      activeDrawerSymbol = null;
+      const backdrop = document.getElementById("drawer-backdrop");
+      const drawer = document.getElementById("holding-drawer");
+      backdrop.classList.add("opacity-0");
+      drawer.classList.add("translate-x-full");
+      setTimeout(() => backdrop.classList.add("hidden"), 280);
     }
-  });
-}
 
-async function fetchSnapshot() {
-  setStatus("loading");
-  fetchErrors = [];
-  try { await loadPortfolio(); } catch(e) { console.warn("Failed to load portfolio.json", e); }
-  var holdings = (portfolio && portfolio.holdings) || [];
-  var snapshotAvailable = false;
-  try {
-    var snapshot = await readMarketSnapshot();
-    lastSnapshot = snapshot;
-    snapshotAvailable = true;
-    try { localStorage.setItem(SNAPSHOT_CACHE_KEY, JSON.stringify(snapshot)); } catch (e) {}
-    priceCache = Object.assign({}, priceCache, snapshot.quotes || {});
-    snapshotHistory = snapshot.history || {};
-    if (snapshot.fx) fxCache = snapshot.fx;
-    var snapshotDate = snapshot.updatedAt ? new Date(snapshot.updatedAt) : null;
-    document.getElementById("lastUpdate").textContent = snapshotDate && isFinite(snapshotDate.getTime())
-      ? "Updated - " + snapshotDate.toLocaleString() : "Latest snapshot loaded";
-    setStatus("live");
-    var banner = document.getElementById("errorBanner");
-    if (banner) banner.style.display = "none";
-  } catch(e) {
-    console.warn("Snapshot not yet available", e);
-    setStatus("error");
-    var banner = document.getElementById("errorBanner");
-    if (banner) {
-      banner.style.display = "block";
-      banner.textContent = "Market data snapshot loading or waiting for GitHub Actions workflow to run.";
+    function runAvgCostSimulator() {
+      if (!activeDrawerSymbol) return;
+      const h = portfolioData.holdings.find(x => x.symbol === activeDrawerSymbol);
+      const q = marketQuotes[activeDrawerSymbol] || { price: h.avgCost };
+      const addShares = parseFloat(document.getElementById("sim-buy-shares").value) || 0;
+      const buyPrice = parseFloat(document.getElementById("sim-buy-price").value) || q.price;
+
+      const needed = addShares * buyPrice;
+      const newShares = h.shares + addShares;
+      const newAvg = newShares > 0 ? ((h.shares * h.avgCost) + needed) / newShares : 0;
+      const newPct = newAvg > 0 ? ((q.price - newAvg) / newAvg) * 100 : 0;
+
+      document.getElementById("sim-needed-cash").textContent = formatMoney(needed);
+      document.getElementById("sim-new-shares").textContent = `${newShares.toFixed(2)} 股`;
+      document.getElementById("sim-new-avg").textContent = `$${newAvg.toFixed(2)}`;
+      document.getElementById("sim-new-pnl-pct").textContent = formatPct(newPct);
     }
-  }
-  restoreWatchlistQuoteCache();
-  try {
-    var holdingsCaption = document.getElementById("holdingsCaption");
-    if (holdingsCaption) holdingsCaption.textContent = holdings.length + " ACTIVE POSITION" + (holdings.length === 1 ? "" : "S");
-    document.getElementById("holdingsGrid").innerHTML = holdings.map(function(s) { return renderStockCard(s, true); }).join("");
-    renderWatchlistSection();
-    renderSummary(holdings);
-    // The generated snapshot has the authoritative previous-close values used
-    // for Daily move and Today P/L. Only use live quotes as a fallback when a
-    // snapshot is unavailable or missing a holding's daily change.
-    var needsLiveHoldings = !snapshotAvailable || holdings.some(function(item) {
-      return !hasQuoteChange(normalizeQuote(priceCache[item.code]));
-    });
-    if (needsLiveHoldings) refreshHoldingQuotes(holdings);
-    refreshProfitTrend(holdings);
-    await refreshFXData();
-    ensureWatchlistQuotes(true);
-  } catch(e) {
-    console.error("Render error:", e);
-  }
-}
 
-initTheme();
-document.getElementById("themeBtn").onclick = function() {
-  applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
-};
-initFXSelectors();
-setupWatchlistControls();
-var fa = document.getElementById("fxFromAmount"); if (fa) fa.oninput = function() { syncConversion("from"); };
-var ta = document.getElementById("fxToAmount"); if (ta) ta.oninput = function() { syncConversion("to"); };
-var fsel = document.getElementById("fxFromSelect"); if (fsel) fsel.onchange = refreshFXData;
-var tsel = document.getElementById("fxToSelect"); if (tsel) tsel.onchange = refreshFXData;
-var fxSnapshotRefresh = document.getElementById("fxSnapshotRefresh");
-if (fxSnapshotRefresh) fxSnapshotRefresh.onclick = refreshFXData;
-var swapBtn = document.getElementById("fxSwapBtn");
-if (swapBtn) {
-  swapBtn.onclick = function() {
-    var t = fsel.value;
-    fsel.value = tsel.value;
-    tsel.value = t;
-    refreshFXData();
-  };
-}
-document.getElementById("refreshBtn").onclick = fetchSnapshot;
-initDinoGame();
-fetchSnapshot();
-setInterval(fetchSnapshot, REFRESH_INTERVAL);
+    function saveDrawerHoldingEdit() {
+      if (!activeDrawerSymbol) return;
+      const h = portfolioData.holdings.find(x => x.symbol === activeDrawerSymbol);
+      if (h) {
+        h.shares = Math.max(0, parseFloat(document.getElementById("drawer-edit-shares").value) || 0);
+        h.avgCost = Math.max(0, parseFloat(document.getElementById("drawer-edit-cost").value) || 0);
+        savePortfolioToLocal();
+        renderAll();
+        closeHoldingDrawer();
+      }
+    }
+
+    function openAddHistoryModal() {
+      document.getElementById("history-modal").classList.remove("hidden");
+      document.getElementById("history-modal").classList.add("flex");
+    }
+    function closeAddHistoryModal() {
+      document.getElementById("history-modal").classList.add("hidden");
+      document.getElementById("history-modal").classList.remove("flex");
+    }
+    function submitHistoryRecord() {
+      const date = document.getElementById("hist-input-date").value || "2026-10-21";
+      const symbol = document.getElementById("hist-input-symbol").value;
+      const amount = parseFloat(document.getElementById("hist-input-amount").value);
+      const note = document.getElementById("hist-input-note").value.trim();
+      if (isNaN(amount)) return;
+
+      portfolioData.realizedHistory.unshift({
+        id: "h_" + Date.now(),
+        date,
+        symbol,
+        amount,
+        note: note || `${symbol} 历史盈亏记录`
+      });
+      savePortfolioToLocal();
+      closeAddHistoryModal();
+      renderAll();
+    }
+    function deleteHistoryRecord(id) {
+      portfolioData.realizedHistory = portfolioData.realizedHistory.filter(r => r.id !== id);
+      savePortfolioToLocal();
+      renderAll();
+    }
+
+    function filterCategory(cat) {
+      activeCategory = cat;
+      ["ALL", "CORE", "DEFENSE", "SATELLITE"].forEach(c => {
+        const el = document.getElementById(`cat-${c}`);
+        if (el) {
+          el.className = c === cat
+            ? "text-[var(--ink-primary)] underline underline-offset-8 font-medium"
+            : "text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition";
+        }
+      });
+      renderAll();
+    }
+
+    function setSort(field) {
+      if (sortField === field) sortAsc = !sortAsc;
+      else { sortField = field; sortAsc = false; }
+      renderAll();
+    }
+
+    function setCurrency(curr) {
+      currentCurrency = curr;
+      localStorage.setItem("pos_currency", curr);
+      ["USD", "CNY", "HKD"].forEach(c => {
+        const el = document.getElementById(`curr-${c}`);
+        if (el) {
+          el.className = c === curr
+            ? "font-semibold underline underline-offset-4"
+            : "text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition";
+        }
+      });
+      renderAll();
+    }
+
+    function toggleColorScheme() {
+      isCnColor = !isCnColor;
+      localStorage.setItem("pos_cn_color", String(isCnColor));
+      applySavedPreferences();
+      renderAll();
+    }
+
+    function togglePrivacy() {
+      isPrivacyMode = !isPrivacyMode;
+      localStorage.setItem("pos_privacy", String(isPrivacyMode));
+      applyPrivacyBlur();
+    }
+
+    function applyPrivacyBlur() {
+      document.querySelectorAll(".privacy-target").forEach(el => {
+        if (isPrivacyMode) el.classList.add("privacy-blur");
+        else el.classList.remove("privacy-blur");
+      });
+    }
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      html.classList.toggle("dark");
+      const isDark = html.classList.contains("dark");
+      localStorage.setItem("pos_editorial_theme", isDark ? "dark" : "light");
+      document.getElementById("theme-btn").textContent = isDark ? "浅色" : "深色";
+    }
+
+    function applySavedPreferences() {
+      const savedTheme = localStorage.getItem("pos_editorial_theme");
+      if (savedTheme === "dark") {
+        document.documentElement.classList.add("dark");
+        document.getElementById("theme-btn").textContent = "浅色";
+      } else {
+        document.documentElement.classList.remove("dark");
+        document.getElementById("theme-btn").textContent = "深色";
+      }
+
+      if (isCnColor) {
+        document.documentElement.classList.add("cn-color");
+        document.getElementById("scheme-btn").textContent = "红涨绿跌";
+      } else {
+        document.documentElement.classList.remove("cn-color");
+        document.getElementById("scheme-btn").textContent = "绿涨红跌";
+      }
+      setCurrency(currentCurrency);
+    }
+
+    function savePortfolioToLocal() {
+      localStorage.setItem(PORTFOLIO_STORAGE_KEY, JSON.stringify(portfolioData));
+    }
+
+    function openConfigModal() {
+      document.getElementById("json-editor-textarea").value = JSON.stringify(portfolioData, null, 2);
+      document.getElementById("config-modal").classList.remove("hidden");
+      document.getElementById("config-modal").classList.add("flex");
+    }
+    function closeConfigModal() {
+      document.getElementById("config-modal").classList.add("hidden");
+      document.getElementById("config-modal").classList.remove("flex");
+    }
+    function applyJsonEditorChanges() {
+      try {
+        const parsed = JSON.parse(document.getElementById("json-editor-textarea").value);
+        if (Array.isArray(parsed.holdings)) {
+          portfolioData = parsed;
+          savePortfolioToLocal();
+          closeConfigModal();
+          renderAll();
+        }
+      } catch (e) {
+        alert("JSON 格式有误，请检查语法。");
+      }
+    }
+    function resetToDefaultHoldings() {
+      portfolioData = JSON.parse(JSON.stringify(DEFAULT_PORTFOLIO_DATA));
+      localStorage.removeItem(PORTFOLIO_STORAGE_KEY);
+      document.getElementById("json-editor-textarea").value = JSON.stringify(portfolioData, null, 2);
+      renderAll();
+    }
+    function downloadPortfolioJson() {
+      const blob = new Blob([JSON.stringify(portfolioData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "portfolio.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    window.addEventListener("DOMContentLoaded", initApp);
   </script>
 </body>
 </html>
