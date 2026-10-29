@@ -184,7 +184,7 @@
             <span>PORTFOLIO TRAJECTORY</span>
             <div class="inline-flex items-center rounded-md border border-[var(--line-hairline)] p-0.5" role="group" aria-label="组合走势类型">
               <button type="button" onclick="switchHeroChartMode('equity')" id="tab-chart-equity" aria-pressed="true" class="rounded px-2.5 py-1 transition">净值</button>
-              <button type="button" onclick="switchHeroChartMode('pnl')" id="tab-chart-pnl" aria-pressed="false" class="rounded px-2.5 py-1 transition">盈亏</button>
+              <button type="button" onclick="switchHeroChartMode('daily')" id="tab-chart-daily" aria-pressed="false" class="rounded px-2.5 py-1 transition">单日盈亏</button>
             </div>
           </div>
           <div class="h-28 w-full">
@@ -787,35 +787,52 @@
 
     function renderSparkline(m) {
       const svg = document.getElementById("hero-sparkline");
-      const pts = m.historyPoints.map(point => heroChartMode === "equity" ? point.value : point.pnl);
-      if (pts.length < 2) {
+      const history = m.historyPoints;
+      const plotPoints = heroChartMode === "equity"
+        ? history.map(point => ({ date: point.date, value: point.value }))
+        : history.slice(1).map((point, index) => ({
+            date: point.date,
+            value: point.value - history[index].value
+          }));
+      if (plotPoints.length < 2) {
         svg.innerHTML = '<text x="250" y="52" text-anchor="middle" fill="var(--ink-muted)" font-size="11">Collecting market history</text>';
         return;
       }
 
-      const minV = Math.min(...pts);
-      const maxV = Math.max(...pts);
+      const values = plotPoints.map(point => point.value);
+      const dailyMode = heroChartMode === "daily";
+      const extent = Math.max(1, ...values.map(Math.abs));
+      const minV = dailyMode ? -extent : Math.min(...values);
+      const maxV = dailyMode ? extent : Math.max(...values);
       const span = Math.max(1, maxV - minV);
 
-      const coords = pts.map((v, idx) => {
-        const x = (idx / (pts.length - 1)) * 500;
-        const y = 88 - ((v - minV) / span) * 74;
+      const coords = plotPoints.map((point, idx) => {
+        const x = (idx / (plotPoints.length - 1)) * 500;
+        const y = dailyMode ? 50 - (point.value / extent) * 36 : 88 - ((point.value - minV) / span) * 74;
         return [x, y];
       });
 
       const d = coords.map((c, i) => `${i === 0 ? "M" : "L"}${c[0].toFixed(1)},${c[1].toFixed(1)}`).join(" ");
-      const stroke = pts[pts.length - 1] >= pts[0] ? "var(--up-color)" : "var(--down-color)";
+      const stroke = values[values.length - 1] >= (dailyMode ? 0 : values[0]) ? "var(--up-color)" : "var(--down-color)";
+      const baselineY = dailyMode ? 50 : 92;
+      const pointMarkers = coords.map((point, index) => {
+        const color = dailyMode
+          ? (plotPoints[index].value >= 0 ? "var(--up-color)" : "var(--down-color)")
+          : stroke;
+        return `<circle cx="${point[0]}" cy="${point[1]}" r="2.2" fill="${color}"><title>${plotPoints[index].date}: ${formatMoney(plotPoints[index].value, true)}</title></circle>`;
+      }).join("");
 
       svg.innerHTML = `
-        <line x1="0" y1="92" x2="500" y2="92" stroke="var(--line-hairline)" stroke-dasharray="3 3" />
+        <line x1="0" y1="${baselineY}" x2="500" y2="${baselineY}" stroke="var(--line-hairline)" stroke-dasharray="3 3" />
         <path d="${d}" fill="none" stroke="${stroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+        ${pointMarkers}
         <circle cx="${coords[coords.length - 1][0]}" cy="${coords[coords.length - 1][1]}" r="3.5" fill="${stroke}" />
       `;
     }
 
     function switchHeroChartMode(mode) {
       heroChartMode = mode;
-      ["equity", "pnl"].forEach(chartMode => {
+      ["equity", "daily"].forEach(chartMode => {
         const button = document.getElementById(`tab-chart-${chartMode}`);
         const selected = mode === chartMode;
         button.setAttribute("aria-pressed", String(selected));
