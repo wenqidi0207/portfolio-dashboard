@@ -170,7 +170,7 @@
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-end">
         <!-- 左侧 7 列：核心大字号总净值 -->
         <div class="lg:col-span-7 space-y-4">
-          <span class="font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--ink-muted)] block">01 / Net Liquidation Value · 账户总净值</span>
+          <span id="hero-value-label" class="font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--ink-muted)] block">01 / Net Liquidation Value · 账户总净值</span>
           <h1 id="hero-net-worth" class="font-serif font-normal text-5xl sm:text-7xl tracking-tight tabular-nums privacy-target leading-none">$0.00</h1>
           <div class="flex flex-wrap items-center gap-3 pt-2">
             <span id="hero-day-pill" class="px-3 py-1 rounded-full text-xs font-mono tabular-nums">+0.00%</span>
@@ -187,8 +187,15 @@
               <button type="button" onclick="switchHeroChartMode('daily')" id="tab-chart-daily" aria-pressed="false" class="rounded px-2.5 py-1 transition">单日盈亏</button>
             </div>
           </div>
-          <div class="h-28 w-full">
+          <div id="hero-chart-wrap" class="relative h-28 w-full">
             <svg id="hero-sparkline" class="w-full h-full overflow-visible" viewBox="0 0 500 100" preserveAspectRatio="none"></svg>
+            <div id="hero-chart-tooltip" role="status" aria-live="polite" class="hidden absolute z-10 pointer-events-none min-w-36 rounded border border-[var(--line-hairline)] bg-[var(--bg-card)] px-2.5 py-2 shadow-lg font-mono text-[10px]">
+              <div id="hero-tooltip-date" class="text-[var(--ink-muted)]"></div>
+              <div class="mt-1.5 flex items-center justify-between gap-3">
+                <span id="hero-tooltip-type" class="font-semibold"></span>
+                <span id="hero-tooltip-value" class="font-semibold tabular-nums"></span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -755,11 +762,22 @@
      * 4. 四大核心板块渲染
      *************************************************************************/
     function renderHero(m) {
-      document.getElementById("hero-net-worth").textContent = formatMoney(m.totalMarketValue);
-      document.getElementById("hero-cost-note").textContent = `持仓总成本 ${formatMoney(m.totalCostBasis)}`;
+      const dailyMode = heroChartMode === "daily";
+      const heroValue = document.getElementById("hero-net-worth");
+      document.getElementById("hero-value-label").textContent = dailyMode
+        ? "01 / Daily P&L · 单日盈亏"
+        : "01 / Net Liquidation Value · 账户总净值";
+      heroValue.textContent = formatMoney(dailyMode ? m.totalDayPnl : m.totalMarketValue, dailyMode);
+      heroValue.classList.toggle("text-up", dailyMode && m.totalDayPnl >= 0);
+      heroValue.classList.toggle("text-down", dailyMode && m.totalDayPnl < 0);
+      document.getElementById("hero-cost-note").textContent = dailyMode
+        ? "相对上一交易日收盘 · 当前行情"
+        : `持仓总成本 ${formatMoney(m.totalCostBasis)}`;
 
       const pill = document.getElementById("hero-day-pill");
-      pill.textContent = `${formatMoney(m.totalDayPnl, true)} (${formatPct(m.totalDayPct)}) 今日`;
+      pill.textContent = dailyMode
+        ? `${formatPct(m.totalDayPct)} 今日`
+        : `${formatMoney(m.totalDayPnl, true)} (${formatPct(m.totalDayPct)}) 今日`;
       pill.className = `px-3 py-1 rounded-full text-xs font-mono tabular-nums ${m.totalDayPnl >= 0 ? "pill-up" : "pill-down"}`;
 
       const dPnl = document.getElementById("metric-day-pnl");
@@ -787,6 +805,9 @@
 
     function renderSparkline(m) {
       const svg = document.getElementById("hero-sparkline");
+      const tooltip = document.getElementById("hero-chart-tooltip");
+      svg.onpointermove = null;
+      tooltip.classList.add("hidden");
       const history = m.historyPoints;
       const plotPoints = heroChartMode === "equity"
         ? history.map(point => ({ date: point.date, value: point.value }))
@@ -828,6 +849,49 @@
         ${pointMarkers}
         <circle cx="${coords[coords.length - 1][0]}" cy="${coords[coords.length - 1][1]}" r="3.5" fill="${stroke}" />
       `;
+
+      const wrapper = document.getElementById("hero-chart-wrap");
+      svg.onpointermove = event => {
+        const matrix = svg.getScreenCTM();
+        if (!matrix) return;
+        const cursor = svg.createSVGPoint();
+        cursor.x = event.clientX;
+        cursor.y = event.clientY;
+        const position = cursor.matrixTransform(matrix.inverse());
+        let nearestIndex = 0;
+        let nearestDistance = Infinity;
+        coords.forEach(([x, y], index) => {
+          const distance = Math.hypot(position.x - x, position.y - y);
+          if (distance < nearestDistance) {
+            nearestDistance = distance;
+            nearestIndex = index;
+          }
+        });
+        if (nearestDistance > 22) {
+          tooltip.classList.add("hidden");
+          return;
+        }
+
+        const item = plotPoints[nearestIndex];
+        const itemUp = item.value > 0;
+        document.getElementById("hero-tooltip-date").textContent = item.date;
+        document.getElementById("hero-tooltip-type").textContent = dailyMode
+          ? (item.value > 0 ? "当日盈利" : item.value < 0 ? "当日亏损" : "当日持平")
+          : "账户净值";
+        document.getElementById("hero-tooltip-type").className = `font-semibold ${dailyMode ? (itemUp ? "text-up" : item.value < 0 ? "text-down" : "text-[var(--ink-muted)]") : "text-[var(--ink-primary)]"}`;
+        document.getElementById("hero-tooltip-value").textContent = formatMoney(item.value, dailyMode);
+        document.getElementById("hero-tooltip-value").className = `font-semibold tabular-nums privacy-target ${dailyMode ? (itemUp ? "text-up" : item.value < 0 ? "text-down" : "text-[var(--ink-muted)]") : "text-[var(--ink-primary)]"}`;
+        applyPrivacyBlur();
+
+        const wrapperRect = wrapper.getBoundingClientRect();
+        const markerX = (coords[nearestIndex][0] / 500) * wrapperRect.width;
+        const markerY = (coords[nearestIndex][1] / 100) * wrapperRect.height;
+        const halfWidth = tooltip.offsetWidth / 2;
+        tooltip.style.left = `${Math.min(wrapperRect.width - halfWidth, Math.max(halfWidth, markerX))}px`;
+        tooltip.style.top = `${Math.max(0, markerY - tooltip.offsetHeight - 8)}px`;
+        tooltip.classList.remove("hidden");
+      };
+      svg.onpointerleave = () => tooltip.classList.add("hidden");
     }
 
     function switchHeroChartMode(mode) {
