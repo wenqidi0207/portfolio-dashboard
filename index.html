@@ -182,9 +182,9 @@
         <div class="lg:col-span-5 space-y-3">
           <div class="flex items-center justify-between text-[11px] font-mono text-[var(--ink-muted)]">
             <span>PORTFOLIO TRAJECTORY</span>
-            <div class="flex items-center gap-4">
-              <button onclick="switchHeroChartMode('equity')" id="tab-chart-equity" class="text-[var(--ink-primary)] underline underline-offset-4">净值走势</button>
-              <button onclick="switchHeroChartMode('pnl')" id="tab-chart-pnl" class="hover:text-[var(--ink-primary)] transition">历史盈亏走势</button>
+            <div class="inline-flex items-center rounded-md border border-[var(--line-hairline)] p-0.5" role="group" aria-label="组合走势类型">
+              <button type="button" onclick="switchHeroChartMode('equity')" id="tab-chart-equity" aria-pressed="true" class="rounded px-2.5 py-1 transition">净值</button>
+              <button type="button" onclick="switchHeroChartMode('pnl')" id="tab-chart-pnl" aria-pressed="false" class="rounded px-2.5 py-1 transition">盈亏</button>
             </div>
           </div>
           <div class="h-28 w-full">
@@ -615,7 +615,17 @@
 
       const snapshotDate = marketSnapshotUpdatedAt ? new Date(marketSnapshotUpdatedAt) : null;
       document.getElementById("sync-time").textContent = snapshotDate && isFinite(snapshotDate.getTime())
-        ? "Updated " + snapshotDate.toLocaleString() : "Snapshot unavailable";
+        ? "数据更新 · 北京时间 " + new Intl.DateTimeFormat("zh-CN", {
+            timeZone: "Asia/Shanghai",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hourCycle: "h23"
+          }).format(snapshotDate)
+        : "行情快照不可用";
       renderAll();
     }
 
@@ -805,12 +815,14 @@
 
     function switchHeroChartMode(mode) {
       heroChartMode = mode;
-      document.getElementById("tab-chart-equity").className = mode === "equity"
-        ? "text-[var(--ink-primary)] underline underline-offset-4"
-        : "hover:text-[var(--ink-primary)] transition";
-      document.getElementById("tab-chart-pnl").className = mode === "pnl"
-        ? "text-[var(--ink-primary)] underline underline-offset-4"
-        : "hover:text-[var(--ink-primary)] transition";
+      ["equity", "pnl"].forEach(chartMode => {
+        const button = document.getElementById(`tab-chart-${chartMode}`);
+        const selected = mode === chartMode;
+        button.setAttribute("aria-pressed", String(selected));
+        button.className = `rounded px-2.5 py-1 transition ${selected
+          ? "bg-[var(--bg-subtle)] text-[var(--ink-primary)]"
+          : "text-[var(--ink-muted)] hover:text-[var(--ink-primary)]"}`;
+      });
       renderAll();
     }
 
