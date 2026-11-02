@@ -45,7 +45,7 @@ jobs:
               sleep 20
               continue
             fi
-            if ! node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('data/market.json','utf8')); if (!data.updatedAt || !data.quotes || Object.keys(data.quotes).length === 0) process.exit(1);"; then
+            if ! node -e "const fs=require('fs'); const portfolio=JSON.parse(fs.readFileSync('portfolio.json','utf8')); const data=JSON.parse(fs.readFileSync('data/market.json','utf8')); const missing=(portfolio.holdings||[]).filter(item=>!(Number(data.quotes?.[item.code]?.price)>0) || !data.quotes?.[item.code]?.fetchedAt); if (!data.updatedAt || missing.length) { console.error('Snapshot missing fresh holding quotes:', missing.map(item=>item.code).join(', ')); process.exit(1); }"; then
               echo "Generated snapshot failed validation on attempt ${attempt}; retrying"
               sleep 20
               continue
