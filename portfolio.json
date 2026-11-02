@@ -4,29 +4,36 @@
                          "market":  "US",
                          "code":  "VTI",
                          "name":  "Vanguard Total Stock Market ETF",
-                         "quantity":  37,
-                         "cost":  370.9938
+                         "quantity":  38,
+                         "cost":  370.982
                      },
                      {
                          "market":  "US",
                          "code":  "SGOV",
                          "name":  "iShares 0-3 Month Treasury Bond ETF",
-                         "quantity":  51,
+                         "quantity":  15,
                          "cost":  100.44
                      },
                      {
                          "market":  "US",
                          "code":  "QQQM",
                          "name":  "Invesco NASDAQ 100 ETF",
-                         "quantity":  23,
-                         "cost":  292.9191
+                         "quantity":  34,
+                         "cost":  291.197
                      },
                      {
                          "market":  "US",
                          "code":  "DRAM",
                          "name":  "Roundhill Memory ETF",
                          "quantity":  16,
-                         "cost":  55.3775
+                         "cost":  55.378
+                     },
+                     {
+                         "market":  "US",
+                         "code":  "KO",
+                         "name":  "The Coca-Cola Company",
+                         "quantity":  2,
+                         "cost":  92.3
                      }
                  ],
     "watchlist":  [

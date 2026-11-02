@@ -50,13 +50,32 @@ function get(url, headers, redirectsLeft = 3) {
       response.setEncoding('utf8');
       response.on('data', chunk => { body += chunk; });
       response.on('end', () => {
-        if (response.statusCode < 200 || response.statusCode >= 300) return reject(new Error(`HTTP ${response.statusCode}`));
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          const error = new Error(`HTTP ${response.statusCode}`);
+          error.statusCode = response.statusCode;
+          return reject(error);
+        }
         resolve(body);
       });
     });
     request.setTimeout(15000, () => request.destroy(new Error('timeout')));
     request.on('error', reject);
   });
+}
+
+async function getWithRetry(url, headers, attempts = 3) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await get(url, headers);
+    } catch (error) {
+      lastError = error;
+      const permanentClientError = error.statusCode >= 400 && error.statusCode < 500 && error.statusCode !== 408 && error.statusCode !== 429;
+      if (permanentClientError || attempt === attempts) break;
+      await new Promise(resolve => setTimeout(resolve, 750 * (2 ** (attempt - 1))));
+    }
+  }
+  throw lastError;
 }
 
 function yahooSymbol(item) {
@@ -129,7 +148,7 @@ async function nasdaqQuoteWithClass(symbol, assetClass) {
     Referer: 'https://www.nasdaq.com/'
   };
   const encoded = encodeURIComponent(symbol);
-  const info = JSON.parse(await get(`https://api.nasdaq.com/api/quote/${encoded}/info?assetclass=${assetClass}`, headers));
+  const info = JSON.parse(await getWithRetry(`https://api.nasdaq.com/api/quote/${encoded}/info?assetclass=${assetClass}`, headers));
   const primary = info.data?.primaryData;
   if (!primary) throw new Error(`empty Nasdaq quote ${symbol}`);
 
@@ -141,7 +160,7 @@ async function nasdaqQuoteWithClass(symbol, assetClass) {
   try {
     const fromDate = new Date(Date.now() - 100 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const toDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const body = await get(`https://api.nasdaq.com/api/quote/${encoded}/historical?assetclass=${assetClass}&fromdate=${fromDate}&todate=${toDate}&limit=500`, headers);
+    const body = await getWithRetry(`https://api.nasdaq.com/api/quote/${encoded}/historical?assetclass=${assetClass}&fromdate=${fromDate}&todate=${toDate}&limit=500`, headers);
     history = nasdaqHistory(JSON.parse(body));
   } catch (error) {
     console.warn(`${symbol}: Nasdaq history unavailable (${error.message})`);
@@ -180,7 +199,7 @@ async function yahooQuote(symbol, timeZone) {
   let body;
   for (const host of ['query1.finance.yahoo.com', 'query2.finance.yahoo.com']) {
     try {
-      body = await get(`https://${host}/v8/finance/chart/${encoded}?interval=1d&range=3mo`, headers);
+      body = await getWithRetry(`https://${host}/v8/finance/chart/${encoded}?interval=1d&range=3mo`, headers);
       break;
     } catch (error) {
       if (host === 'query2.finance.yahoo.com') throw error;
@@ -219,7 +238,7 @@ async function yahooQuote(symbol, timeZone) {
 
 async function sinaQuotes(cnItems) {
   const codes = cnItems.map(item => `${item.code.startsWith('6') ? 'sh' : 'sz'}${item.code}`).join(',');
-  const body = await get(`https://hq.sinajs.cn/list=${codes}`, { 'User-Agent': 'Mozilla/5.0' });
+  const body = await getWithRetry(`https://hq.sinajs.cn/list=${codes}`, { 'User-Agent': 'Mozilla/5.0' });
   const quotes = {};
   for (const line of body.split('\n')) {
     const match = line.match(/hq_str_(\w+)="([^"]*)"/);
@@ -235,6 +254,7 @@ async function sinaQuotes(cnItems) {
 
 async function main() {
   const quotes = {};
+  const holdingCodes = new Set((portfolio.holdings || []).map(item => item.code));
   const cnItems = items.filter(item => item.market === 'CN');
   if (cnItems.length) {
     try { Object.assign(quotes, await sinaQuotes(cnItems)); } catch (error) { console.warn(`A-share source: ${error.message}`); }
@@ -257,10 +277,14 @@ async function main() {
   for (const pair of portfolio.fx_pairs || []) {
     const key = `${pair.from}${pair.to}`;
     try {
-      const body = await get(`https://api.frankfurter.app/latest?from=${pair.from}&to=${pair.to}`);
+      const body = await getWithRetry(`https://api.frankfurter.app/latest?from=${pair.from}&to=${pair.to}`);
       const rate = Number(JSON.parse(body).rates?.[pair.to]);
       if (rate) fx[key] = { rate, changePct: 0, source: 'ECB reference rates' };
     } catch (error) { console.warn(`${key}: ${error.message}`); }
+  }
+  const missingHoldings = [...holdingCodes].filter(code => !quotes[code] || !(Number(quotes[code].price) > 0));
+  if (missingHoldings.length) {
+    throw new Error(`Missing valid quotes for holdings: ${missingHoldings.join(', ')}; snapshot was not updated`);
   }
   if (!Object.keys(quotes).length && !Object.keys(fx).length) throw new Error('No market data returned');
   if (!Object.keys(quotes).length && items.length) throw new Error('No stock quotes returned; refusing to overwrite snapshot');
@@ -274,7 +298,7 @@ async function main() {
     if (Array.isArray(quote.history) && quote.history.length) newHistory[code] = quote.history;
     const cleanQuote = Object.assign({}, quote);
     delete cleanQuote.history;
-    cleanQuotes[code] = cleanQuote;
+    cleanQuotes[code] = { ...cleanQuote, fetchedAt: new Date().toISOString() };
   });
   const mergedQuotes = Object.assign({}, previousQuotes, cleanQuotes);
   const mergedHistory = Object.assign({}, previousHistory, newHistory);
