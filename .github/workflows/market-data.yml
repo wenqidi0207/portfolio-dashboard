@@ -9,10 +9,13 @@ on:
       - 'update-market.js'
       - '.github/workflows/market-data.yml'
   schedule:
-    # GitHub cron uses UTC. These entries are 21:30-04:00 Beijing time (UTC+8), every 30 minutes.
-    - cron: '30 13 * * 1-5'
-    - cron: '0,30 14-19 * * 1-5'
-    - cron: '0 20 * * 1-5'
+    # Candidate half-hour windows in UTC. A session check below runs the update
+    # only during regular New York trading hours, so this remains correct across
+    # U.S. daylight saving time (Beijing market open moves between 21:30/22:30).
+    # Offset by two minutes to avoid GitHub's busiest :00/:30 scheduler slots.
+    - cron: '32 13 * * 1-5'
+    - cron: '2,32 14-19 * * 1-5'
+    - cron: '2 20 * * 1-5'
 
 concurrency:
   group: market-data
@@ -32,7 +35,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - name: Check regular U.S. market session
+        id: market_session
+        if: github.event_name == 'schedule'
+        run: |
+          node -e "const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()); const value=Object.fromEntries(parts.map(part=>[part.type,part.value])); const minutes=Number(value.hour)*60+Number(value.minute); const open=!['Sat','Sun'].includes(value.weekday)&&minutes>=570&&minutes<960; console.log('New York market time:', value.weekday, value.hour+':'+value.minute, open?'open':'closed'); require('fs').appendFileSync(process.env.GITHUB_OUTPUT, 'open='+open+'\\n');"
       - name: Generate and publish snapshot
+        if: github.event_name != 'schedule' || steps.market_session.outputs.open == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
