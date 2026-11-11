@@ -2,20 +2,26 @@ name: Update market data
 
 on:
   workflow_dispatch:
+    inputs:
+      update_source:
+        description: 'Manual update or independent market scheduler'
+        type: choice
+        options:
+          - manual
+          - external_schedule
+        default: manual
   push:
     branches: [main]
     paths:
       - 'portfolio.json'
       - 'update-market.js'
+      - 'scripts/market-session.mjs'
       - '.github/workflows/market-data.yml'
   schedule:
-    # Candidate half-hour windows in UTC. A session check below runs the update
-    # only during regular New York trading hours, so this remains correct across
-    # U.S. daylight saving time (Beijing market open moves between 21:30/22:30).
-    # Offset by two minutes to avoid GitHub's busiest :00/:30 scheduler slots.
-    - cron: '32 13 * * 1-5'
-    - cron: '2,32 14-19 * * 1-5'
-    - cron: '2 20 * * 1-5'
+    # Best-effort fallback for the independent Cloudflare scheduler.
+    # Includes 16:02 New York in summer/winter to publish the closing snapshot.
+    # GitHub may delay or drop cron events; these are not punctual guarantees.
+    - cron: '2,32 13-21 * * 1-5'
 
 concurrency:
   group: market-data
@@ -33,13 +39,45 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-      - name: Check regular U.S. market session
+      - name: Check market session and snapshot freshness
         id: market_session
-        if: github.event_name == 'schedule'
+        env:
+          UPDATE_EVENT: ${{ github.event_name }}
+          UPDATE_SOURCE: ${{ inputs.update_source }}
         run: |
-          node -e "const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()); const value=Object.fromEntries(parts.map(part=>[part.type,part.value])); const minutes=Number(value.hour)*60+Number(value.minute); const open=!['Sat','Sun'].includes(value.weekday)&&minutes>=570&&minutes<960; console.log('New York market time:', value.weekday, value.hour+':'+value.minute, open?'open':'closed'); require('fs').appendFileSync(process.env.GITHUB_OUTPUT, 'open='+open+'\\n');"
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { getMarketSession } from './scripts/market-session.mjs';
+          const automatic = process.env.UPDATE_EVENT === 'schedule' || process.env.UPDATE_SOURCE === 'external_schedule';
+          const now = new Date();
+          const session = getMarketSession(now);
+          let shouldUpdate = !automatic || session.open;
+          let reason = automatic ? session.reason : 'manual/configuration update';
+          // Two schedulers can arrive in the same window. Reuse a valid recent
+          // snapshot, but never skip because of an incomplete or old snapshot.
+          if (automatic && shouldUpdate && !session.closingSnapshot) {
+            try {
+              const portfolio = JSON.parse(fs.readFileSync('portfolio.json', 'utf8').replace(/^\uFEFF/, ''));
+              const snapshot = JSON.parse(fs.readFileSync('data/market.json', 'utf8'));
+              const age = now.getTime() - Date.parse(snapshot.updatedAt);
+              const complete = portfolio.holdings.length > 0 && portfolio.holdings.every(item => {
+                const quote = snapshot.quotes?.[item.code];
+                const quoteAge = now.getTime() - Date.parse(quote?.fetchedAt);
+                return Number(quote?.price) > 0 && quoteAge >= 0 && quoteAge < 20 * 60 * 1000;
+              });
+              if (age >= 0 && age < 20 * 60 * 1000 && complete) {
+                shouldUpdate = false;
+                reason = 'complete snapshot already fetched within 20 minutes';
+              }
+            } catch { /* Missing/invalid snapshots must be regenerated. */ }
+          }
+          const message = `New York ${session.newYorkTime}: ${shouldUpdate ? 'UPDATE' : 'SKIP'} — ${reason}`;
+          console.log(message);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `update=${shouldUpdate}\n`);
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${message}\n`);
+          NODE
       - name: Generate and publish snapshot
-        if: github.event_name != 'schedule' || steps.market_session.outputs.open == 'true'
+        if: steps.market_session.outputs.update == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -65,6 +103,7 @@ jobs:
             git commit -m "chore: update market snapshot"
             if git push origin HEAD:main; then
               echo "Market snapshot committed; Pages will deploy after this workflow succeeds"
+              node -e 'console.log("Published market snapshot: " + require("./data/market.json").updatedAt)' >> "$GITHUB_STEP_SUMMARY"
               exit 0
             fi
             echo "Remote changed during attempt ${attempt}; retrying"
