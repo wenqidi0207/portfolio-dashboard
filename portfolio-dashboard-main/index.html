@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portfolio — US Equity & Historical P&L</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            serif: ['Newsreader', 'Georgia', 'serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --bg-canvas: #FAF9F5;
+      --bg-subtle: #F2F0E8;
+      --bg-card: #FFFFFF;
+      --ink-primary: #121211;
+      --ink-secondary: #5A5955;
+      --ink-muted: #91908B;
+      --line-hairline: rgba(18, 18, 17, 0.085);
+      --line-strong: rgba(18, 18, 17, 0.22);
+      --up-color: #0D7A5F;
+      --up-soft: rgba(13, 122, 95, 0.08);
+      --down-color: #C83E3B;
+      --down-soft: rgba(200, 62, 59, 0.08);
+    }
+
+    html.dark {
+      --bg-canvas: #0B0B0A;
+      --bg-subtle: #141413;
+      --bg-card: #171715;
+      --ink-primary: #F5F4F0;
+      --ink-secondary: #A3A29D;
+      --ink-muted: #666560;
+      --line-hairline: rgba(245, 244, 240, 0.085);
+      --line-strong: rgba(245, 244, 240, 0.24);
+      --up-color: #2DD4BF;
+      --up-soft: rgba(45, 212, 191, 0.11);
+      --down-color: #FB7185;
+      --down-soft: rgba(251, 113, 133, 0.11);
+    }
+
+    html.cn-color {
+      --up-color: #C83E3B;
+      --up-soft: rgba(200, 62, 59, 0.08);
+      --down-color: #0D7A5F;
+      --down-soft: rgba(13, 122, 95, 0.08);
+    }
+
+    html.dark.cn-color {
+      --up-color: #FB7185;
+      --up-soft: rgba(251, 113, 133, 0.11);
+      --down-color: #2DD4BF;
+      --down-soft: rgba(45, 212, 191, 0.11);
+    }
+
+    body {
+      background-color: var(--bg-canvas);
+      color: var(--ink-primary);
+      font-family: 'Inter', -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 0.35s ease, color 0.35s ease;
+    }
+
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum" 1, "zero" 1;
+    }
+
+    .hairline-t { border-top: 1px solid var(--line-hairline); }
+    .hairline-b { border-bottom: 1px solid var(--line-hairline); }
+    .hairline-l { border-left: 1px solid var(--line-hairline); }
+    .hairline-r { border-right: 1px solid var(--line-hairline); }
+    .hairline-box { border: 1px solid var(--line-hairline); }
+
+    .text-up { color: var(--up-color); }
+    .text-down { color: var(--down-color); }
+    .pill-up { background-color: var(--up-soft); color: var(--up-color); }
+    .pill-down { background-color: var(--down-soft); color: var(--down-color); }
+
+    .privacy-blur {
+      filter: blur(9px);
+      user-select: none;
+      transition: filter 0.25s ease;
+    }
+    .privacy-blur:hover {
+      filter: blur(3px);
+    }
+
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--line-strong); }
+  </style>
+</head>
+<body class="min-h-screen selection:bg-neutral-900 selection:text-white dark:selection:bg-white dark:selection:text-neutral-900">
+
+  <!-- 顶栏 (Minimalist Editorial Masthead) -->
+  <header class="max-w-6xl mx-auto px-6 sm:px-12 pt-9 pb-6 flex flex-wrap items-center justify-between gap-4 hairline-b">
+    <div class="flex items-baseline gap-4">
+      <span class="font-serif italic text-2xl sm:text-3xl tracking-tight">Portfolio.</span>
+      <span class="text-[11px] font-mono uppercase tracking-[0.2em] text-[var(--ink-muted)]">US Equity & P&L Ledger</span>
+    </div>
+
+    <!-- 右侧工具控制栏 -->
+    <div class="flex flex-wrap items-center gap-5 text-xs">
+      <!-- 实时行情同步 -->
+      <div class="flex items-center gap-2 text-[var(--ink-muted)] font-mono text-[11px]">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+        <span id="sync-time">LIVE</span>
+        <button onclick="refreshQuotes(true)" class="hover:text-[var(--ink-primary)] transition underline underline-offset-4">刷新</button>
+      </div>
+
+      <span class="text-[var(--line-strong)]">|</span>
+
+      <!-- 币种切换 -->
+      <div class="flex items-center gap-2.5 font-mono text-[11px]">
+        <button onclick="setCurrency('USD')" id="curr-USD" class="font-semibold underline underline-offset-4">USD</button>
+        <button onclick="setCurrency('CNY')" id="curr-CNY" class="text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition">CNY</button>
+        <button onclick="setCurrency('HKD')" id="curr-HKD" class="text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition">HKD</button>
+      </div>
+
+      <span class="text-[var(--line-strong)]">|</span>
+
+      <!-- 涨跌配色切换 -->
+      <button onclick="toggleColorScheme()" id="scheme-btn" class="text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] transition font-mono text-[11px]">
+        绿涨红跌
+      </button>
+
+      <!-- 隐私模糊 -->
+      <button onclick="togglePrivacy()" id="privacy-btn" class="text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] transition font-mono text-[11px]" title="快捷键 P">
+        隐私
+      </button>
+
+      <!-- 主题切换 -->
+      <button onclick="toggleTheme()" id="theme-btn" class="text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] transition font-mono text-[11px]">
+        深色
+      </button>
+
+      <!-- JSON 配置导出 -->
+      <button onclick="openConfigModal()" class="px-3.5 py-1 rounded-full hairline-box hover:border-[var(--ink-primary)] transition font-mono text-[11px]">
+        JSON ↗
+      </button>
+    </div>
+  </header>
+
+  <!-- 主画布：四段黄金留白架构 -->
+  <main class="max-w-6xl mx-auto px-6 sm:px-12 py-16 space-y-24">
+
+    <!-- SECTION 01 / 核心总净值与盈亏总览 -->
+    <section class="space-y-12">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-end">
+        <!-- 左侧 7 列：核心大字号总净值 -->
+        <div class="lg:col-span-7 space-y-4">
+          <span id="hero-value-label" class="font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--ink-muted)] block">01 / Net Liquidation Value · 账户总净值</span>
+          <h1 id="hero-net-worth" class="font-serif font-normal text-5xl sm:text-7xl tracking-tight tabular-nums privacy-target leading-none">$0.00</h1>
+          <div class="flex flex-wrap items-center gap-3 pt-2">
+            <span id="hero-day-pill" class="px-3 py-1 rounded-full text-xs font-mono tabular-nums">+0.00%</span>
+            <span id="hero-cost-note" class="text-xs font-mono text-[var(--ink-muted)] tabular-nums privacy-target">持仓总成本 $0.00</span>
+          </div>
+        </div>
+
+        <!-- 右侧 5 列：极简无框历史曲线 -->
+        <div class="lg:col-span-5 space-y-3">
+          <div class="flex items-center justify-between text-[11px] font-mono text-[var(--ink-muted)]">
+            <span>PORTFOLIO TRAJECTORY</span>
+            <div class="inline-flex items-center rounded-md border border-[var(--line-hairline)] p-0.5" role="group" aria-label="组合走势类型">
+              <button type="button" onclick="switchHeroChartMode('equity')" id="tab-chart-equity" aria-pressed="true" class="rounded px-2.5 py-1 transition">净值</button>
+              <button type="button" onclick="switchHeroChartMode('daily')" id="tab-chart-daily" aria-pressed="false" class="rounded px-2.5 py-1 transition">单日盈亏</button>
+            </div>
+          </div>
+          <div id="hero-chart-wrap" class="relative h-28 w-full">
+            <svg id="hero-sparkline" class="w-full h-full overflow-visible" viewBox="0 0 500 100" preserveAspectRatio="none"></svg>
+            <div id="hero-chart-tooltip" role="status" aria-live="polite" class="hidden absolute z-10 pointer-events-none min-w-36 rounded border border-[var(--line-hairline)] bg-[var(--bg-card)] px-2.5 py-2 shadow-lg font-mono text-[10px]">
+              <div id="hero-tooltip-date" class="text-[var(--ink-muted)]"></div>
+              <div class="mt-1.5 flex items-center justify-between gap-3">
+                <span id="hero-tooltip-type" class="font-semibold"></span>
+                <span id="hero-tooltip-value" class="font-semibold tabular-nums"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 四维盈亏核心数据栏 -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 hairline-t hairline-b py-8 gap-y-8">
+        <div class="pr-6">
+          <span class="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--ink-muted)]">Day P&L · 今日盈亏</span>
+          <p id="metric-day-pnl" class="mt-2.5 font-mono text-2xl font-medium tabular-nums privacy-target">$0.00</p>
+          <p id="metric-day-pct" class="mt-1 font-mono text-xs text-[var(--ink-muted)] tabular-nums">0.00%</p>
+        </div>
+
+        <div class="lg:hairline-l lg:pl-8 pr-6">
+          <span class="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--ink-muted)]">Unrealized · 当前持仓浮盈亏</span>
+          <p id="metric-unrealized-pnl" class="mt-2.5 font-mono text-2xl font-medium tabular-nums privacy-target">$0.00</p>
+          <p id="metric-unrealized-pct" class="mt-1 font-mono text-xs text-[var(--ink-muted)] tabular-nums">0.00%</p>
+        </div>
+
+        <div class="lg:hairline-l lg:pl-8 pr-6">
+          <span class="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--ink-muted)]">Realized · 历史已实现盈亏</span>
+          <p id="metric-realized-pnl" class="mt-2.5 font-mono text-2xl font-medium tabular-nums privacy-target">$0.00</p>
+          <p id="metric-realized-sub" class="mt-1 font-mono text-xs text-[var(--ink-muted)] tabular-nums">累计落袋收益</p>
+        </div>
+
+        <div class="lg:hairline-l lg:pl-8">
+          <span class="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--ink-muted)]">Total Historical P&L · 历史总盈亏</span>
+          <p id="metric-total-pnl" class="mt-2.5 font-mono text-2xl font-medium tabular-nums privacy-target">$0.00</p>
+          <p id="metric-total-pct" class="mt-1 font-mono text-xs text-[var(--ink-muted)] tabular-nums">历史总回报率 0.00%</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 02 / 仓位结构光谱 (Asset Allocation Spectrum) -->
+    <section class="space-y-6">
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <div class="flex items-baseline gap-3">
+          <span class="font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--ink-muted)]">02 / Allocation Spectrum · 仓位结构</span>
+        </div>
+        <span id="sgov-buffer-label" class="font-mono text-xs text-[var(--ink-secondary)]">SGOV 现金防守垫 22.4%</span>
+      </div>
+
+      <!-- 极简线性比例条 -->
+      <div id="allocation-bar" class="h-3 w-full rounded-full overflow-hidden flex gap-0.5 bg-[var(--bg-subtle)]"></div>
+
+      <!-- 五大持仓结构卡片 -->
+      <div id="allocation-legend" class="grid grid-cols-2 sm:grid-cols-5 gap-4 pt-2"></div>
+    </section>
+
+    <!-- SECTION 03 / 美股持仓明细 (Open Positions) -->
+    <section class="space-y-6">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <span class="font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--ink-muted)]">03 / Open Positions</span>
+          <h2 class="font-serif text-3xl mt-1">美股持仓与实时盈亏</h2>
+        </div>
+
+        <!-- 极简分类切换 -->
+        <div class="flex items-center gap-5 text-xs font-mono">
+          <button onclick="filterCategory('ALL')" id="cat-ALL" class="text-[var(--ink-primary)] underline underline-offset-8 font-medium">全部 (5)</button>
+          <button onclick="filterCategory('CORE')" id="cat-CORE" class="text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition">美股核心</button>
+          <button onclick="filterCategory('DEFENSE')" id="cat-DEFENSE" class="text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition">国债防守</button>
+          <button onclick="filterCategory('SATELLITE')" id="cat-SATELLITE" class="text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition">卫星仓位</button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="hairline-t hairline-b text-[10px] font-mono uppercase tracking-[0.16em] text-[var(--ink-muted)]">
+              <th class="py-4 pr-4 cursor-pointer hover:text-[var(--ink-primary)]" onclick="setSort('symbol')">标的 / 定位 ↕</th>
+              <th class="py-4 px-4 text-right cursor-pointer hover:text-[var(--ink-primary)]" onclick="setSort('price')">最新现价 ↕</th>
+              <th class="py-4 px-4 text-right cursor-pointer hover:text-[var(--ink-primary)]" onclick="setSort('shares')">持仓股数 / 成本均价 ↕</th>
+              <th class="py-4 px-4 text-right cursor-pointer hover:text-[var(--ink-primary)]" onclick="setSort('marketValue')">持仓市值 / 总成本 ↕</th>
+              <th class="py-4 px-4 text-right cursor-pointer hover:text-[var(--ink-primary)]" onclick="setSort('dayPnl')">今日盈亏 ↕</th>
+              <th class="py-4 px-4 text-right cursor-pointer hover:text-[var(--ink-primary)]" onclick="setSort('totalPnl')">持仓浮盈亏 ↕</th>
+              <th class="py-4 pl-4 text-right cursor-pointer hover:text-[var(--ink-primary)]" onclick="setSort('weight')">仓位占比 ↕</th>
+            </tr>
+          </thead>
+          <tbody id="holdings-tbody" class="divide-y divide-[var(--line-hairline)] text-sm"></tbody>
+        </table>
+      </div>
+      <p class="text-[11px] font-mono text-[var(--ink-muted)]">提示：点击任意一行持仓，可在右侧抽屉中模拟补仓摊平成本或修改持仓股数与成本。</p>
+    </section>
+
+    <!-- SECTION 04 / 历史盈亏 (Historical P&L — 纯粹、清晰的全宽双栏画廊布局) -->
+    <section class="space-y-10 hairline-t pt-16">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <span class="font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--ink-muted)]">04 / Historical P&L</span>
+          <h2 class="font-serif text-3xl mt-1">历史盈亏</h2>
+        </div>
+        <button onclick="openAddHistoryModal()" class="px-4 py-2 rounded-full hairline-box text-xs font-mono hover:border-[var(--ink-primary)] transition">
+          + 新增历史盈亏记录
+        </button>
+      </div>
+
+      <!-- 历史盈亏核心概览条 -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 p-6 rounded-2xl bg-[var(--bg-subtle)]/65 hairline-box">
+        <div>
+          <span class="text-[11px] font-mono text-[var(--ink-muted)] block">历史累计总盈亏 (含浮盈+已实现)</span>
+          <span id="hist-overview-total" class="font-mono text-xl font-semibold mt-1.5 block tabular-nums privacy-target">$0.00</span>
+        </div>
+        <div class="lg:hairline-l lg:pl-6">
+          <span class="text-[11px] font-mono text-[var(--ink-muted)] block">历史已实现盈亏总额</span>
+          <span id="hist-overview-realized" class="font-mono text-xl font-semibold mt-1.5 block tabular-nums privacy-target">$0.00</span>
+        </div>
+        <div class="lg:hairline-l lg:pl-6">
+          <span class="text-[11px] font-mono text-[var(--ink-muted)] block">月度盈利胜率</span>
+          <span id="hist-overview-winrate" class="font-mono text-xl font-semibold mt-1.5 block tabular-nums">83% (5/6月)</span>
+        </div>
+        <div class="lg:hairline-l lg:pl-6">
+          <span class="text-[11px] font-mono text-[var(--ink-muted)] block">最佳单月盈亏</span>
+          <span id="hist-overview-best" class="font-mono text-xl font-semibold mt-1.5 block tabular-nums privacy-target text-up">+$542.80</span>
+        </div>
+      </div>
+
+      <!-- 左右分栏：左侧 7 列月度历史盈亏矩阵，右侧 5 列历史盈亏记录明细 -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+
+        <!-- 左侧 7 列：月度历史盈亏表现 -->
+        <div class="lg:col-span-7 space-y-4">
+          <div class="flex items-center justify-between text-xs font-mono text-[var(--ink-muted)]">
+            <span>MONTHLY P&L ARCHIVE · 月度盈亏表现</span>
+            <span>2026 年度</span>
+          </div>
+          <div id="monthly-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3.5"></div>
+        </div>
+
+        <!-- 右侧 5 列：历史盈亏流水账本 -->
+        <div class="lg:col-span-5 space-y-4">
+          <div class="flex items-center justify-between text-xs font-mono text-[var(--ink-muted)]">
+            <span>HISTORICAL P&L RECORDS · 历史盈亏明细</span>
+            <span id="ledger-count">0 条记录</span>
+          </div>
+          <div id="ledger-list" class="divide-y divide-[var(--line-hairline)] hairline-t hairline-b max-h-80 overflow-y-auto"></div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 页脚 -->
+  <footer class="max-w-6xl mx-auto px-6 sm:px-12 py-12 hairline-t text-xs font-mono text-[var(--ink-muted)] flex flex-wrap items-center justify-between gap-4">
+    <span>PORTFOLIO · SWISS EDITORIAL EDITION</span>
+    <span>SHORTCUTS: [P] 隐私模糊 · [ESC] 关闭面板</span>
+  </footer>
+
+  <!-- 右侧滑出：单标的深度抽屉与补仓均价计算器 -->
+  <div id="drawer-backdrop" onclick="closeHoldingDrawer()" class="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-50 hidden opacity-0 transition-opacity"></div>
+  <aside id="holding-drawer" class="fixed top-0 right-0 h-full w-full max-w-md bg-[var(--bg-canvas)] hairline-l z-50 transform translate-x-full transition-transform duration-300 ease-out p-8 flex flex-col justify-between overflow-y-auto">
+    <div class="space-y-8">
+      <div class="flex items-start justify-between hairline-b pb-5">
+        <div>
+          <span id="drawer-role" class="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-muted)]">CORE EQUITY</span>
+          <h3 id="drawer-symbol" class="font-serif text-4xl mt-1">VTI</h3>
+          <p id="drawer-name" class="text-xs text-[var(--ink-secondary)] mt-0.5">Vanguard Total Stock Market ETF</p>
+        </div>
+        <button onclick="closeHoldingDrawer()" class="text-xs font-mono text-[var(--ink-muted)] hover:text-[var(--ink-primary)]">关闭 [ESC]</button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-6 hairline-b pb-6 font-mono">
+        <div>
+          <span class="text-[10px] uppercase text-[var(--ink-muted)]">当前现价</span>
+          <p id="drawer-price" class="text-lg font-medium mt-1 tabular-nums">$0.00</p>
+        </div>
+        <div>
+          <span class="text-[10px] uppercase text-[var(--ink-muted)]">当前持仓浮盈亏</span>
+          <p id="drawer-pnl" class="text-lg font-medium mt-1 tabular-nums">$0.00</p>
+        </div>
+      </div>
+
+      <!-- 修改持仓股数与成本 -->
+      <div class="space-y-4 hairline-b pb-7">
+        <span class="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--ink-muted)] block">修改持仓参数</span>
+        <div class="grid grid-cols-2 gap-3 font-mono text-xs">
+          <div>
+            <label class="text-[10px] text-[var(--ink-muted)] block mb-1">持仓股数 (Shares)</label>
+            <input type="number" step="0.01" id="drawer-edit-shares" class="w-full px-3 py-2 bg-transparent hairline-box rounded" />
+          </div>
+          <div>
+            <label class="text-[10px] text-[var(--ink-muted)] block mb-1">平均成本价 ($)</label>
+            <input type="number" step="0.01" id="drawer-edit-cost" class="w-full px-3 py-2 bg-transparent hairline-box rounded" />
+          </div>
+        </div>
+        <button onclick="saveDrawerHoldingEdit()" class="w-full py-2.5 rounded-full bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 text-xs font-mono font-medium">
+          保存该标的修改
+        </button>
+      </div>
+
+      <!-- 补仓摊平成本模拟器 -->
+      <div class="space-y-4">
+        <span class="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--ink-muted)] block">补仓摊平成本计算器</span>
+        <div class="grid grid-cols-2 gap-3 font-mono text-xs">
+          <div>
+            <label class="text-[10px] text-[var(--ink-muted)] block mb-1">计划加仓股数</label>
+            <input type="number" step="1" id="sim-buy-shares" value="10" oninput="runAvgCostSimulator()" class="w-full px-3 py-2 bg-transparent hairline-box rounded" />
+          </div>
+          <div>
+            <label class="text-[10px] text-[var(--ink-muted)] block mb-1">计划买入价 ($)</label>
+            <input type="number" step="0.01" id="sim-buy-price" oninput="runAvgCostSimulator()" class="w-full px-3 py-2 bg-transparent hairline-box rounded" />
+          </div>
+        </div>
+        <div class="p-4 rounded-xl bg-[var(--bg-subtle)] font-mono text-xs space-y-2 tabular-nums">
+          <div class="flex justify-between"><span class="text-[var(--ink-muted)]">所需新增资金：</span><span id="sim-needed-cash" class="font-medium">$0.00</span></div>
+          <div class="flex justify-between"><span class="text-[var(--ink-muted)]">加仓后总股数：</span><span id="sim-new-shares">0</span></div>
+          <div class="flex justify-between"><span class="text-[var(--ink-muted)]">加仓后新均价：</span><span id="sim-new-avg" class="font-semibold">$0.00</span></div>
+          <div class="flex justify-between"><span class="text-[var(--ink-muted)]">加仓后新浮盈率：</span><span id="sim-new-pnl-pct">0.00%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pt-6 hairline-t text-[11px] font-mono text-[var(--ink-muted)]">
+      修改将自动保存至本地并支持导出至 portfolio.json
+    </div>
+  </aside>
+
+  <!-- 新增历史盈亏弹窗 -->
+  <div id="history-modal" class="fixed inset-0 bg-black/50 backdrop-blur-[2px] z-50 hidden items-center justify-center p-4">
+    <div class="bg-[var(--bg-canvas)] hairline-box rounded-2xl max-w-md w-full p-7 space-y-5">
+      <div class="flex items-center justify-between hairline-b pb-3">
+        <h3 class="font-serif text-xl">新增历史盈亏记录</h3>
+        <button onclick="closeAddHistoryModal()" class="text-xs font-mono text-[var(--ink-muted)]">✕</button>
+      </div>
+      <div class="space-y-4 text-xs font-mono">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-[var(--ink-muted)] block mb-1">日期</label>
+            <input type="date" id="hist-input-date" value="2026-10-21" class="w-full px-3 py-2 bg-transparent hairline-box rounded" />
+          </div>
+          <div>
+            <label class="text-[var(--ink-muted)] block mb-1">关联标的</label>
+            <select id="hist-input-symbol" class="w-full px-3 py-2 bg-[var(--bg-canvas)] hairline-box rounded">
+              <option value="VTI">VTI</option>
+              <option value="QQQM">QQQM</option>
+              <option value="SGOV">SGOV</option>
+              <option value="VXUS">VXUS</option>
+              <option value="DRAM">DRAM</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="text-[var(--ink-muted)] block mb-1">盈亏金额 (USD，正数为盈利，负数为亏损)</label>
+          <input type="number" step="0.01" id="hist-input-amount" placeholder="例如 142.60 或 -35.00" class="w-full px-3 py-2 bg-transparent hairline-box rounded" />
+        </div>
+        <div>
+          <label class="text-[var(--ink-muted)] block mb-1">备注说明</label>
+          <input type="text" id="hist-input-note" placeholder="例如：阶段止盈 / 历史已实现收益" class="w-full px-3 py-2 bg-transparent hairline-box rounded font-sans" />
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 pt-2 font-mono text-xs">
+        <button onclick="closeAddHistoryModal()" class="px-4 py-2 rounded-full hairline-box">取消</button>
+        <button onclick="submitHistoryRecord()" class="px-5 py-2 rounded-full bg-neutral-900 text-white dark:bg-white dark:text-neutral-900">保存记录</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 管理与导出 portfolio.json 弹窗 -->
+  <div id="config-modal" class="fixed inset-0 bg-black/50 backdrop-blur-[2px] z-50 hidden items-center justify-center p-4">
+    <div class="bg-[var(--bg-canvas)] hairline-box rounded-2xl max-w-2xl w-full p-7 space-y-5">
+      <div class="flex items-center justify-between hairline-b pb-3">
+        <div>
+          <h3 class="font-serif text-xl">管理持仓与历史盈亏 JSON</h3>
+          <p class="text-xs text-[var(--ink-muted)] mt-0.5">直接编辑或下载 `portfolio.json` 后提交至 GitHub 仓库根目录</p>
+        </div>
+        <button onclick="closeConfigModal()" class="text-xs font-mono text-[var(--ink-muted)]">✕</button>
+      </div>
+      <textarea id="json-editor-textarea" rows="13" class="w-full p-4 bg-[var(--bg-subtle)] hairline-box rounded-xl font-mono text-xs leading-relaxed focus:outline-none"></textarea>
+      <div class="flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
+        <button onclick="resetToDefaultHoldings()" class="px-3.5 py-2 rounded-full hairline-box text-rose-600 dark:text-rose-400">
+          恢复默认初始数据
+        </button>
+        <div class="flex items-center gap-2.5">
+          <button onclick="downloadPortfolioJson()" class="px-4 py-2 rounded-full hairline-box">
+            下载 portfolio.json
+          </button>
+          <button onclick="applyJsonEditorChanges()" class="px-5 py-2 rounded-full bg-neutral-900 text-white dark:bg-white dark:text-neutral-900">
+            应用并保存
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /*************************************************************************
+     * 1. 默认持仓与历史盈亏数据 (VTI, SGOV, QQQM, VXUS, DRAM)
+     *************************************************************************/
+    const DEFAULT_PORTFOLIO_DATA = {
+      updatedAt: "2026-10-21",
+      baseCurrency: "USD",
+      holdings: [
+        {
+          symbol: "VTI",
+          name: "Vanguard Total Stock Market ETF",
+          role: "美股全市场核心",
+          category: "CORE",
+          shares: 37,
+          avgCost: 370.9938,
+          color: "#1E293B"
+        },
+        {
+          symbol: "SGOV",
+          name: "iShares 0-3 Month Treasury Bond ETF",
+          role: "超短债流动性防守",
+          category: "DEFENSE",
+          shares: 51,
+          avgCost: 100.44,
+          color: "#0D7A5F"
+        },
+        {
+          symbol: "QQQM",
+          name: "Invesco NASDAQ 100 ETF",
+          role: "纳指100科技成长",
+          category: "CORE",
+          shares: 23,
+          avgCost: 292.9191,
+          color: "#4F46E5"
+        },
+        {
+          symbol: "DRAM",
+          name: "Roundhill Memory ETF",
+          role: "存储半导体周期卫星",
+          category: "SATELLITE",
+          shares: 16,
+          avgCost: 55.3775,
+          color: "#BE185D"
+        }
+      ],
+      realizedHistory: [],
+      monthlyPnl: []
+    };
+
+    const FX_RATES = { USD: 1, CNY: 7.12, HKD: 7.78 };
+    const CURRENCY_SYMBOLS = { USD: "$", CNY: "¥", HKD: "HK$" };
+
+    const PORTFOLIO_STORAGE_KEY = "portfolio-editorial-v1";
+    let portfolioData = JSON.parse(JSON.stringify(DEFAULT_PORTFOLIO_DATA));
+    let marketQuotes = {};
+    let marketHistory = {};
+    let marketSnapshotUpdatedAt = null;
+    let currentCurrency = localStorage.getItem("pos_currency") || "USD";
+    let isPrivacyMode = localStorage.getItem("pos_privacy") === "true";
+    let isCnColor = localStorage.getItem("pos_cn_color") === "true";
+    let activeCategory = "ALL";
+    let sortField = "marketValue";
+    let sortAsc = false;
+    let heroChartMode = "equity";
+    let activeDrawerSymbol = null;
+
+    /*************************************************************************
+     * 2. 初始化与 GitHub 数据同步 (./portfolio.json & ./data/market.json)
+     *************************************************************************/
+    async function initApp() {
+      applySavedPreferences();
+      await loadExternalPortfolioJson();
+      await refreshQuotes(false);
+      renderAll();
+
+      setInterval(() => refreshQuotes(false), 5 * 60 * 1000);
+
+      window.addEventListener("keydown", (e) => {
+        if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) {
+          if (e.key === "Escape") document.activeElement.blur();
+          return;
+        }
+        if (e.key.toLowerCase() === "p") togglePrivacy();
+        else if (e.key === "Escape" && activeDrawerSymbol) closeHoldingDrawer();
+      });
+    }
+
+    async function loadExternalPortfolioJson() {
+      const savedLocal = localStorage.getItem(PORTFOLIO_STORAGE_KEY);
+      if (savedLocal) {
+        try { portfolioData = JSON.parse(savedLocal); } catch (e) {}
+      }
+      try {
+        const res = await fetch("./portfolio.json", { cache: "no-store" });
+        if (res.ok) {
+          const remoteJson = await res.json();
+          if (Array.isArray(remoteJson.holdings) && remoteJson.holdings.length > 0) {
+            const palette = ["#1E293B", "#0D7A5F", "#4F46E5", "#D97706", "#BE185D"];
+            portfolioData.holdings = remoteJson.holdings.map((h, idx) => ({
+              symbol: h.symbol || h.code,
+              name: h.name || h.symbol || h.code,
+              role: h.role || "美股持仓",
+              category: h.category || ((h.symbol || h.code) === "SGOV" ? "DEFENSE" : ["VTI", "QQQM"].includes(h.symbol || h.code) ? "CORE" : "SATELLITE"),
+              shares: Number(h.shares ?? h.quantity ?? 0),
+              avgCost: Number(h.avgCost ?? h.cost ?? 0),
+              color: h.color || palette[idx % palette.length]
+            }));
+            if (Array.isArray(remoteJson.realizedHistory)) portfolioData.realizedHistory = remoteJson.realizedHistory;
+            if (Array.isArray(remoteJson.monthlyPnl)) portfolioData.monthlyPnl = remoteJson.monthlyPnl;
+          }
+        }
+      } catch (e) {}
+    }
+
+    async function refreshQuotes(isManual) {
+      try {
+        const res = await fetch("./data/market.json?t=" + Date.now(), { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          marketSnapshotUpdatedAt = data.updatedAt || null;
+          marketHistory = data.history || {};
+          const sourceQuotes = data.quotes || data.prices || data;
+          portfolioData.holdings.forEach(h => {
+            const q = sourceQuotes[h.symbol];
+            if (q) {
+              const price = Number(q.price ?? q.regularMarketPrice ?? q);
+              const prevClose = Number(q.prevClose ?? q.previousClose ?? (Number.isFinite(Number(q.change)) ? price - Number(q.change) : NaN));
+              if (price > 0) {
+                marketQuotes[h.symbol] = {
+                  price,
+                  prevClose,
+                  change: price - prevClose,
+                  changePct: prevClose > 0 ? ((price - prevClose) / prevClose) * 100 : null
+                };
+              }
+            }
+          });
+        }
+      } catch (err) {}
+
+      const snapshotDate = marketSnapshotUpdatedAt ? new Date(marketSnapshotUpdatedAt) : null;
+      document.getElementById("sync-time").textContent = snapshotDate && isFinite(snapshotDate.getTime())
+        ? "数据更新 · 北京时间 " + new Intl.DateTimeFormat("zh-CN", {
+            timeZone: "Asia/Shanghai",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hourCycle: "h23"
+          }).format(snapshotDate)
+        : "行情快照不可用";
+      renderAll();
+    }
+
+    /*************************************************************************
+     * 3. 净值与历史盈亏计算引擎
+     *************************************************************************/
+    function buildPortfolioHistory() {
+      const holdings = portfolioData.holdings || [];
+      if (!holdings.length) return [];
+      const priceMaps = {};
+      holdings.forEach(h => {
+        priceMaps[h.symbol] = {};
+        (marketHistory[h.symbol] || []).forEach(point => {
+          if (point && point.date && isFinite(Number(point.close))) priceMaps[h.symbol][point.date] = Number(point.close);
+        });
+      });
+      const dates = Object.keys(priceMaps[holdings[0].symbol] || {}).filter(date =>
+        holdings.every(h => priceMaps[h.symbol][date] != null)
+      ).sort();
+      return dates.map(date => {
+        const value = holdings.reduce((sum, h) => sum + priceMaps[h.symbol][date] * h.shares, 0);
+        const cost = holdings.reduce((sum, h) => sum + h.avgCost * h.shares, 0);
+        return { date, value, pnl: value - cost };
+      });
+    }
+
+    function summarizeMonthlyPnl(points) {
+      const months = {};
+      points.forEach(point => { months[point.date.slice(0, 7)] = point; });
+      const values = Object.keys(months).sort().map(month => ({ month, point: months[month] }));
+      return values.map((entry, index) => {
+        const prior = index ? values[index - 1].point.value : null;
+        const pnl = prior == null ? entry.point.pnl : entry.point.value - prior;
+        return { month: entry.month, pnl, returnPct: prior ? (pnl / prior) * 100 : 0 };
+      });
+    }
+
+    function computePortfolioMetrics() {
+      let totalMarketValue = 0;
+      let totalCostBasis = 0;
+      let totalDayPnl = 0;
+
+      const enriched = portfolioData.holdings.map(h => {
+        const q = marketQuotes[h.symbol] || { price: h.avgCost, prevClose: h.avgCost, change: 0, changePct: 0 };
+        const marketValue = h.shares * q.price;
+        const costBasis = h.shares * h.avgCost;
+        const dayPnl = h.shares * q.change;
+        const totalPnl = marketValue - costBasis;
+        const totalPnlPct = costBasis > 0 ? (totalPnl / costBasis) * 100 : 0;
+
+        totalMarketValue += marketValue;
+        totalCostBasis += costBasis;
+        totalDayPnl += dayPnl;
+
+        return {
+          ...h,
+          price: q.price,
+          prevClose: q.prevClose,
+          dayChange: q.change,
+          dayChangePct: q.changePct,
+          marketValue,
+          costBasis,
+          dayPnl,
+          totalPnl,
+          totalPnlPct,
+          weight: 0
+        };
+      });
+
+      enriched.forEach(item => {
+        item.weight = totalMarketValue > 0 ? (item.marketValue / totalMarketValue) * 100 : 0;
+      });
+
+      const unrealizedPnl = totalMarketValue - totalCostBasis;
+      const unrealizedPct = totalCostBasis > 0 ? (unrealizedPnl / totalCostBasis) * 100 : 0;
+      const prevTotal = totalMarketValue - totalDayPnl;
+      const totalDayPct = prevTotal > 0 ? (totalDayPnl / prevTotal) * 100 : 0;
+
+      const totalRealizedPnl = (portfolioData.realizedHistory || []).reduce((sum, r) => sum + Number(r.amount || 0), 0);
+      const totalHistoricalPnl = unrealizedPnl + totalRealizedPnl;
+      const totalHistoricalPct = totalCostBasis > 0 ? (totalHistoricalPnl / totalCostBasis) * 100 : 0;
+
+      const historyPoints = buildPortfolioHistory();
+      return {
+        enriched,
+        totalMarketValue,
+        totalCostBasis,
+        totalDayPnl,
+        totalDayPct,
+        unrealizedPnl,
+        unrealizedPct,
+        totalRealizedPnl,
+        totalHistoricalPnl,
+        totalHistoricalPct,
+        historyPoints,
+        monthlyPnl: summarizeMonthlyPnl(historyPoints)
+      };
+    }
+
+    function formatMoney(usdVal, showSign = false) {
+      const rate = FX_RATES[currentCurrency] || 1;
+      const sym = CURRENCY_SYMBOLS[currentCurrency] || "$";
+      const converted = usdVal * rate;
+      const absStr = Math.abs(converted).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      if (showSign) {
+        const sign = converted > 0.0001 ? "+" : converted < -0.0001 ? "-" : "";
+        return `${sign}${sym}${absStr}`;
+      }
+      return `${converted < 0 ? "-" : ""}${sym}${absStr}`;
+    }
+
+    function formatPct(pctVal, showSign = true) {
+      const sign = showSign && pctVal > 0.0001 ? "+" : "";
+      return `${sign}${pctVal.toFixed(2)}%`;
+    }
+
+    function renderAll() {
+      const m = computePortfolioMetrics();
+      renderHero(m);
+      renderAllocationSpectrum(m);
+      renderHoldingsTable(m);
+      renderHistoricalPnlSection(m);
+      applyPrivacyBlur();
+    }
+
+    /*************************************************************************
+     * 4. 四大核心板块渲染
+     *************************************************************************/
+    function renderHero(m) {
+      const dailyMode = heroChartMode === "daily";
+      const heroValue = document.getElementById("hero-net-worth");
+      document.getElementById("hero-value-label").textContent = dailyMode
+        ? "01 / Daily P&L · 单日盈亏"
+        : "01 / Net Liquidation Value · 账户总净值";
+      heroValue.textContent = formatMoney(dailyMode ? m.totalDayPnl : m.totalMarketValue, dailyMode);
+      heroValue.classList.toggle("text-up", dailyMode && m.totalDayPnl >= 0);
+      heroValue.classList.toggle("text-down", dailyMode && m.totalDayPnl < 0);
+      document.getElementById("hero-cost-note").textContent = dailyMode
+        ? "相对上一交易日收盘 · 当前行情"
+        : `持仓总成本 ${formatMoney(m.totalCostBasis)}`;
+
+      const pill = document.getElementById("hero-day-pill");
+      pill.textContent = dailyMode
+        ? `${formatPct(m.totalDayPct)} 今日`
+        : `${formatMoney(m.totalDayPnl, true)} (${formatPct(m.totalDayPct)}) 今日`;
+      pill.className = `px-3 py-1 rounded-full text-xs font-mono tabular-nums ${m.totalDayPnl >= 0 ? "pill-up" : "pill-down"}`;
+
+      const dPnl = document.getElementById("metric-day-pnl");
+      dPnl.textContent = formatMoney(m.totalDayPnl, true);
+      dPnl.className = `mt-2.5 font-mono text-2xl font-medium tabular-nums privacy-target ${m.totalDayPnl >= 0 ? "text-up" : "text-down"}`;
+      document.getElementById("metric-day-pct").textContent = `今日涨跌幅 ${formatPct(m.totalDayPct)}`;
+
+      const uPnl = document.getElementById("metric-unrealized-pnl");
+      uPnl.textContent = formatMoney(m.unrealizedPnl, true);
+      uPnl.className = `mt-2.5 font-mono text-2xl font-medium tabular-nums privacy-target ${m.unrealizedPnl >= 0 ? "text-up" : "text-down"}`;
+      document.getElementById("metric-unrealized-pct").textContent = `持仓浮盈率 ${formatPct(m.unrealizedPct)}`;
+
+      const rPnl = document.getElementById("metric-realized-pnl");
+      rPnl.textContent = formatMoney(m.totalRealizedPnl, true);
+      rPnl.className = `mt-2.5 font-mono text-2xl font-medium tabular-nums privacy-target ${m.totalRealizedPnl >= 0 ? "text-up" : "text-down"}`;
+      document.getElementById("metric-realized-sub").textContent = `共 ${(portfolioData.realizedHistory || []).length} 笔历史记录`;
+
+      const tPnl = document.getElementById("metric-total-pnl");
+      tPnl.textContent = formatMoney(m.totalHistoricalPnl, true);
+      tPnl.className = `mt-2.5 font-mono text-2xl font-medium tabular-nums privacy-target ${m.totalHistoricalPnl >= 0 ? "text-up" : "text-down"}`;
+      document.getElementById("metric-total-pct").textContent = `历史总回报率 ${formatPct(m.totalHistoricalPct)}`;
+
+      renderSparkline(m);
+    }
+
+    function renderSparkline(m) {
+      const svg = document.getElementById("hero-sparkline");
+      const tooltip = document.getElementById("hero-chart-tooltip");
+      svg.onpointermove = null;
+      tooltip.classList.add("hidden");
+      const history = m.historyPoints;
+      const plotPoints = heroChartMode === "equity"
+        ? history.map(point => ({ date: point.date, value: point.value }))
+        : history.slice(1).map((point, index) => ({
+            date: point.date,
+            value: point.value - history[index].value
+          }));
+      if (plotPoints.length < 2) {
+        svg.innerHTML = '<text x="250" y="52" text-anchor="middle" fill="var(--ink-muted)" font-size="11">Collecting market history</text>';
+        return;
+      }
+
+      const values = plotPoints.map(point => point.value);
+      const dailyMode = heroChartMode === "daily";
+      const extent = Math.max(1, ...values.map(Math.abs));
+      const minV = dailyMode ? -extent : Math.min(...values);
+      const maxV = dailyMode ? extent : Math.max(...values);
+      const span = Math.max(1, maxV - minV);
+
+      const coords = plotPoints.map((point, idx) => {
+        const x = (idx / (plotPoints.length - 1)) * 500;
+        const y = dailyMode ? 50 - (point.value / extent) * 36 : 88 - ((point.value - minV) / span) * 74;
+        return [x, y];
+      });
+
+      const d = coords.map((c, i) => `${i === 0 ? "M" : "L"}${c[0].toFixed(1)},${c[1].toFixed(1)}`).join(" ");
+      const stroke = values[values.length - 1] >= (dailyMode ? 0 : values[0]) ? "var(--up-color)" : "var(--down-color)";
+      const baselineY = dailyMode ? 50 : 92;
+      const pointMarkers = coords.map((point, index) => {
+        const color = dailyMode
+          ? (plotPoints[index].value >= 0 ? "var(--up-color)" : "var(--down-color)")
+          : stroke;
+        return `<circle cx="${point[0]}" cy="${point[1]}" r="2.2" fill="${color}"><title>${plotPoints[index].date}: ${formatMoney(plotPoints[index].value, true)}</title></circle>`;
+      }).join("");
+
+      svg.innerHTML = `
+        <line x1="0" y1="${baselineY}" x2="500" y2="${baselineY}" stroke="var(--line-hairline)" stroke-dasharray="3 3" />
+        <path d="${d}" fill="none" stroke="${stroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+        ${pointMarkers}
+        <circle cx="${coords[coords.length - 1][0]}" cy="${coords[coords.length - 1][1]}" r="3.5" fill="${stroke}" />
+      `;
+
+      const wrapper = document.getElementById("hero-chart-wrap");
+      svg.onpointermove = event => {
+        const matrix = svg.getScreenCTM();
+        if (!matrix) return;
+        const cursor = svg.createSVGPoint();
+        cursor.x = event.clientX;
+        cursor.y = event.clientY;
+        const position = cursor.matrixTransform(matrix.inverse());
+        let nearestIndex = 0;
+        let nearestDistance = Infinity;
+        coords.forEach(([x, y], index) => {
+          const distance = Math.hypot(position.x - x, position.y - y);
+          if (distance < nearestDistance) {
+            nearestDistance = distance;
+            nearestIndex = index;
+          }
+        });
+        if (nearestDistance > 22) {
+          tooltip.classList.add("hidden");
+          return;
+        }
+
+        const item = plotPoints[nearestIndex];
+        const itemUp = item.value > 0;
+        document.getElementById("hero-tooltip-date").textContent = item.date;
+        document.getElementById("hero-tooltip-type").textContent = dailyMode
+          ? (item.value > 0 ? "当日盈利" : item.value < 0 ? "当日亏损" : "当日持平")
+          : "账户净值";
+        document.getElementById("hero-tooltip-type").className = `font-semibold ${dailyMode ? (itemUp ? "text-up" : item.value < 0 ? "text-down" : "text-[var(--ink-muted)]") : "text-[var(--ink-primary)]"}`;
+        document.getElementById("hero-tooltip-value").textContent = formatMoney(item.value, dailyMode);
+        document.getElementById("hero-tooltip-value").className = `font-semibold tabular-nums privacy-target ${dailyMode ? (itemUp ? "text-up" : item.value < 0 ? "text-down" : "text-[var(--ink-muted)]") : "text-[var(--ink-primary)]"}`;
+        applyPrivacyBlur();
+
+        const wrapperRect = wrapper.getBoundingClientRect();
+        const markerX = (coords[nearestIndex][0] / 500) * wrapperRect.width;
+        const markerY = (coords[nearestIndex][1] / 100) * wrapperRect.height;
+        const halfWidth = tooltip.offsetWidth / 2;
+        tooltip.style.left = `${Math.min(wrapperRect.width - halfWidth, Math.max(halfWidth, markerX))}px`;
+        tooltip.style.top = `${Math.max(0, markerY - tooltip.offsetHeight - 8)}px`;
+        tooltip.classList.remove("hidden");
+      };
+      svg.onpointerleave = () => tooltip.classList.add("hidden");
+    }
+
+    function switchHeroChartMode(mode) {
+      heroChartMode = mode;
+      ["equity", "daily"].forEach(chartMode => {
+        const button = document.getElementById(`tab-chart-${chartMode}`);
+        const selected = mode === chartMode;
+        button.setAttribute("aria-pressed", String(selected));
+        button.className = `rounded px-2.5 py-1 transition ${selected
+          ? "bg-[var(--bg-subtle)] text-[var(--ink-primary)]"
+          : "text-[var(--ink-muted)] hover:text-[var(--ink-primary)]"}`;
+      });
+      renderAll();
+    }
+
+    function renderAllocationSpectrum(m) {
+      const bar = document.getElementById("allocation-bar");
+      const legend = document.getElementById("allocation-legend");
+
+      const sgov = m.enriched.find(x => x.symbol === "SGOV");
+      document.getElementById("sgov-buffer-label").textContent = `SGOV 现金防守垫 ${(sgov ? sgov.weight : 0).toFixed(1)}%`;
+
+      const sorted = [...m.enriched].sort((a, b) => b.weight - a.weight);
+
+      bar.innerHTML = sorted.filter(x => x.weight > 0).map(item => `
+        <div onclick="openHoldingDrawer('${item.symbol}')"
+          style="width:${item.weight}%; background-color:${item.color}"
+          class="h-full transition-all duration-300 hover:opacity-75 cursor-pointer"
+          title="${item.symbol}: ${item.weight.toFixed(1)}%"></div>
+      `).join("");
+
+      legend.innerHTML = sorted.map(item => `
+        <div onclick="openHoldingDrawer('${item.symbol}')" class="p-3.5 rounded-xl hairline-box hover:border-[var(--ink-primary)] cursor-pointer transition">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full" style="background-color:${item.color}"></span>
+              <span class="font-mono text-xs font-semibold">${item.symbol}</span>
+            </div>
+            <span class="font-mono text-xs font-medium tabular-nums">${item.weight.toFixed(1)}%</span>
+          </div>
+          <div class="mt-2 flex items-center justify-between text-[11px] font-mono text-[var(--ink-muted)] tabular-nums">
+            <span class="truncate max-w-[90px]">${item.role}</span>
+            <span class="privacy-target">${formatMoney(item.marketValue)}</span>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function renderHoldingsTable(m) {
+      const tbody = document.getElementById("holdings-tbody");
+      let list = m.enriched.filter(item => activeCategory === "ALL" || item.category === activeCategory);
+
+      list.sort((a, b) => {
+        const vA = a[sortField];
+        const vB = b[sortField];
+        if (typeof vA === "string") return sortAsc ? vA.localeCompare(vB) : vB.localeCompare(vA);
+        return sortAsc ? vA - vB : vB - vA;
+      });
+
+      tbody.innerHTML = list.map(item => {
+        const dayCls = item.dayPnl >= 0 ? "text-up" : "text-down";
+        const totCls = item.totalPnl >= 0 ? "text-up" : "text-down";
+
+        return `
+          <tr onclick="openHoldingDrawer('${item.symbol}')" class="group hover:bg-[var(--bg-subtle)]/60 cursor-pointer transition">
+            <td class="py-5 pr-4">
+              <div class="flex items-baseline gap-3">
+                <span class="font-mono font-semibold text-base group-hover:underline underline-offset-4">${item.symbol}</span>
+                <span class="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">${item.role}</span>
+              </div>
+              <p class="text-xs text-[var(--ink-muted)] mt-0.5">${item.name}</p>
+            </td>
+            <td class="py-5 px-4 text-right font-mono tabular-nums">
+              <div class="font-medium">$${item.price.toFixed(2)}</div>
+              <div class="text-[11px] ${dayCls}">${formatPct(item.dayChangePct)}</div>
+            </td>
+            <td class="py-5 px-4 text-right font-mono tabular-nums">
+              <div>${Number(item.shares.toFixed(4))} 股</div>
+              <div class="text-[11px] text-[var(--ink-muted)]">均价 $${item.avgCost.toFixed(2)}</div>
+            </td>
+            <td class="py-5 px-4 text-right font-mono tabular-nums privacy-target">
+              <div class="font-medium">${formatMoney(item.marketValue)}</div>
+              <div class="text-[11px] text-[var(--ink-muted)]">成本 ${formatMoney(item.costBasis)}</div>
+            </td>
+            <td class="py-5 px-4 text-right font-mono tabular-nums privacy-target ${dayCls}">
+              <div>${formatMoney(item.dayPnl, true)}</div>
+              <div class="text-[11px]">${formatPct(item.dayChangePct)}</div>
+            </td>
+            <td class="py-5 px-4 text-right font-mono tabular-nums privacy-target ${totCls}">
+              <div class="font-medium">${formatMoney(item.totalPnl, true)}</div>
+              <div class="text-[11px]">${formatPct(item.totalPnlPct)}</div>
+            </td>
+            <td class="py-5 pl-4 text-right font-mono tabular-nums">
+              <div class="font-medium">${item.weight.toFixed(1)}%</div>
+              <div class="w-20 ml-auto mt-1.5 h-1 rounded-full bg-[var(--bg-subtle)] overflow-hidden">
+                <div class="h-full rounded-full" style="width:${Math.min(100, item.weight)}%; background-color:${item.color}"></div>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function renderHistoricalPnlSection(m) {
+      const totalEl = document.getElementById("hist-overview-total");
+      totalEl.textContent = formatMoney(m.totalHistoricalPnl, true);
+      totalEl.className = `font-mono text-xl font-semibold mt-1.5 block tabular-nums privacy-target ${m.totalHistoricalPnl >= 0 ? "text-up" : "text-down"}`;
+
+      const realEl = document.getElementById("hist-overview-realized");
+      realEl.textContent = formatMoney(m.totalRealizedPnl, true);
+      realEl.className = `font-mono text-xl font-semibold mt-1.5 block tabular-nums privacy-target ${m.totalRealizedPnl >= 0 ? "text-up" : "text-down"}`;
+
+      const months = m.monthlyPnl || [];
+      const wins = months.filter(x => x.pnl >= 0).length;
+      document.getElementById("hist-overview-winrate").textContent = months.length
+        ? `${Math.round((wins / months.length) * 100)}% (${wins}/${months.length}月)`
+        : "--";
+
+      if (months.length > 0) {
+        const bestMonth = [...months].sort((a, b) => b.pnl - a.pnl)[0];
+        const bestEl = document.getElementById("hist-overview-best");
+        bestEl.textContent = `${formatMoney(bestMonth.pnl, true)} (${bestMonth.month.slice(5)}月)`;
+        bestEl.className = `font-mono text-xl font-semibold mt-1.5 block tabular-nums privacy-target ${bestMonth.pnl >= 0 ? "text-up" : "text-down"}`;
+      } else {
+        document.getElementById("hist-overview-best").textContent = "--";
+      }
+
+      // 渲染月度历史盈亏矩阵
+      const maxAbsMonth = Math.max(1, ...months.map(x => Math.abs(x.pnl)));
+      document.getElementById("monthly-grid").innerHTML = months.length ? months.map(item => {
+        const isPos = item.pnl >= 0;
+        const cls = isPos ? "text-up" : "text-down";
+        const barColor = isPos ? "var(--up-color)" : "var(--down-color)";
+        const barWidth = Math.min(100, Math.round((Math.abs(item.pnl) / maxAbsMonth) * 100));
+
+        return `
+          <div class="p-4 rounded-xl hairline-box bg-[var(--bg-card)]/50 flex flex-col justify-between font-mono">
+            <div class="flex items-center justify-between text-[11px] text-[var(--ink-muted)]">
+              <span>${item.month}</span>
+              <span class="tabular-nums ${cls}">${formatPct(item.returnPct)}</span>
+            </div>
+            <div class="my-2.5 text-base font-semibold tabular-nums privacy-target ${cls}">
+              ${formatMoney(item.pnl, true)}
+            </div>
+            <div class="w-full h-1 rounded-full bg-[var(--bg-subtle)] overflow-hidden">
+              <div class="h-full rounded-full" style="width:${barWidth}%; background-color:${barColor}"></div>
+            </div>
+          </div>
+        `;
+      }).join("") : '<div class="col-span-full py-8 text-center font-mono text-xs text-[var(--ink-muted)]">Collecting market history</div>';
+
+      // 渲染历史盈亏记录列表
+      const records = portfolioData.realizedHistory || [];
+      document.getElementById("ledger-count").textContent = `${records.length} 条记录`;
+      document.getElementById("ledger-list").innerHTML = records.map(r => {
+        const cls = Number(r.amount) >= 0 ? "text-up" : "text-down";
+        return `
+          <div class="py-3.5 flex items-center justify-between gap-3 text-xs">
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="font-mono text-[11px] text-[var(--ink-muted)]">${r.date}</span>
+              <span class="font-mono font-semibold px-1.5 py-0.5 rounded bg-[var(--bg-subtle)]">${r.symbol}</span>
+              <span class="text-[var(--ink-secondary)] truncate">${r.note || "历史盈亏"}</span>
+            </div>
+            <div class="flex items-center gap-3 shrink-0 font-mono">
+              <span class="tabular-nums font-medium privacy-target ${cls}">${formatMoney(Number(r.amount), true)}</span>
+              <button onclick="deleteHistoryRecord('${r.id}')" class="text-[var(--ink-muted)] hover:text-[var(--ink-primary)]" title="删除">✕</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    /*************************************************************************
+     * 5. 抽屉、弹窗与交互控制
+     *************************************************************************/
+    function openHoldingDrawer(symbol) {
+      activeDrawerSymbol = symbol;
+      const m = computePortfolioMetrics();
+      const item = m.enriched.find(x => x.symbol === symbol);
+      if (!item) return;
+
+      document.getElementById("drawer-role").textContent = item.role;
+      document.getElementById("drawer-symbol").textContent = item.symbol;
+      document.getElementById("drawer-name").textContent = item.name;
+      document.getElementById("drawer-price").textContent = `$${item.price.toFixed(2)} (${formatPct(item.dayChangePct)})`;
+
+      const pnlEl = document.getElementById("drawer-pnl");
+      pnlEl.textContent = `${formatMoney(item.totalPnl, true)} (${formatPct(item.totalPnlPct)})`;
+      pnlEl.className = `text-lg font-medium mt-1 tabular-nums ${item.totalPnl >= 0 ? "text-up" : "text-down"}`;
+
+      document.getElementById("drawer-edit-shares").value = item.shares;
+      document.getElementById("drawer-edit-cost").value = item.avgCost;
+
+      document.getElementById("sim-buy-shares").value = 10;
+      document.getElementById("sim-buy-price").value = item.price.toFixed(2);
+      runAvgCostSimulator();
+
+      const backdrop = document.getElementById("drawer-backdrop");
+      const drawer = document.getElementById("holding-drawer");
+      backdrop.classList.remove("hidden");
+      setTimeout(() => {
+        backdrop.classList.remove("opacity-0");
+        drawer.classList.remove("translate-x-full");
+      }, 10);
+    }
+
+    function closeHoldingDrawer() {
+      activeDrawerSymbol = null;
+      const backdrop = document.getElementById("drawer-backdrop");
+      const drawer = document.getElementById("holding-drawer");
+      backdrop.classList.add("opacity-0");
+      drawer.classList.add("translate-x-full");
+      setTimeout(() => backdrop.classList.add("hidden"), 280);
+    }
+
+    function runAvgCostSimulator() {
+      if (!activeDrawerSymbol) return;
+      const h = portfolioData.holdings.find(x => x.symbol === activeDrawerSymbol);
+      const q = marketQuotes[activeDrawerSymbol] || { price: h.avgCost };
+      const addShares = parseFloat(document.getElementById("sim-buy-shares").value) || 0;
+      const buyPrice = parseFloat(document.getElementById("sim-buy-price").value) || q.price;
+
+      const needed = addShares * buyPrice;
+      const newShares = h.shares + addShares;
+      const newAvg = newShares > 0 ? ((h.shares * h.avgCost) + needed) / newShares : 0;
+      const newPct = newAvg > 0 ? ((q.price - newAvg) / newAvg) * 100 : 0;
+
+      document.getElementById("sim-needed-cash").textContent = formatMoney(needed);
+      document.getElementById("sim-new-shares").textContent = `${newShares.toFixed(2)} 股`;
+      document.getElementById("sim-new-avg").textContent = `$${newAvg.toFixed(2)}`;
+      document.getElementById("sim-new-pnl-pct").textContent = formatPct(newPct);
+    }
+
+    function saveDrawerHoldingEdit() {
+      if (!activeDrawerSymbol) return;
+      const h = portfolioData.holdings.find(x => x.symbol === activeDrawerSymbol);
+      if (h) {
+        h.shares = Math.max(0, parseFloat(document.getElementById("drawer-edit-shares").value) || 0);
+        h.avgCost = Math.max(0, parseFloat(document.getElementById("drawer-edit-cost").value) || 0);
+        savePortfolioToLocal();
+        renderAll();
+        closeHoldingDrawer();
+      }
+    }
+
+    function openAddHistoryModal() {
+      document.getElementById("history-modal").classList.remove("hidden");
+      document.getElementById("history-modal").classList.add("flex");
+    }
+    function closeAddHistoryModal() {
+      document.getElementById("history-modal").classList.add("hidden");
+      document.getElementById("history-modal").classList.remove("flex");
+    }
+    function submitHistoryRecord() {
+      const date = document.getElementById("hist-input-date").value || "2026-10-21";
+      const symbol = document.getElementById("hist-input-symbol").value;
+      const amount = parseFloat(document.getElementById("hist-input-amount").value);
+      const note = document.getElementById("hist-input-note").value.trim();
+      if (isNaN(amount)) return;
+
+      portfolioData.realizedHistory.unshift({
+        id: "h_" + Date.now(),
+        date,
+        symbol,
+        amount,
+        note: note || `${symbol} 历史盈亏记录`
+      });
+      savePortfolioToLocal();
+      closeAddHistoryModal();
+      renderAll();
+    }
+    function deleteHistoryRecord(id) {
+      portfolioData.realizedHistory = portfolioData.realizedHistory.filter(r => r.id !== id);
+      savePortfolioToLocal();
+      renderAll();
+    }
+
+    function filterCategory(cat) {
+      activeCategory = cat;
+      ["ALL", "CORE", "DEFENSE", "SATELLITE"].forEach(c => {
+        const el = document.getElementById(`cat-${c}`);
+        if (el) {
+          el.className = c === cat
+            ? "text-[var(--ink-primary)] underline underline-offset-8 font-medium"
+            : "text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition";
+        }
+      });
+      renderAll();
+    }
+
+    function setSort(field) {
+      if (sortField === field) sortAsc = !sortAsc;
+      else { sortField = field; sortAsc = false; }
+      renderAll();
+    }
+
+    function setCurrency(curr) {
+      currentCurrency = curr;
+      localStorage.setItem("pos_currency", curr);
+      ["USD", "CNY", "HKD"].forEach(c => {
+        const el = document.getElementById(`curr-${c}`);
+        if (el) {
+          el.className = c === curr
+            ? "font-semibold underline underline-offset-4"
+            : "text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition";
+        }
+      });
+      renderAll();
+    }
+
+    function toggleColorScheme() {
+      isCnColor = !isCnColor;
+      localStorage.setItem("pos_cn_color", String(isCnColor));
+      applySavedPreferences();
+      renderAll();
+    }
+
+    function togglePrivacy() {
+      isPrivacyMode = !isPrivacyMode;
+      localStorage.setItem("pos_privacy", String(isPrivacyMode));
+      applyPrivacyBlur();
+    }
+
+    function applyPrivacyBlur() {
+      document.querySelectorAll(".privacy-target").forEach(el => {
+        if (isPrivacyMode) el.classList.add("privacy-blur");
+        else el.classList.remove("privacy-blur");
+      });
+    }
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      html.classList.toggle("dark");
+      const isDark = html.classList.contains("dark");
+      localStorage.setItem("pos_editorial_theme", isDark ? "dark" : "light");
+      document.getElementById("theme-btn").textContent = isDark ? "浅色" : "深色";
+    }
+
+    function applySavedPreferences() {
+      const savedTheme = localStorage.getItem("pos_editorial_theme");
+      if (savedTheme === "dark") {
+        document.documentElement.classList.add("dark");
+        document.getElementById("theme-btn").textContent = "浅色";
+      } else {
+        document.documentElement.classList.remove("dark");
+        document.getElementById("theme-btn").textContent = "深色";
+      }
+
+      if (isCnColor) {
+        document.documentElement.classList.add("cn-color");
+        document.getElementById("scheme-btn").textContent = "红涨绿跌";
+      } else {
+        document.documentElement.classList.remove("cn-color");
+        document.getElementById("scheme-btn").textContent = "绿涨红跌";
+      }
+      setCurrency(currentCurrency);
+    }
+
+    function savePortfolioToLocal() {
+      localStorage.setItem(PORTFOLIO_STORAGE_KEY, JSON.stringify(portfolioData));
+    }
+
+    function openConfigModal() {
+      document.getElementById("json-editor-textarea").value = JSON.stringify(portfolioData, null, 2);
+      document.getElementById("config-modal").classList.remove("hidden");
+      document.getElementById("config-modal").classList.add("flex");
+    }
+    function closeConfigModal() {
+      document.getElementById("config-modal").classList.add("hidden");
+      document.getElementById("config-modal").classList.remove("flex");
+    }
+    function applyJsonEditorChanges() {
+      try {
+        const parsed = JSON.parse(document.getElementById("json-editor-textarea").value);
+        if (Array.isArray(parsed.holdings)) {
+          portfolioData = parsed;
+          savePortfolioToLocal();
+          closeConfigModal();
+          renderAll();
+        }
+      } catch (e) {
+        alert("JSON 格式有误，请检查语法。");
+      }
+    }
+    function resetToDefaultHoldings() {
+      portfolioData = JSON.parse(JSON.stringify(DEFAULT_PORTFOLIO_DATA));
+      localStorage.removeItem(PORTFOLIO_STORAGE_KEY);
+      document.getElementById("json-editor-textarea").value = JSON.stringify(portfolioData, null, 2);
+      renderAll();
+    }
+    function downloadPortfolioJson() {
+      const blob = new Blob([JSON.stringify(portfolioData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "portfolio.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    window.addEventListener("DOMContentLoaded", initApp);
+  </script>
+</body>
+</html>

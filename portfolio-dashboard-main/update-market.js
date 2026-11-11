@@ -1,0 +1,309 @@
+const fs = require('fs');
+const http = require('http');
+const https = require('https');
+
+function readPortfolio() {
+  const raw = fs.readFileSync('portfolio.json', 'utf8').replace(/^\uFEFF/, '');
+  let clean = '';
+  let inString = false;
+  let escaped = false;
+  for (const char of raw) {
+    if (escaped) {
+      clean += char;
+      escaped = false;
+      continue;
+    }
+    if (char === '\\') {
+      clean += char;
+      escaped = true;
+      continue;
+    }
+    if (char === '"') {
+      clean += char;
+      inString = !inString;
+      continue;
+    }
+    clean += inString && char.charCodeAt(0) < 32 ? ' ' : char;
+  }
+  return JSON.parse(clean);
+}
+
+const portfolio = readPortfolio();
+const items = [];
+const itemCodes = new Set();
+for (const item of (portfolio.holdings || []).concat(portfolio.watchlist || [])) {
+  if (!itemCodes.has(item.code)) {
+    itemCodes.add(item.code);
+    items.push(item);
+  }
+}
+
+function get(url, headers, redirectsLeft = 3) {
+  return new Promise((resolve, reject) => {
+    const request = (url.startsWith('https') ? https : http).get(url, { headers: headers || {} }, response => {
+      if ([301, 302, 307, 308].includes(response.statusCode)) {
+        response.resume();
+        if (!response.headers.location || redirectsLeft <= 0) return reject(new Error(`redirect ${response.statusCode}`));
+        return resolve(get(new URL(response.headers.location, url).href, headers, redirectsLeft - 1));
+      }
+      let body = '';
+      response.setEncoding('utf8');
+      response.on('data', chunk => { body += chunk; });
+      response.on('end', () => {
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          const error = new Error(`HTTP ${response.statusCode}`);
+          error.statusCode = response.statusCode;
+          return reject(error);
+        }
+        resolve(body);
+      });
+    });
+    request.setTimeout(15000, () => request.destroy(new Error('timeout')));
+    request.on('error', reject);
+  });
+}
+
+async function getWithRetry(url, headers, attempts = 3) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await get(url, headers);
+    } catch (error) {
+      lastError = error;
+      const permanentClientError = error.statusCode >= 400 && error.statusCode < 500 && error.statusCode !== 408 && error.statusCode !== 429;
+      if (permanentClientError || attempt === attempts) break;
+      await new Promise(resolve => setTimeout(resolve, 750 * (2 ** (attempt - 1))));
+    }
+  }
+  throw lastError;
+}
+
+function yahooSymbol(item) {
+  if (item.market === 'HK') return `${item.code}.HK`;
+  if (item.market === 'CN') return `${item.code}${item.code.startsWith('6') ? '.SS' : '.SZ'}`;
+  return item.code;
+}
+
+function marketTimeZone(market) {
+  if (market === 'HK') return 'Asia/Hong_Kong';
+  if (market === 'CN') return 'Asia/Shanghai';
+  return 'America/New_York';
+}
+
+function formatMarketDate(timestamp, timeZone) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(new Date(Number(timestamp) * 1000));
+  const value = {};
+  parts.forEach(part => { value[part.type] = part.value; });
+  return `${value.year}-${value.month}-${value.day}`;
+}
+
+function yahooHistory(result, timeZone) {
+  const timestamps = result.timestamp || [];
+  const closes = result.indicators?.quote?.[0]?.close || [];
+  const points = [];
+  for (let index = 0; index < timestamps.length; index += 1) {
+    const close = Number(closes[index]);
+    if (!Number.isFinite(close)) continue;
+    points.push({
+      date: formatMarketDate(timestamps[index], timeZone),
+      close
+    });
+  }
+  return points.slice(-60);
+}
+
+function parseMarketNumber(value) {
+  if (value == null) return NaN;
+  const parsed = Number(String(value).replace(/[$,%+,]/g, '').trim());
+  return Number.isFinite(parsed) ? parsed : NaN;
+}
+
+function nasdaqDate(value) {
+  const parts = String(value || '').split('/');
+  if (parts.length !== 3) return null;
+  const month = parts[0].padStart(2, '0');
+  const day = parts[1].padStart(2, '0');
+  const year = parts[2].padStart(4, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function nasdaqHistory(payload) {
+  const rows = payload?.data?.tradesTable?.rows || [];
+  return rows.map(row => ({ date: nasdaqDate(row.date), close: parseMarketNumber(row.close) }))
+    .filter(point => point.date && Number.isFinite(point.close))
+    .sort((left, right) => left.date.localeCompare(right.date))
+    .slice(-60);
+}
+
+async function nasdaqQuoteWithClass(symbol, assetClass) {
+  const headers = {
+    'User-Agent': 'Mozilla/5.0',
+    Accept: 'application/json,text/plain,*/*',
+    Origin: 'https://www.nasdaq.com',
+    Referer: 'https://www.nasdaq.com/'
+  };
+  const encoded = encodeURIComponent(symbol);
+  const info = JSON.parse(await getWithRetry(`https://api.nasdaq.com/api/quote/${encoded}/info?assetclass=${assetClass}`, headers));
+  const primary = info.data?.primaryData;
+  if (!primary) throw new Error(`empty Nasdaq quote ${symbol}`);
+
+  const price = parseMarketNumber(primary.lastSalePrice);
+  if (!Number.isFinite(price)) throw new Error(`invalid Nasdaq quote ${symbol}`);
+  const change = parseMarketNumber(primary.netChange);
+  const changePct = parseMarketNumber(primary.percentageChange);
+  let history = [];
+  try {
+    const fromDate = new Date(Date.now() - 100 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const toDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const body = await getWithRetry(`https://api.nasdaq.com/api/quote/${encoded}/historical?assetclass=${assetClass}&fromdate=${fromDate}&todate=${toDate}&limit=500`, headers);
+    history = nasdaqHistory(JSON.parse(body));
+  } catch (error) {
+    console.warn(`${symbol}: Nasdaq history unavailable (${error.message})`);
+  }
+  let previous = Number.isFinite(change) ? price - change : NaN;
+  if (!(Number.isFinite(previous) && previous > 0) && history.length >= 2) {
+    previous = history[history.length - 2].close;
+  }
+  const changeAvailable = Number.isFinite(previous) && previous > 0;
+  return {
+    price,
+    previousClose: changeAvailable ? previous : null,
+    change: changeAvailable ? price - previous : null,
+    changePct: changeAvailable ? (Number.isFinite(changePct) ? changePct : ((price - previous) / previous) * 100) : null,
+    changeAvailable,
+    source: 'Nasdaq',
+    history
+  };
+}
+
+async function nasdaqQuote(symbol) {
+  let lastError;
+  for (const assetClass of ['stocks', 'etf']) {
+    try {
+      return await nasdaqQuoteWithClass(symbol, assetClass);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError || new Error(`empty Nasdaq quote ${symbol}`);
+}
+
+async function yahooQuote(symbol, timeZone) {
+  const headers = { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' };
+  const encoded = encodeURIComponent(symbol);
+  let body;
+  for (const host of ['query1.finance.yahoo.com', 'query2.finance.yahoo.com']) {
+    try {
+      body = await getWithRetry(`https://${host}/v8/finance/chart/${encoded}?interval=1d&range=3mo`, headers);
+      break;
+    } catch (error) {
+      if (host === 'query2.finance.yahoo.com') throw error;
+    }
+  }
+  const result = JSON.parse(body).chart?.result?.[0];
+  if (!result?.meta?.regularMarketPrice) throw new Error(`empty quote ${symbol}`);
+  const meta = result.meta;
+  const price = Number(meta.regularMarketPrice);
+  const closes = result.indicators?.quote?.[0]?.close || [];
+  const validCloses = closes.filter(value => value != null).map(Number).filter(value => Number.isFinite(value));
+  const history = yahooHistory(result, timeZone);
+  // Yahoo's chartPreviousClose is the close before the requested range, not
+  // necessarily the previous trading session. Prefer the quote's explicit
+  // daily change, then an explicit previous close, then the prior daily bar.
+  const explicitChange = Number(meta.regularMarketChange ?? meta.fulldayChange);
+  let previous = Number(meta.regularMarketPreviousClose ?? meta.previousClose);
+  if (!(Number.isFinite(previous) && previous > 0) && Number.isFinite(explicitChange)) {
+    previous = price - explicitChange;
+  }
+  if (!(Number.isFinite(previous) && previous > 0)) {
+    previous = validCloses.length >= 2 ? validCloses[validCloses.length - 2] : NaN;
+  }
+  if (!Number.isFinite(price)) throw new Error(`invalid quote ${symbol}`);
+  const changeAvailable = Number.isFinite(previous) && previous !== 0;
+  return {
+    price,
+    previousClose: changeAvailable ? previous : null,
+    change: changeAvailable ? price - previous : null,
+    changePct: changeAvailable ? ((price - previous) / previous) * 100 : null,
+    changeAvailable,
+    source: 'Yahoo Finance',
+    history
+  };
+}
+
+async function sinaQuotes(cnItems) {
+  const codes = cnItems.map(item => `${item.code.startsWith('6') ? 'sh' : 'sz'}${item.code}`).join(',');
+  const body = await getWithRetry(`https://hq.sinajs.cn/list=${codes}`, { 'User-Agent': 'Mozilla/5.0' });
+  const quotes = {};
+  for (const line of body.split('\n')) {
+    const match = line.match(/hq_str_(\w+)="([^"]*)"/);
+    if (!match) continue;
+    const fields = match[2].split(',');
+    const price = Number(fields[3]);
+    const previous = Number(fields[2]);
+    if (!price || !previous) continue;
+    quotes[match[1].replace(/^sh|^sz/, '')] = { price, previousClose: previous, change: price - previous, changePct: ((price - previous) / previous) * 100, changeAvailable: true, source: 'A-share quote' };
+  }
+  return quotes;
+}
+
+async function main() {
+  const quotes = {};
+  const holdingCodes = new Set((portfolio.holdings || []).map(item => item.code));
+  const cnItems = items.filter(item => item.market === 'CN');
+  if (cnItems.length) {
+    try { Object.assign(quotes, await sinaQuotes(cnItems)); } catch (error) { console.warn(`A-share source: ${error.message}`); }
+  }
+  const remainingResults = await Promise.all(items.filter(item => !quotes[item.code]).map(async item => {
+    const errors = [];
+    if (item.market === 'US') {
+      try { return [item.code, await nasdaqQuote(item.code)]; }
+      catch (error) { errors.push(`Nasdaq: ${error.message}`); }
+    }
+    try { return [item.code, await yahooQuote(yahooSymbol(item), marketTimeZone(item.market))]; }
+    catch (error) {
+      errors.push(`Yahoo: ${error.message}`);
+      console.warn(`${item.code}: ${errors.join('; ')}`);
+      return [item.code, null];
+    }
+  }));
+  remainingResults.forEach(([code, quote]) => { if (quote) quotes[code] = quote; });
+  const fx = {};
+  for (const pair of portfolio.fx_pairs || []) {
+    const key = `${pair.from}${pair.to}`;
+    try {
+      const body = await getWithRetry(`https://api.frankfurter.app/latest?from=${pair.from}&to=${pair.to}`);
+      const rate = Number(JSON.parse(body).rates?.[pair.to]);
+      if (rate) fx[key] = { rate, changePct: 0, source: 'ECB reference rates' };
+    } catch (error) { console.warn(`${key}: ${error.message}`); }
+  }
+  const missingHoldings = [...holdingCodes].filter(code => !quotes[code] || !(Number(quotes[code].price) > 0));
+  if (missingHoldings.length) {
+    throw new Error(`Missing valid quotes for holdings: ${missingHoldings.join(', ')}; snapshot was not updated`);
+  }
+  if (!Object.keys(quotes).length && !Object.keys(fx).length) throw new Error('No market data returned');
+  if (!Object.keys(quotes).length && items.length) throw new Error('No stock quotes returned; refusing to overwrite snapshot');
+  let previousSnapshot = {};
+  try { previousSnapshot = JSON.parse(fs.readFileSync('data/market.json', 'utf8')); } catch (error) {}
+  const previousQuotes = previousSnapshot.quotes || {};
+  const previousHistory = previousSnapshot.history || {};
+  const newHistory = {};
+  const cleanQuotes = {};
+  Object.entries(quotes).forEach(([code, quote]) => {
+    if (Array.isArray(quote.history) && quote.history.length) newHistory[code] = quote.history;
+    const cleanQuote = Object.assign({}, quote);
+    delete cleanQuote.history;
+    cleanQuotes[code] = { ...cleanQuote, fetchedAt: new Date().toISOString() };
+  });
+  const mergedQuotes = Object.assign({}, previousQuotes, cleanQuotes);
+  const mergedHistory = Object.assign({}, previousHistory, newHistory);
+  fs.mkdirSync('data', { recursive: true });
+  fs.writeFileSync('data/market.json', `${JSON.stringify({ updatedAt: new Date().toISOString(), quotes: mergedQuotes, history: mergedHistory, fx }, null, 2)}\n`);
+}
+
+main().catch(error => { console.error(error); process.exitCode = 1; });

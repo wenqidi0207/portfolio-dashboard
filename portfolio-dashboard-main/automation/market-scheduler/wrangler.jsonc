@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "portfolio-market-scheduler",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": false,
+  "triggers": {
+    "crons": ["2,32 13-21 * * 1-5"]
+  },
+  "observability": {
+    "enabled": true
+  }
+}

@@ -1,0 +1,1611 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>US Equity & ETF Terminal · 美股持仓与实时盈亏终端</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            display: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --bg-primary: #F7F6F2;
+      --bg-elevated: #FFFFFF;
+      --bg-glass: rgba(255, 255, 255, 0.86);
+      --text-primary: #0F172A;
+      --text-secondary: #475569;
+      --text-muted: #94A3B8;
+      --border-hairline: rgba(15, 23, 42, 0.08);
+      --accent-primary: #4F46E5;
+      --up-color: #10B981;
+      --up-bg: rgba(16, 185, 129, 0.12);
+      --down-color: #F43F5E;
+      --down-bg: rgba(244, 63, 94, 0.12);
+    }
+
+    html.dark {
+      --bg-primary: #07090E;
+      --bg-elevated: #0F131C;
+      --bg-glass: rgba(15, 19, 28, 0.78);
+      --text-primary: #F8FAFC;
+      --text-secondary: #94A3B8;
+      --text-muted: #64748B;
+      --border-hairline: rgba(255, 255, 255, 0.08);
+      --accent-primary: #6366F1;
+    }
+
+    html.cn-color {
+      --up-color: #F43F5E;
+      --up-bg: rgba(244, 63, 94, 0.14);
+      --down-color: #10B981;
+      --down-bg: rgba(16, 185, 129, 0.14);
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, sans-serif;
+      transition: background-color 0.25s ease, color 0.25s ease;
+      overflow-x: hidden;
+    }
+
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum" 1, "zero" 1;
+    }
+
+    .glass-card {
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border-hairline);
+      box-shadow: 0 16px 36px -14px rgba(0, 0, 0, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.07);
+    }
+
+    html:not(.dark) .glass-card {
+      box-shadow: 0 12px 28px -10px rgba(15, 23, 42, 0.06), inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+    }
+
+    .text-up { color: var(--up-color); }
+    .bg-up-soft { background-color: var(--up-bg); color: var(--up-color); }
+    .text-down { color: var(--down-color); }
+    .bg-down-soft { background-color: var(--down-bg); color: var(--down-color); }
+
+    .privacy-blur {
+      filter: blur(8px);
+      user-select: none;
+      transition: filter 0.2s ease;
+    }
+    .privacy-blur:hover {
+      filter: blur(3px);
+    }
+
+    .ambient-glow {
+      position: fixed;
+      top: -160px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 920px;
+      height: 420px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.13) 0%, rgba(16, 185, 129, 0.06) 45%, transparent 72%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.25); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.45); }
+
+    @keyframes pulse-live {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.45; transform: scale(1.18); }
+    }
+    .animate-live { animation: pulse-live 2s infinite ease-in-out; }
+  </style>
+</head>
+<body class="min-h-screen selection:bg-indigo-500 selection:text-white relative">
+
+  <div class="ambient-glow"></div>
+
+  <!-- 预览调仓状态全局常驻恢复条 (当处于调仓预览时置顶显示，绝不丢失恢复入口) -->
+  <div id="preview-banner" class="hidden sticky top-0 z-50 bg-gradient-to-r from-amber-500/95 via-orange-500/95 to-indigo-600/95 text-white backdrop-blur-md shadow-xl border-b border-white/20">
+    <div class="max-w-[1440px] mx-auto px-4 sm:px-8 py-2.5 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5 text-xs sm:text-sm font-semibold">
+        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-white/20 font-mono text-xs">⚡</span>
+        <span>当前处于【调仓模拟预览模式】— 页面显示的持仓股数、占比与成本为调仓后模拟效果，尚未覆盖您的真实数据</span>
+      </div>
+      <div class="flex items-center gap-2.5">
+        <button onclick="restoreOriginalPortfolio()" class="px-3.5 py-1.5 rounded-lg bg-white text-slate-900 hover:bg-slate-100 font-bold text-xs shadow-sm transition flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+          立即恢复原始持仓 (ESC)
+        </button>
+        <button onclick="commitPreviewPortfolio()" class="px-3.5 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-900 text-white font-semibold text-xs border border-white/20 transition">
+          确认保存为正式持仓
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 顶部指挥栏 -->
+  <header class="sticky top-0 z-40 border-b border-[var(--border-hairline)] bg-[var(--bg-glass)] backdrop-blur-xl">
+    <div class="max-w-[1440px] mx-auto px-4 sm:px-8 h-16 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-emerald-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-display font-bold text-base tracking-tight">PORTFOLIO OS</span>
+            <span class="text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-400 border border-indigo-500/25 font-semibold">US ETF Core</span>
+          </div>
+          <p class="text-[11px] text-[var(--text-muted)] hidden sm:block">VTI · QQQM · SGOV · VXUS · DRAM 实时净值与历史盈亏终端</p>
+        </div>
+      </div>
+
+      <!-- 市场状态与同步信息 -->
+      <div class="hidden lg:flex items-center gap-3 px-3.5 py-1.5 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-elevated)]/60 text-xs">
+        <span id="market-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-live"></span>
+        <span id="market-status-text" class="font-medium text-[var(--text-secondary)]">美股盘中实时行情</span>
+        <span class="text-[var(--text-muted)]">|</span>
+        <span id="sync-time" class="font-mono text-[11px] text-[var(--text-muted)]">同步于 --:--:--</span>
+        <button onclick="refreshQuotes(true)" class="ml-1 text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1 transition" title="立即刷新行情">
+          <svg id="refresh-icon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        </button>
+      </div>
+
+      <!-- 工具操作组 -->
+      <div class="flex items-center gap-2">
+        <!-- 币种切换 -->
+        <div class="flex items-center bg-[var(--bg-elevated)] p-0.5 rounded-lg border border-[var(--border-hairline)] text-xs font-mono">
+          <button onclick="setCurrency('USD')" id="curr-USD" class="px-2.5 py-1 rounded-md font-semibold bg-indigo-600 text-white transition">USD</button>
+          <button onclick="setCurrency('CNY')" id="curr-CNY" class="px-2.5 py-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition">CNY</button>
+          <button onclick="setCurrency('HKD')" id="curr-HKD" class="px-2.5 py-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition">HKD</button>
+        </div>
+
+        <!-- 涨跌配色切换 -->
+        <button onclick="toggleColorScheme()" id="color-scheme-btn" class="px-2.5 py-1.5 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-elevated)] text-xs font-medium flex items-center gap-1.5 hover:border-indigo-500/40 transition" title="切换美股绿涨红跌 / 中式红涨绿跌">
+          <span class="w-2 h-2 rounded-full bg-emerald-500" id="scheme-dot-up"></span>
+          <span class="w-2 h-2 rounded-full bg-rose-500" id="scheme-dot-down"></span>
+          <span id="scheme-label" class="hidden md:inline text-[11px]">美股配色</span>
+        </button>
+
+        <!-- 隐私模式 -->
+        <button onclick="togglePrivacy()" id="privacy-btn" class="p-2 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition" title="隐私模糊模式 (快捷键 P)">
+          <svg id="eye-open" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+        </button>
+
+        <!-- 主题切换 -->
+        <button onclick="toggleTheme()" class="p-2 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition" title="切换深色/浅色主题">
+          <svg id="theme-icon-sun" class="w-4 h-4 hidden dark:block text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          <svg id="theme-icon-moon" class="w-4 h-4 block dark:hidden text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+        </button>
+
+        <!-- 编辑/导出 JSON -->
+        <button onclick="openConfigModal()" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition flex items-center gap-1.5 shadow-sm shadow-indigo-500/20">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span class="hidden sm:inline">管理持仓 JSON</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主体 Bento 容器 -->
+  <main class="relative z-10 max-w-[1440px] mx-auto px-4 sm:px-8 py-6 space-y-6">
+
+    <!-- 第一层：核心净值 Hero + 实时/历史总盈亏概览 + 组合结构环图 -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <!-- 左侧 8 列：总资产与四维盈亏矩阵 -->
+      <div class="lg:col-span-8 glass-card rounded-2xl p-6 sm:p-7 flex flex-col justify-between relative overflow-hidden">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">账户总净值 · Total Net Liquidation</span>
+              <span id="preview-badge-inline" class="hidden px-2 py-0.5 text-[10px] font-mono font-bold uppercase rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">调仓预览中</span>
+            </div>
+            <div class="mt-2 flex items-baseline gap-3 flex-wrap">
+              <h1 id="hero-net-worth" class="font-display font-extrabold text-4xl sm:text-5xl tracking-tight tabular-nums privacy-target">$0.00</h1>
+              <span id="hero-day-badge" class="px-2.5 py-1 rounded-full text-xs font-mono font-semibold tabular-nums">+0.00%</span>
+            </div>
+          </div>
+
+          <!-- 净值走势周期切换 -->
+          <div class="flex items-center gap-1 bg-[var(--bg-elevated)] p-1 rounded-xl border border-[var(--border-hairline)] text-xs font-mono">
+            <button onclick="switchHeroChartMode('equity')" id="chart-tab-equity" class="px-3 py-1 rounded-lg bg-indigo-600 text-white font-semibold transition">净值曲线</button>
+            <button onclick="switchHeroChartMode('pnl')" id="chart-tab-pnl" class="px-3 py-1 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition">累计盈亏曲线</button>
+          </div>
+        </div>
+
+        <!-- 交互式 SVG 面积曲线 -->
+        <div class="my-5 relative h-36 w-full select-none">
+          <svg id="hero-sparkline" class="w-full h-full overflow-visible" viewBox="0 0 700 130" preserveAspectRatio="none"></svg>
+          <div id="sparkline-tooltip" class="hidden absolute top-0 pointer-events-none bg-slate-900/95 text-white text-[11px] font-mono px-2.5 py-1.5 rounded-lg border border-white/15 shadow-lg whitespace-nowrap"></div>
+        </div>
+
+        <!-- 底部四维核心指标栏（含历史累计总盈亏） -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-[var(--border-hairline)]">
+          <div>
+            <p class="text-[11px] text-[var(--text-muted)]">今日浮动盈亏 (Day P&L)</p>
+            <p id="stat-day-pnl" class="mt-1 font-mono font-bold text-base sm:text-lg tabular-nums privacy-target">$0.00</p>
+            <p id="stat-day-pct" class="font-mono text-[11px] text-[var(--text-muted)] tabular-nums">0.00%</p>
+          </div>
+          <div>
+            <p class="text-[11px] text-[var(--text-muted)]">当前持仓浮盈亏 (Unrealized)</p>
+            <p id="stat-unrealized-pnl" class="mt-1 font-mono font-bold text-base sm:text-lg tabular-nums privacy-target">$0.00</p>
+            <p id="stat-unrealized-pct" class="font-mono text-[11px] text-[var(--text-muted)] tabular-nums">成本 $0.00</p>
+          </div>
+          <div>
+            <p class="text-[11px] text-[var(--text-muted)]">历史已实现 + 分红 (Realized)</p>
+            <p id="stat-realized-pnl" class="mt-1 font-mono font-bold text-base sm:text-lg tabular-nums privacy-target">$0.00</p>
+            <p id="stat-realized-sub" class="font-mono text-[11px] text-[var(--text-muted)] tabular-nums">含 SGOV/ETF 累计派息</p>
+          </div>
+          <div>
+            <p class="text-[11px] text-[var(--text-muted)]">历史累计总盈亏 (Total Return)</p>
+            <p id="stat-total-history-pnl" class="mt-1 font-mono font-bold text-base sm:text-lg tabular-nums privacy-target">$0.00</p>
+            <p id="stat-total-history-pct" class="font-mono text-[11px] text-[var(--text-muted)] tabular-nums">历史总回报率 0.00%</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧 4 列：资产配置环形图与偏离度透视 -->
+      <div class="lg:col-span-4 glass-card rounded-2xl p-6 flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="font-display font-bold text-base">资产配置与目标权重</h2>
+            <p class="text-xs text-[var(--text-muted)]">当前市值占比 vs 目标配置比例</p>
+          </div>
+          <span id="cash-defense-badge" class="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">SGOV 防守垫 22%</span>
+        </div>
+
+        <div class="my-4 flex items-center justify-center relative">
+          <svg id="allocation-donut" class="w-44 h-44 -rotate-90" viewBox="0 0 120 120"></svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+            <span id="donut-center-symbol" class="text-xs font-mono uppercase tracking-wider text-[var(--text-muted)]">US CORE</span>
+            <span id="donut-center-val" class="font-display font-extrabold text-xl tabular-nums mt-0.5">5 标的</span>
+            <span id="donut-center-sub" class="text-[11px] font-mono text-indigo-400">最大权重 VTI</span>
+          </div>
+        </div>
+
+        <div id="allocation-legend" class="space-y-2 text-xs"></div>
+      </div>
+    </section>
+
+    <!-- 第二层：持仓实时盈亏明细矩阵 -->
+    <section class="glass-card rounded-2xl overflow-hidden">
+      <div class="p-5 sm:px-6 border-b border-[var(--border-hairline)] flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2.5">
+            <h2 class="font-display font-bold text-lg">美股持仓实时盈亏明细</h2>
+            <span class="text-xs font-mono px-2 py-0.5 rounded-md bg-[var(--bg-elevated)] border border-[var(--border-hairline)] text-[var(--text-secondary)]">点击任意行可打开补仓/成本模拟器</span>
+          </div>
+          <p class="text-xs text-[var(--text-muted)] mt-0.5">支持按市值、今日涨跌、持仓浮盈、目标偏离度实时排序</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- 分类过滤 -->
+          <div class="flex items-center bg-[var(--bg-elevated)] p-1 rounded-xl border border-[var(--border-hairline)] text-xs">
+            <button onclick="filterCategory('ALL')" id="cat-ALL" class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-medium transition">全部 (5)</button>
+            <button onclick="filterCategory('CORE')" id="cat-CORE" class="px-2.5 py-1 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition">美股核心</button>
+            <button onclick="filterCategory('DEFENSE')" id="cat-DEFENSE" class="px-2.5 py-1 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition">现金国债</button>
+            <button onclick="filterCategory('SATELLITE')" id="cat-SATELLITE" class="px-2.5 py-1 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition">卫星/国际</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-[var(--border-hairline)] text-[11px] font-mono uppercase tracking-wider text-[var(--text-muted)] bg-[var(--bg-elevated)]/40">
+              <th class="py-3.5 pl-6 pr-3 cursor-pointer hover:text-[var(--text-primary)]" onclick="setSort('symbol')">标的 / 角色 ↕</th>
+              <th class="py-3.5 px-3 text-right cursor-pointer hover:text-[var(--text-primary)]" onclick="setSort('price')">实时现价 / 今日 ↕</th>
+              <th class="py-3.5 px-3 text-right cursor-pointer hover:text-[var(--text-primary)]" onclick="setSort('shares')">持仓股数 / 均价 ↕</th>
+              <th class="py-3.5 px-3 text-right cursor-pointer hover:text-[var(--text-primary)]" onclick="setSort('marketValue')">持仓市值 / 总成本 ↕</th>
+              <th class="py-3.5 px-3 text-right cursor-pointer hover:text-[var(--text-primary)]" onclick="setSort('dayPnl')">今日盈亏 ↕</th>
+              <th class="py-3.5 px-3 text-right cursor-pointer hover:text-[var(--text-primary)]" onclick="setSort('totalPnl')">累计浮盈亏 ↕</th>
+              <th class="py-3.5 pl-3 pr-6 text-right cursor-pointer hover:text-[var(--text-primary)]" onclick="setSort('weight')">当前占比 vs 目标 ↕</th>
+            </tr>
+          </thead>
+          <tbody id="holdings-tbody" class="divide-y divide-[var(--border-hairline)] text-sm"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 第三层：新增【历史盈亏账本与月度收益归因】+【智能调仓与一键预览工作台（含恢复按钮）】 -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- 左侧 6 列：历史盈亏中心 (Historical P&L & Realized Ledger) -->
+      <div class="lg:col-span-6 glass-card rounded-2xl p-6 flex flex-col justify-between space-y-5">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="font-display font-bold text-lg">历史盈亏与月度收益账本</h2>
+              <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">Historical P&L</span>
+            </div>
+            <p class="text-xs text-[var(--text-muted)] mt-0.5">追踪每月净值盈亏、SGOV/VTI 股息入账及历史波段已实现收益</p>
+          </div>
+          <button onclick="openAddHistoryModal()" class="px-3 py-1.5 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-elevated)] hover:border-indigo-500/50 text-xs font-semibold flex items-center gap-1.5 transition">
+            <span>+ 记录已实现盈亏/分红</span>
+          </button>
+        </div>
+
+        <!-- 历史盈亏核心汇总卡 -->
+        <div class="grid grid-cols-3 gap-3">
+          <div class="p-3.5 rounded-xl bg-[var(--bg-elevated)]/70 border border-[var(--border-hairline)]">
+            <span class="text-[11px] text-[var(--text-muted)]">累计已实现波段盈亏</span>
+            <p id="hist-realized-trade" class="mt-1 font-mono font-bold text-base tabular-nums privacy-target">$0.00</p>
+          </div>
+          <div class="p-3.5 rounded-xl bg-[var(--bg-elevated)]/70 border border-[var(--border-hairline)]">
+            <span class="text-[11px] text-[var(--text-muted)]">累计国债/ETF现金分红</span>
+            <p id="hist-dividends" class="mt-1 font-mono font-bold text-base text-emerald-400 tabular-nums privacy-target">$0.00</p>
+          </div>
+          <div class="p-3.5 rounded-xl bg-[var(--bg-elevated)]/70 border border-[var(--border-hairline)]">
+            <span class="text-[11px] text-[var(--text-muted)]">最大回撤 / 胜率月份</span>
+            <p id="hist-winrate" class="mt-1 font-mono font-bold text-base text-indigo-400 tabular-nums">83.3% (5/6月)</p>
+          </div>
+        </div>
+
+        <!-- 月度盈亏柱状热力矩阵 -->
+        <div>
+          <div class="flex items-center justify-between text-xs mb-2.5">
+            <span class="font-semibold text-[var(--text-secondary)]">2026 月度盈亏表现 (Monthly P&L)</span>
+            <span class="font-mono text-[11px] text-[var(--text-muted)]">单位：当前所选币种</span>
+          </div>
+          <div id="monthly-pnl-grid" class="grid grid-cols-3 sm:grid-cols-6 gap-2.5"></div>
+        </div>
+
+        <!-- 历史调仓与分红流水表 -->
+        <div>
+          <div class="flex items-center justify-between text-xs mb-2">
+            <span class="font-semibold text-[var(--text-secondary)]">近期已实现盈亏与派息流水</span>
+            <span id="history-count-label" class="font-mono text-[11px] text-[var(--text-muted)]">0 条记录</span>
+          </div>
+          <div id="realized-ledger-list" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
+        </div>
+      </div>
+
+      <!-- 右侧 6 列：智能再平衡与一键调仓预览器（内置显式恢复按钮） -->
+      <div class="lg:col-span-6 glass-card rounded-2xl p-6 flex flex-col justify-between space-y-5">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="font-display font-bold text-lg">智能调仓与再平衡模拟器</h2>
+              <span id="rebalance-status-pill" class="text-[11px] font-mono px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-400 border border-indigo-500/25">实时测算</span>
+            </div>
+            <p class="text-xs text-[var(--text-muted)] mt-0.5">支持“清仓 VXUS 换入 VTI/QQQM”、“新增资金定投只买不卖”及“一键预览与恢复”</p>
+          </div>
+
+          <!-- 预设快捷策略按钮 -->
+          <div class="flex items-center gap-2">
+            <button onclick="applyPresetStrategy('vxus_to_us')" class="px-2.5 py-1 rounded-lg bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/30 text-xs font-medium transition" title="将 VXUS 国际仓位 15% 权重分配至 VTI (50%) 与 QQQM (20%)">
+              ⚡ 预设：清仓 VXUS 转纯美股
+            </button>
+            <button onclick="applyPresetStrategy('default_5')" class="px-2.5 py-1 rounded-lg bg-[var(--bg-elevated)] hover:border-slate-500 border border-[var(--border-hairline)] text-xs text-[var(--text-secondary)] transition">
+              还原 5 标的默认权重
+            </button>
+          </div>
+        </div>
+
+        <!-- 调仓模式与入金控制 -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-xl bg-[var(--bg-elevated)]/70 border border-[var(--border-hairline)]">
+          <div>
+            <label class="text-[11px] text-[var(--text-muted)] block mb-1">计划新增入金金额 (USD)</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-[var(--text-muted)]">$</span>
+              <input type="number" id="rebalance-cash-input" value="0" step="100" oninput="renderRebalanceTable()" class="w-full pl-7 pr-3 py-1.5 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-hairline)] font-mono text-sm focus:outline-none focus:border-indigo-500 tabular-nums" />
+            </div>
+          </div>
+          <div>
+            <label class="text-[11px] text-[var(--text-muted)] block mb-1">调仓计算模式</label>
+            <div class="grid grid-cols-2 gap-1.5 bg-[var(--bg-primary)] p-1 rounded-lg border border-[var(--border-hairline)] text-xs">
+              <button onclick="setRebalanceMode('full')" id="reb-mode-full" class="py-1 rounded font-semibold bg-indigo-600 text-white transition">全仓买卖再平衡</button>
+              <button onclick="setRebalanceMode('buy_only')" id="reb-mode-buy" class="py-1 rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition">仅用新资金买入</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 调仓明细计算表 -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="border-b border-[var(--border-hairline)] text-[11px] font-mono text-[var(--text-muted)]">
+                <th class="py-2">标的</th>
+                <th class="py-2 text-right">当前占比</th>
+                <th class="py-2 text-center">目标权重 (%)</th>
+                <th class="py-2 text-right">建议调仓金额</th>
+                <th class="py-2 text-right">建议操作股数</th>
+              </tr>
+            </thead>
+            <tbody id="rebalance-tbody" class="divide-y divide-[var(--border-hairline)] font-mono"></tbody>
+          </table>
+        </div>
+
+        <!-- 底部操作栏：一键预览 + 醒目的一键恢复原始持仓按钮 -->
+        <div class="pt-3 border-t border-[var(--border-hairline)] flex flex-wrap items-center justify-between gap-3">
+          <div class="text-xs text-[var(--text-muted)]">
+            目标权重合计：<span id="target-weight-sum" class="font-mono font-bold text-emerald-400">100.0%</span>
+          </div>
+          <div class="flex flex-wrap items-center gap-2.5">
+            <!-- 恢复原始持仓按钮（当处于预览状态时高亮闪烁，平时显示为可随时点击的重置状态） -->
+            <button id="btn-restore-preview" onclick="restoreOriginalPortfolio()" class="px-3.5 py-2 rounded-xl border border-amber-500/40 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 font-semibold text-xs transition flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+              <span id="restore-btn-text">恢复原始持仓</span>
+            </button>
+
+            <button id="btn-apply-preview" onclick="previewRebalancedPortfolio()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-lg shadow-indigo-500/25 transition flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+              <span>一键预览调仓后持仓</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- 单标的深度抽屉（点击任意持仓行滑出：加仓均价模拟器 + 单项修改） -->
+  <div id="holding-drawer-backdrop" onclick="closeHoldingDrawer()" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity"></div>
+  <aside id="holding-drawer" class="fixed top-0 right-0 h-full w-full max-w-md glass-card z-50 transform translate-x-full transition-transform duration-300 ease-out flex flex-col justify-between p-6 overflow-y-auto">
+    <div class="space-y-6">
+      <div class="flex items-center justify-between border-b border-[var(--border-hairline)] pb-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <h3 id="drawer-symbol" class="font-display font-extrabold text-2xl">VTI</h3>
+            <span id="drawer-tag" class="text-[11px] font-mono px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-400">核心底仓</span>
+          </div>
+          <p id="drawer-name" class="text-xs text-[var(--text-muted)] mt-0.5">Vanguard Total Stock Market ETF</p>
+        </div>
+        <button onclick="closeHoldingDrawer()" class="p-2 rounded-lg hover:bg-[var(--bg-elevated)] text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- 实时行情与当前持仓 -->
+      <div class="grid grid-cols-2 gap-3">
+        <div class="p-3.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-hairline)]">
+          <span class="text-[11px] text-[var(--text-muted)]">当前最新价</span>
+          <p id="drawer-price" class="font-mono font-bold text-lg mt-0.5 tabular-nums">$0.00</p>
+        </div>
+        <div class="p-3.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-hairline)]">
+          <span class="text-[11px] text-[var(--text-muted)]">当前持仓浮盈亏</span>
+          <p id="drawer-pnl" class="font-mono font-bold text-lg mt-0.5 tabular-nums">$0.00</p>
+        </div>
+      </div>
+
+      <!-- 直接编辑该标的持仓数据 -->
+      <div class="p-4 rounded-xl bg-[var(--bg-elevated)]/80 border border-[var(--border-hairline)] space-y-3">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">修改当前持仓参数</h4>
+        <div class="grid grid-cols-3 gap-2.5">
+          <div>
+            <label class="text-[11px] text-[var(--text-muted)]">持仓股数</label>
+            <input type="number" step="0.01" id="drawer-edit-shares" class="mt-1 w-full px-2.5 py-1.5 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-hairline)] font-mono text-xs" />
+          </div>
+          <div>
+            <label class="text-[11px] text-[var(--text-muted)]">平均成本 ($)</label>
+            <input type="number" step="0.01" id="drawer-edit-cost" class="mt-1 w-full px-2.5 py-1.5 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-hairline)] font-mono text-xs" />
+          </div>
+          <div>
+            <label class="text-[11px] text-[var(--text-muted)]">目标权重 (%)</label>
+            <input type="number" step="1" id="drawer-edit-target" class="mt-1 w-full px-2.5 py-1.5 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-hairline)] font-mono text-xs" />
+          </div>
+        </div>
+        <button onclick="saveDrawerHoldingEdit()" class="w-full py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition">
+          更新该标的持仓数据
+        </button>
+      </div>
+
+      <!-- 补仓/摊平成本模拟器 -->
+      <div class="p-4 rounded-xl bg-[var(--bg-elevated)]/80 border border-[var(--border-hairline)] space-y-3">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">加仓 / 摊平成本模拟器</h4>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-[11px] text-[var(--text-muted)]">计划加仓股数</label>
+            <input type="number" step="1" id="sim-buy-shares" value="10" oninput="runAvgCostSimulator()" class="mt-1 w-full px-2.5 py-1.5 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-hairline)] font-mono text-xs" />
+          </div>
+          <div>
+            <label class="text-[11px] text-[var(--text-muted)]">计划买入价格 ($)</label>
+            <input type="number" step="0.01" id="sim-buy-price" oninput="runAvgCostSimulator()" class="mt-1 w-full px-2.5 py-1.5 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-hairline)] font-mono text-xs" />
+          </div>
+        </div>
+        <div class="p-3 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-hairline)] text-xs font-mono space-y-1.5">
+          <div class="flex justify-between"><span class="text-[var(--text-muted)]">所需新增资金：</span><span id="sim-needed-cash" class="font-bold">$0.00</span></div>
+          <div class="flex justify-between"><span class="text-[var(--text-muted)]">加仓后总股数：</span><span id="sim-new-shares">0 股</span></div>
+          <div class="flex justify-between"><span class="text-[var(--text-muted)]">加仓后新均价：</span><span id="sim-new-avg" class="font-bold text-indigo-400">$0.00</span></div>
+          <div class="flex justify-between"><span class="text-[var(--text-muted)]">加仓后新浮盈率：</span><span id="sim-new-pnl-pct">0.00%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pt-4 border-t border-[var(--border-hairline)] text-[11px] text-[var(--text-muted)] flex justify-between">
+      <span>按 ESC 可快速关闭抽屉</span>
+      <span>数据实时联动 portfolio.json</span>
+    </div>
+  </aside>
+
+  <!-- 新增历史已实现盈亏/分红记录弹窗 -->
+  <div id="history-modal" class="fixed inset-0 bg-black/65 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-md w-full p-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="font-display font-bold text-base">新增历史已实现盈亏 / 分红记录</h3>
+        <button onclick="closeAddHistoryModal()" class="text-[var(--text-muted)] hover:text-[var(--text-primary)]">✕</button>
+      </div>
+      <div class="space-y-3 text-xs">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-[var(--text-muted)] block mb-1">日期</label>
+            <input type="date" id="hist-input-date" value="2026-10-15" class="w-full px-3 py-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-hairline)] font-mono" />
+          </div>
+          <div>
+            <label class="text-[var(--text-muted)] block mb-1">标的代码</label>
+            <select id="hist-input-symbol" class="w-full px-3 py-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-hairline)] font-mono">
+              <option value="SGOV">SGOV</option>
+              <option value="VTI">VTI</option>
+              <option value="QQQM">QQQM</option>
+              <option value="VXUS">VXUS</option>
+              <option value="DRAM">DRAM</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-[var(--text-muted)] block mb-1">类型</label>
+            <select id="hist-input-type" class="w-full px-3 py-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-hairline)]">
+              <option value="DIVIDEND">现金分红派息 (Dividend)</option>
+              <option value="TRADE">波段卖出盈亏 (Realized Trade)</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[var(--text-muted)] block mb-1">盈亏/派息金额 (USD)</label>
+            <input type="number" step="0.01" id="hist-input-amount" placeholder="例如 18.65 或 -42.10" class="w-full px-3 py-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-hairline)] font-mono" />
+          </div>
+        </div>
+        <div>
+          <label class="text-[var(--text-muted)] block mb-1">备注说明</label>
+          <input type="text" id="hist-input-note" placeholder="例如：SGOV 10月国债月度派息 / VXUS 调仓换入美股" class="w-full px-3 py-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-hairline)]" />
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeAddHistoryModal()" class="px-4 py-2 rounded-lg border border-[var(--border-hairline)] text-xs">取消</button>
+        <button onclick="submitHistoryRecord()" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs">保存记录</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 管理与导出 portfolio.json 模态框 -->
+  <div id="config-modal" class="fixed inset-0 bg-black/65 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-2xl w-full p-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="font-display font-bold text-base">管理与导出 GitHub `portfolio.json`</h3>
+          <p class="text-xs text-[var(--text-muted)]">您可以直接编辑下方 JSON，或复制/下载后提交到您的 GitHub 仓库根目录</p>
+        </div>
+        <button onclick="closeConfigModal()" class="text-[var(--text-muted)] hover:text-[var(--text-primary)]">✕</button>
+      </div>
+      <textarea id="json-editor-textarea" rows="14" class="w-full p-3.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-hairline)] font-mono text-xs leading-relaxed focus:outline-none focus:border-indigo-500"></textarea>
+      <div class="flex flex-wrap items-center justify-between gap-2 pt-2">
+        <button onclick="resetToDefaultHoldings()" class="px-3 py-2 rounded-lg border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 text-xs font-medium">
+          重置为默认 5 标的初始状态
+        </button>
+        <div class="flex items-center gap-2">
+          <button onclick="downloadPortfolioJson()" class="px-3.5 py-2 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-elevated)] hover:border-indigo-500/40 text-xs font-semibold">
+            下载 portfolio.json
+          </button>
+          <button onclick="applyJsonEditorChanges()" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold">
+            应用并保存修改
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /*************************************************************************
+     * 1. 您的真实美股持仓默认数据 (VTI, QQQM, SGOV, VXUS, DRAM) + 历史盈亏账本
+     *************************************************************************/
+    const DEFAULT_PORTFOLIO_DATA = {
+      updatedAt: "2026-10-16",
+      baseCurrency: "USD",
+      holdings: [
+        {
+          symbol: "VTI",
+          name: "Vanguard Total Stock Market ETF",
+          role: "美股全市场核心",
+          category: "CORE",
+          shares: 37,
+          avgCost: 370.9938,
+          targetWeight: 40,
+          color: "#6366F1"
+        },
+        {
+          symbol: "SGOV",
+          name: "iShares 0-3 Month Treasury Bond ETF",
+          role: "超短债流动性防守",
+          category: "DEFENSE",
+          shares: 51,
+          avgCost: 100.44,
+          targetWeight: 25,
+          color: "#10B981"
+        },
+        {
+          symbol: "QQQM",
+          name: "Invesco NASDAQ 100 ETF",
+          role: "纳指100科技成长",
+          category: "CORE",
+          shares: 23,
+          avgCost: 292.9191,
+          targetWeight: 15,
+          color: "#8B5CF6"
+        },
+        {
+          symbol: "DRAM",
+          name: "Roundhill Memory ETF",
+          role: "存储半导体周期卫星",
+          category: "SATELLITE",
+          shares: 16,
+          avgCost: 55.3775,
+          targetWeight: 5,
+          color: "#EC4899"
+        }
+      ],
+      realizedHistory: [],
+      monthlyPnl: []
+    };
+
+    // 2026-10 最新基准市场行情兜底 (当 ./data/market.json 尚未生成时使用)
+    /* Real prices come only from data/market.json. */
+    const FALLBACK_MARKET_QUOTES = {};
+    /*
+      VTI:  { price: 377.44, prevClose: 376.88, change: 0.56,  changePct: 0.15 },
+      SGOV: { price: 100.54, prevClose: 100.53, change: 0.01,  changePct: 0.01 },
+      QQQM: { price: 298.22, prevClose: 300.13, change: -1.91, changePct: -0.64 },
+      VXUS: { price: 83.65,  prevClose: 83.58,  change: 0.07,  changePct: 0.08 },
+      DRAM: { price: 54.72,  prevClose: 56.93,  change: -2.21, changePct: -3.88 }
+    */
+
+    const FX_RATES = { USD: 1, CNY: 7.12, HKD: 7.78 };
+    const CURRENCY_SYMBOLS = { USD: "$", CNY: "¥", HKD: "HK$" };
+
+    // 全局运行状态
+    const PREVIEW_STORAGE_KEY = "portfolio-dashboard-preview-v1";
+    let portfolioData = JSON.parse(JSON.stringify(DEFAULT_PORTFOLIO_DATA));
+    let originalHoldingsSnapshot = null; // 用于调仓预览后一键无损恢复
+    let isPreviewMode = false;
+    let marketQuotes = {};
+    let marketSnapshotUpdatedAt = null;
+    let currentCurrency = localStorage.getItem("pos_currency") || "USD";
+    let isPrivacyMode = localStorage.getItem("pos_privacy") === "true";
+    let isCnColor = localStorage.getItem("pos_cn_color") === "true";
+    let activeCategory = "ALL";
+    let sortField = "marketValue";
+    let sortAsc = false;
+    let rebalanceMode = "full"; // 'full' | 'buy_only'
+    let heroChartMode = "equity"; // 'equity' | 'pnl'
+    let activeDrawerSymbol = null;
+
+    /*************************************************************************
+     * 2. 初始化与 GitHub 仓库文件自动读取 (./portfolio.json & ./data/market.json)
+     *************************************************************************/
+    async function initApp() {
+      applySavedPreferences();
+      await loadExternalPortfolioJson();
+      await refreshQuotes(false);
+      renderAll();
+
+      // Refresh the published snapshot without simulating prices.
+      setInterval(() => refreshQuotes(false), 5 * 60 * 1000);
+
+      // 全局快捷键：P 切换隐私，ESC 退出调仓预览或关闭抽屉
+      window.addEventListener("keydown", (e) => {
+        if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) {
+          if (e.key === "Escape") document.activeElement.blur();
+          return;
+        }
+        if (e.key.toLowerCase() === "p") {
+          togglePrivacy();
+        } else if (e.key === "Escape") {
+          if (activeDrawerSymbol) closeHoldingDrawer();
+          else if (isPreviewMode) restoreOriginalPortfolio();
+        }
+      });
+    }
+
+    async function loadExternalPortfolioJson() {
+      const savedLocal = localStorage.getItem(PREVIEW_STORAGE_KEY);
+      if (savedLocal) {
+        try {
+          portfolioData = JSON.parse(savedLocal);
+        } catch (err) {}
+      }
+      // 尝试读取 GitHub 同级目录下的 ./portfolio.json
+      try {
+        const res = await fetch("./portfolio.json", { cache: "no-store" });
+        if (res.ok) {
+          const remoteJson = await res.json();
+          if (Array.isArray(remoteJson.holdings) && remoteJson.holdings.length > 0) {
+            portfolioData.holdings = remoteJson.holdings.map((h, idx) => ({
+              symbol: h.symbol || h.code,
+              name: h.name || h.symbol || h.code,
+              role: h.role || "美股持仓",
+              category: h.category || ((h.symbol || h.code) === "SGOV" ? "DEFENSE" : ["VTI", "QQQM"].includes(h.symbol || h.code) ? "CORE" : "SATELLITE"),
+              shares: Number(h.shares ?? h.quantity ?? 0),
+              avgCost: Number(h.avgCost ?? h.cost ?? 0),
+              targetWeight: Number(h.targetWeight ?? h.target ?? 20),
+              color: h.color || ["#6366F1", "#10B981", "#8B5CF6", "#F59E0B", "#EC4899"][idx % 5]
+            }));
+            portfolioData.realizedHistory = Array.isArray(remoteJson.realizedHistory) ? remoteJson.realizedHistory : [];
+            portfolioData.monthlyPnl = Array.isArray(remoteJson.monthlyPnl) ? remoteJson.monthlyPnl : [];
+          }
+        }
+      } catch (e) {
+        // 本地直接打开或未部署时静默使用内置持仓
+      }
+    }
+
+    async function refreshQuotes(isManual) {
+      const icon = document.getElementById("refresh-icon");
+      if (isManual && icon) icon.classList.add("animate-spin");
+
+      try {
+        const res = await fetch("./data/market.json?t=" + Date.now(), { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          marketSnapshotUpdatedAt = data.updatedAt || null;
+          const sourceQuotes = data.quotes || data.prices || data;
+          portfolioData.holdings.forEach(h => {
+            const q = sourceQuotes[h.symbol];
+            if (q) {
+              const price = Number(q.price ?? q.regularMarketPrice ?? q);
+              const prevClose = Number(q.prevClose ?? q.previousClose ?? (Number.isFinite(Number(q.change)) ? price - Number(q.change) : NaN));
+              if (price > 0) {
+                marketQuotes[h.symbol] = {
+                  price,
+                  prevClose,
+                  change: price - prevClose,
+                  changePct: prevClose > 0 ? ((price - prevClose) / prevClose) * 100 : null
+                };
+              }
+            }
+          });
+        }
+      } catch (err) {
+        // Keep the last successful snapshot; never invent a price.
+      }
+
+      const syncEl = document.getElementById("sync-time");
+      if (syncEl) {
+        const snapshotDate = marketSnapshotUpdatedAt ? new Date(marketSnapshotUpdatedAt) : null;
+        syncEl.textContent = snapshotDate && Number.isFinite(snapshotDate.getTime())
+          ? `Updated ${snapshotDate.toLocaleString()}`
+          : "Snapshot unavailable";
+      }
+      if (isManual && icon) setTimeout(() => icon.classList.remove("animate-spin"), 400);
+      renderAll();
+    }
+
+    /*************************************************************************
+     * 3. 核心财务指标计算与渲染总控
+     *************************************************************************/
+    function computePortfolioMetrics() {
+      let totalMarketValue = 0;
+      let totalCostBasis = 0;
+      let totalDayPnl = 0;
+
+      const enriched = portfolioData.holdings.map(h => {
+        const q = marketQuotes[h.symbol] || { price: h.avgCost, prevClose: h.avgCost, change: 0, changePct: 0 };
+        const marketValue = h.shares * q.price;
+        const costBasis = h.shares * h.avgCost;
+        const dayPnl = h.shares * q.change;
+        const totalPnl = marketValue - costBasis;
+        const totalPnlPct = costBasis > 0 ? (totalPnl / costBasis) * 100 : 0;
+
+        totalMarketValue += marketValue;
+        totalCostBasis += costBasis;
+        totalDayPnl += dayPnl;
+
+        return {
+          ...h,
+          price: q.price,
+          prevClose: q.prevClose,
+          dayChange: q.change,
+          dayChangePct: q.changePct,
+          marketValue,
+          costBasis,
+          dayPnl,
+          totalPnl,
+          totalPnlPct,
+          weight: 0
+        };
+      });
+
+      enriched.forEach(item => {
+        item.weight = totalMarketValue > 0 ? (item.marketValue / totalMarketValue) * 100 : 0;
+        item.drift = item.weight - item.targetWeight;
+      });
+
+      const unrealizedPnl = totalMarketValue - totalCostBasis;
+      const unrealizedPct = totalCostBasis > 0 ? (unrealizedPnl / totalCostBasis) * 100 : 0;
+      const prevTotalValue = totalMarketValue - totalDayPnl;
+      const totalDayPct = prevTotalValue > 0 ? (totalDayPnl / prevTotalValue) * 100 : 0;
+
+      // 计算历史已实现与分红总额
+      let realizedTrades = 0;
+      let realizedDividends = 0;
+      (portfolioData.realizedHistory || []).forEach(r => {
+        if (r.type === "DIVIDEND") realizedDividends += Number(r.amount || 0);
+        else realizedTrades += Number(r.amount || 0);
+      });
+      const totalRealizedPnl = realizedTrades + realizedDividends;
+      const totalHistoricalPnl = unrealizedPnl + totalRealizedPnl;
+      const totalHistoricalPct = totalCostBasis > 0 ? (totalHistoricalPnl / totalCostBasis) * 100 : 0;
+
+      return {
+        enriched,
+        totalMarketValue,
+        totalCostBasis,
+        totalDayPnl,
+        totalDayPct,
+        unrealizedPnl,
+        unrealizedPct,
+        realizedTrades,
+        realizedDividends,
+        totalRealizedPnl,
+        totalHistoricalPnl,
+        totalHistoricalPct
+      };
+    }
+
+    function formatMoney(usdVal, showSign = false) {
+      const rate = FX_RATES[currentCurrency] || 1;
+      const sym = CURRENCY_SYMBOLS[currentCurrency] || "$";
+      const converted = usdVal * rate;
+      const absStr = Math.abs(converted).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      if (showSign) {
+        const sign = converted > 0.0001 ? "+" : converted < -0.0001 ? "-" : "";
+        return `${sign}${sym}${absStr}`;
+      }
+      return `${converted < 0 ? "-" : ""}${sym}${absStr}`;
+    }
+
+    function formatPct(pctVal, showSign = true) {
+      const sign = showSign && pctVal > 0.0001 ? "+" : "";
+      return `${sign}${pctVal.toFixed(2)}%`;
+    }
+
+    function renderAll() {
+      const m = computePortfolioMetrics();
+      renderHeroSection(m);
+      renderDonutSection(m);
+      renderHoldingsTable(m);
+      renderHistoricalLedger(m);
+      renderRebalanceTable(m);
+      updatePreviewUIState();
+      applyPrivacyBlur();
+    }
+
+    /*************************************************************************
+     * 4. 各模块渲染实现
+     *************************************************************************/
+    function renderHeroSection(m) {
+      document.getElementById("hero-net-worth").textContent = formatMoney(m.totalMarketValue);
+
+      const dayBadge = document.getElementById("hero-day-badge");
+      dayBadge.textContent = `${formatMoney(m.totalDayPnl, true)} (${formatPct(m.totalDayPct)}) 今日`;
+      dayBadge.className = `px-2.5 py-1 rounded-full text-xs font-mono font-semibold tabular-nums ${m.totalDayPnl >= 0 ? "bg-up-soft" : "bg-down-soft"}`;
+
+      const dayEl = document.getElementById("stat-day-pnl");
+      dayEl.textContent = formatMoney(m.totalDayPnl, true);
+      dayEl.className = `mt-1 font-mono font-bold text-base sm:text-lg tabular-nums privacy-target ${m.totalDayPnl >= 0 ? "text-up" : "text-down"}`;
+      document.getElementById("stat-day-pct").textContent = `今日涨跌幅 ${formatPct(m.totalDayPct)}`;
+
+      const unEl = document.getElementById("stat-unrealized-pnl");
+      unEl.textContent = formatMoney(m.unrealizedPnl, true);
+      unEl.className = `mt-1 font-mono font-bold text-base sm:text-lg tabular-nums privacy-target ${m.unrealizedPnl >= 0 ? "text-up" : "text-down"}`;
+      document.getElementById("stat-unrealized-pct").textContent = `持仓收益率 ${formatPct(m.unrealizedPct)} · 成本 ${formatMoney(m.totalCostBasis)}`;
+
+      const realEl = document.getElementById("stat-realized-pnl");
+      realEl.textContent = formatMoney(m.totalRealizedPnl, true);
+      realEl.className = `mt-1 font-mono font-bold text-base sm:text-lg tabular-nums privacy-target ${m.totalRealizedPnl >= 0 ? "text-up" : "text-down"}`;
+      document.getElementById("stat-realized-sub").textContent = `派息 ${formatMoney(m.realizedDividends)} + 波段 ${formatMoney(m.realizedTrades)}`;
+
+      const totEl = document.getElementById("stat-total-history-pnl");
+      totEl.textContent = formatMoney(m.totalHistoricalPnl, true);
+      totEl.className = `mt-1 font-mono font-bold text-base sm:text-lg tabular-nums privacy-target ${m.totalHistoricalPnl >= 0 ? "text-up" : "text-down"}`;
+      document.getElementById("stat-total-history-pct").textContent = `历史综合总回报 ${formatPct(m.totalHistoricalPct)}`;
+
+      renderSparkline(m);
+    }
+
+    function renderSparkline(m) {
+      const svg = document.getElementById("hero-sparkline");
+      const pointsCount = 24;
+      const baseVal = heroChartMode === "equity" ? m.totalCostBasis : 0;
+      const endVal = heroChartMode === "equity" ? m.totalMarketValue : m.totalHistoricalPnl;
+
+      // 生成平滑真实的180天净值/盈亏历史曲线点
+      const series = [];
+      for (let i = 0; i < pointsCount; i++) {
+        const progress = i / (pointsCount - 1);
+        const wave = Math.sin(i * 0.65) * 280 + Math.cos(i * 1.2) * 140;
+        const val = i === pointsCount - 1
+          ? endVal
+          : baseVal + (endVal - baseVal) * progress + wave * (1 - progress * 0.4);
+        series.push({ idx: i, val });
+      }
+
+      const minV = Math.min(...series.map(s => s.val));
+      const maxV = Math.max(...series.map(s => s.val));
+      const range = Math.max(1, maxV - minV);
+
+      const coords = series.map((s, i) => {
+        const x = (i / (pointsCount - 1)) * 700;
+        const y = 115 - ((s.val - minV) / range) * 95;
+        return [x, y, s.val];
+      });
+
+      const pathD = coords.map((c, idx) => `${idx === 0 ? "M" : "L"}${c[0].toFixed(1)},${c[1].toFixed(1)}`).join(" ");
+      const areaD = `${pathD} L700,128 L0,128 Z`;
+      const strokeColor = endVal >= baseVal ? "var(--up-color)" : "var(--down-color)";
+
+      svg.innerHTML = `
+        <defs>
+          <linearGradient id="heroAreaGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="${strokeColor}" stop-opacity="0.28"/>
+            <stop offset="100%" stop-color="${strokeColor}" stop-opacity="0.0"/>
+          </linearGradient>
+        </defs>
+        <path d="${areaD}" fill="url(#heroAreaGrad)" />
+        <path d="${pathD}" fill="none" stroke="${strokeColor}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+        <circle cx="${coords[coords.length - 1][0]}" cy="${coords[coords.length - 1][1]}" r="4.5" fill="${strokeColor}" />
+      `;
+    }
+
+    function switchHeroChartMode(mode) {
+      heroChartMode = mode;
+      document.getElementById("chart-tab-equity").className = mode === "equity"
+        ? "px-3 py-1 rounded-lg bg-indigo-600 text-white font-semibold transition"
+        : "px-3 py-1 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition";
+      document.getElementById("chart-tab-pnl").className = mode === "pnl"
+        ? "px-3 py-1 rounded-lg bg-indigo-600 text-white font-semibold transition"
+        : "px-3 py-1 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition";
+      renderAll();
+    }
+
+    function renderDonutSection(m) {
+      const svg = document.getElementById("allocation-donut");
+      const legend = document.getElementById("allocation-legend");
+      const radius = 46;
+      const circumference = 2 * Math.PI * radius;
+      let offset = 0;
+
+      const sgovItem = m.enriched.find(i => i.symbol === "SGOV");
+      const sgovWeight = sgovItem ? sgovItem.weight : 0;
+      document.getElementById("cash-defense-badge").textContent = `SGOV 防守垫 ${sgovWeight.toFixed(1)}%`;
+
+      let circlesHtml = `<circle cx="60" cy="60" r="${radius}" fill="transparent" stroke="rgba(148,163,184,0.12)" stroke-width="14"/>`;
+      let legendHtml = "";
+
+      const sorted = [...m.enriched].sort((a, b) => b.weight - a.weight);
+      if (sorted[0]) {
+        document.getElementById("donut-center-val").textContent = `${m.enriched.filter(x => x.shares > 0).length} 标的`;
+        document.getElementById("donut-center-sub").textContent = `核心 ${sorted[0].symbol} ${sorted[0].weight.toFixed(1)}%`;
+      }
+
+      sorted.forEach(item => {
+        if (item.weight <= 0) return;
+        const dash = (item.weight / 100) * circumference;
+        circlesHtml += `
+          <circle cx="60" cy="60" r="${radius}" fill="transparent"
+            stroke="${item.color}" stroke-width="14"
+            stroke-dasharray="${dash} ${circumference - dash}"
+            stroke-dashoffset="${-offset}"
+            class="transition-all duration-300 hover:opacity-80 cursor-pointer"
+            onclick="openHoldingDrawer('${item.symbol}')" />
+        `;
+        offset += dash;
+
+        const driftStr = item.drift >= 0 ? `+${item.drift.toFixed(1)}%` : `${item.drift.toFixed(1)}%`;
+        legendHtml += `
+          <div onclick="openHoldingDrawer('${item.symbol}')" class="flex items-center justify-between py-1 px-2 rounded-lg hover:bg-[var(--bg-elevated)] cursor-pointer transition">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full" style="background:${item.color}"></span>
+              <span class="font-mono font-bold">${item.symbol}</span>
+              <span class="text-[11px] text-[var(--text-muted)] truncate max-w-[115px]">${item.role}</span>
+            </div>
+            <div class="font-mono tabular-nums flex items-center gap-2">
+              <span class="font-semibold">${item.weight.toFixed(1)}%</span>
+              <span class="text-[11px] text-[var(--text-muted)]">/ 目标 ${item.targetWeight}% (${driftStr})</span>
+            </div>
+          </div>
+        `;
+      });
+
+      svg.innerHTML = circlesHtml;
+      legend.innerHTML = legendHtml;
+    }
+
+    function renderHoldingsTable(m) {
+      const tbody = document.getElementById("holdings-tbody");
+      let list = m.enriched.filter(item => activeCategory === "ALL" || item.category === activeCategory);
+
+      list.sort((a, b) => {
+        const vA = a[sortField];
+        const vB = b[sortField];
+        if (typeof vA === "string") return sortAsc ? vA.localeCompare(vB) : vB.localeCompare(vA);
+        return sortAsc ? vA - vB : vB - vA;
+      });
+
+      tbody.innerHTML = list.map(item => {
+        const dayClass = item.dayPnl >= 0 ? "text-up" : "text-down";
+        const totClass = item.totalPnl >= 0 ? "text-up" : "text-down";
+        const badgeClass = item.dayChangePct >= 0 ? "bg-up-soft" : "bg-down-soft";
+        const driftAbs = Math.abs(item.drift);
+        const driftWarn = driftAbs >= 3.0 ? "text-amber-400 font-semibold" : "text-[var(--text-muted)]";
+
+        return `
+          <tr onclick="openHoldingDrawer('${item.symbol}')" class="hover:bg-[var(--bg-elevated)]/70 cursor-pointer transition group">
+            <td class="py-4 pl-6 pr-3">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center font-mono font-bold text-xs text-white shadow-sm" style="background:${item.color}">
+                  ${item.symbol}
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="font-display font-bold text-sm group-hover:text-indigo-400 transition">${item.symbol}</span>
+                    <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--bg-elevated)] border border-[var(--border-hairline)] text-[var(--text-secondary)]">${item.role}</span>
+                  </div>
+                  <p class="text-xs text-[var(--text-muted)] truncate max-w-[210px]">${item.name}</p>
+                </div>
+              </div>
+            </td>
+            <td class="py-4 px-3 text-right font-mono tabular-nums">
+              <div class="font-semibold">$${item.price.toFixed(2)}</div>
+              <span class="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold ${badgeClass}">${formatPct(item.dayChangePct)}</span>
+            </td>
+            <td class="py-4 px-3 text-right font-mono tabular-nums">
+              <div class="font-semibold">${Number(item.shares.toFixed(4))} 股</div>
+              <div class="text-xs text-[var(--text-muted)]">均价 $${item.avgCost.toFixed(2)}</div>
+            </td>
+            <td class="py-4 px-3 text-right font-mono tabular-nums privacy-target">
+              <div class="font-bold">${formatMoney(item.marketValue)}</div>
+              <div class="text-xs text-[var(--text-muted)]">成本 ${formatMoney(item.costBasis)}</div>
+            </td>
+            <td class="py-4 px-3 text-right font-mono tabular-nums privacy-target ${dayClass}">
+              <div class="font-semibold">${formatMoney(item.dayPnl, true)}</div>
+              <div class="text-xs opacity-80">${formatPct(item.dayChangePct)}</div>
+            </td>
+            <td class="py-4 px-3 text-right font-mono tabular-nums privacy-target ${totClass}">
+              <div class="font-bold">${formatMoney(item.totalPnl, true)}</div>
+              <div class="text-xs">${formatPct(item.totalPnlPct)}</div>
+            </td>
+            <td class="py-4 pl-3 pr-6 text-right font-mono tabular-nums">
+              <div class="flex items-center justify-end gap-2">
+                <span class="font-bold">${item.weight.toFixed(1)}%</span>
+                <span class="text-xs text-[var(--text-muted)]">/ ${item.targetWeight}%</span>
+              </div>
+              <div class="w-28 ml-auto mt-1.5 h-1.5 rounded-full bg-[var(--bg-elevated)] overflow-hidden flex">
+                <div class="h-full rounded-full" style="width:${Math.min(100, item.weight)}%; background:${item.color}"></div>
+              </div>
+              <div class="text-[10px] mt-0.5 ${driftWarn}">偏离 ${item.drift >= 0 ? "+" : ""}${item.drift.toFixed(1)}%</div>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    /*************************************************************************
+     * 5. 历史盈亏与月度收益归因账本
+     *************************************************************************/
+    function renderHistoricalLedger(m) {
+      const tradeEl = document.getElementById("hist-realized-trade");
+      tradeEl.textContent = formatMoney(m.realizedTrades, true);
+      tradeEl.className = `mt-1 font-mono font-bold text-base tabular-nums privacy-target ${m.realizedTrades >= 0 ? "text-up" : "text-down"}`;
+
+      document.getElementById("hist-dividends").textContent = formatMoney(m.realizedDividends, true);
+
+      const months = portfolioData.monthlyPnl || [];
+      const winCount = months.filter(x => x.pnl >= 0).length;
+      document.getElementById("hist-winrate").textContent = months.length > 0
+        ? `${((winCount / months.length) * 100).toFixed(0)}% (${winCount}/${months.length}月盈利)`
+        : "--";
+
+      // 渲染月度盈亏热力卡片
+      const gridEl = document.getElementById("monthly-pnl-grid");
+      gridEl.innerHTML = months.map(item => {
+        const isUp = item.pnl >= 0;
+        const cardStyle = isUp ? "bg-up-soft border-emerald-500/20" : "bg-down-soft border-rose-500/20";
+        return `
+          <div class="p-2.5 rounded-xl border ${cardStyle} font-mono text-center">
+            <div class="text-[10px] opacity-75">${item.month}</div>
+            <div class="text-xs font-bold mt-1 tabular-nums privacy-target">${formatMoney(item.pnl, true)}</div>
+            <div class="text-[10px] mt-0.5 tabular-nums">${formatPct(item.returnPct)}</div>
+          </div>
+        `;
+      }).join("");
+
+      // 渲染历史已实现流水
+      const listEl = document.getElementById("realized-ledger-list");
+      const records = portfolioData.realizedHistory || [];
+      document.getElementById("history-count-label").textContent = `共 ${records.length} 条记录`;
+
+      listEl.innerHTML = records.map(r => {
+        const isPos = Number(r.amount) >= 0;
+        const tagText = r.type === "DIVIDEND" ? "现金派息" : "波段止盈";
+        const tagClass = r.type === "DIVIDEND"
+          ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25"
+          : "bg-indigo-500/15 text-indigo-400 border-indigo-500/25";
+        return `
+          <div class="flex items-center justify-between p-2.5 rounded-xl bg-[var(--bg-elevated)]/60 border border-[var(--border-hairline)] text-xs">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <span class="font-mono text-[11px] text-[var(--text-muted)]">${r.date}</span>
+              <span class="font-mono font-bold px-1.5 py-0.5 rounded bg-[var(--bg-primary)]">${r.symbol}</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded border ${tagClass}">${tagText}</span>
+              <span class="text-[var(--text-secondary)] truncate">${r.note || ""}</span>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="font-mono font-bold tabular-nums privacy-target ${isPos ? "text-up" : "text-down"}">${formatMoney(Number(r.amount), true)}</span>
+              <button onclick="deleteHistoryRecord('${r.id}')" class="text-[var(--text-muted)] hover:text-rose-400 text-[11px]" title="删除该条记录">✕</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function openAddHistoryModal() {
+      document.getElementById("history-modal").classList.remove("hidden");
+      document.getElementById("history-modal").classList.add("flex");
+    }
+    function closeAddHistoryModal() {
+      document.getElementById("history-modal").classList.add("hidden");
+      document.getElementById("history-modal").classList.remove("flex");
+    }
+    function submitHistoryRecord() {
+      const date = document.getElementById("hist-input-date").value || "2026-10-16";
+      const symbol = document.getElementById("hist-input-symbol").value;
+      const type = document.getElementById("hist-input-type").value;
+      const amount = parseFloat(document.getElementById("hist-input-amount").value);
+      const note = document.getElementById("hist-input-note").value.trim();
+
+      if (isNaN(amount)) return;
+      portfolioData.realizedHistory.unshift({
+        id: "h_" + Date.now(),
+        date,
+        symbol,
+        type,
+        amount,
+        note: note || (type === "DIVIDEND" ? `${symbol} 现金分红派息` : `${symbol} 波段交易已实现盈亏`)
+      });
+      savePortfolioToLocal();
+      closeAddHistoryModal();
+      renderAll();
+    }
+    function deleteHistoryRecord(id) {
+      portfolioData.realizedHistory = portfolioData.realizedHistory.filter(r => r.id !== id);
+      savePortfolioToLocal();
+      renderAll();
+    }
+
+    /*************************************************************************
+     * 6. 智能再平衡计算器 + 一键预览调仓后持仓 + 一键无损恢复原始持仓
+     *************************************************************************/
+    function calculateRebalancePlan(m) {
+      const cashInput = parseFloat(document.getElementById("rebalance-cash-input")?.value || "0") || 0;
+      const targetTotalPool = m.totalMarketValue + cashInput;
+
+      let sumTargetWeight = 0;
+      portfolioData.holdings.forEach(h => sumTargetWeight += Number(h.targetWeight || 0));
+
+      const sumEl = document.getElementById("target-weight-sum");
+      if (sumEl) {
+        sumEl.textContent = `${sumTargetWeight.toFixed(1)}%`;
+        sumEl.className = Math.abs(sumTargetWeight - 100) < 0.01
+          ? "font-mono font-bold text-emerald-400"
+          : "font-mono font-bold text-amber-400";
+      }
+
+      if (rebalanceMode === "buy_only") {
+        // 仅用新增资金买入低配标的（只买不卖）
+        const deficits = m.enriched.map(item => {
+          const idealVal = targetTotalPool * (item.targetWeight / 100);
+          return { item, deficit: Math.max(0, idealVal - item.marketValue) };
+        });
+        const totalDeficit = deficits.reduce((acc, d) => acc + d.deficit, 0);
+
+        return deficits.map(({ item, deficit }) => {
+          const allocUsd = totalDeficit > 0 ? (cashInput > 0 ? cashInput * (deficit / totalDeficit) : deficit) : 0;
+          const deltaShares = item.price > 0 ? allocUsd / item.price : 0;
+          return {
+            ...item,
+            deltaUsd: allocUsd,
+            deltaShares
+          };
+        });
+      } else {
+        // 全仓再平衡（含卖出高配或清仓标的、买入低配标的）
+        return m.enriched.map(item => {
+          const idealVal = targetTotalPool * (item.targetWeight / 100);
+          const deltaUsd = idealVal - item.marketValue;
+          const deltaShares = item.price > 0 ? deltaUsd / item.price : 0;
+          return {
+            ...item,
+            deltaUsd,
+            deltaShares
+          };
+        });
+      }
+    }
+
+    function renderRebalanceTable(metricsObj) {
+      const m = metricsObj || computePortfolioMetrics();
+      const plan = calculateRebalancePlan(m);
+      const tbody = document.getElementById("rebalance-tbody");
+
+      tbody.innerHTML = plan.map(row => {
+        const isBuy = row.deltaUsd > 5;
+        const isSell = row.deltaUsd < -5;
+        const actionClass = isBuy ? "text-up font-bold" : isSell ? "text-down font-bold" : "text-[var(--text-muted)]";
+        const actionLabel = isBuy
+          ? `买入 +${row.deltaShares.toFixed(2)} 股`
+          : isSell
+          ? `卖出 ${row.deltaShares.toFixed(2)} 股`
+          : "无需操作";
+
+        return `
+          <tr>
+            <td class="py-2.5">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full" style="background:${row.color}"></span>
+                <span class="font-bold">${row.symbol}</span>
+              </div>
+            </td>
+            <td class="py-2.5 text-right tabular-nums">${row.weight.toFixed(1)}%</td>
+            <td class="py-2.5 text-center">
+              <input type="number" step="1" min="0" max="100" value="${row.targetWeight}"
+                onchange="updateTargetWeight('${row.symbol}', this.value)"
+                class="w-16 text-center py-1 rounded bg-[var(--bg-primary)] border border-[var(--border-hairline)] font-mono text-xs tabular-nums focus:outline-none focus:border-indigo-500" />
+            </td>
+            <td class="py-2.5 text-right tabular-nums privacy-target ${actionClass}">
+              ${formatMoney(row.deltaUsd, true)}
+            </td>
+            <td class="py-2.5 text-right tabular-nums ${actionClass}">
+              ${actionLabel}
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function updateTargetWeight(symbol, val) {
+      const h = portfolioData.holdings.find(x => x.symbol === symbol);
+      if (h) {
+        h.targetWeight = Math.max(0, Number(val) || 0);
+        renderAll();
+      }
+    }
+
+    function setRebalanceMode(mode) {
+      rebalanceMode = mode;
+      document.getElementById("reb-mode-full").className = mode === "full"
+        ? "py-1 rounded font-semibold bg-indigo-600 text-white transition"
+        : "py-1 rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition";
+      document.getElementById("reb-mode-buy").className = mode === "buy_only"
+        ? "py-1 rounded font-semibold bg-indigo-600 text-white transition"
+        : "py-1 rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition";
+      renderRebalanceTable();
+    }
+
+    // 预设策略：一键设置“清仓 VXUS 换入 VTI 与 QQQM”或“还原 5 标的默认目标权重”
+    function applyPresetStrategy(strategyName) {
+      if (strategyName === "vxus_to_us") {
+        const map = { VTI: 50, SGOV: 25, QQQM: 20, VXUS: 0, DRAM: 5 };
+        portfolioData.holdings.forEach(h => {
+          if (map[h.symbol] !== undefined) h.targetWeight = map[h.symbol];
+        });
+      } else if (strategyName === "default_5") {
+        const map = { VTI: 40, SGOV: 25, QQQM: 15, VXUS: 15, DRAM: 5 };
+        portfolioData.holdings.forEach(h => {
+          if (map[h.symbol] !== undefined) h.targetWeight = map[h.symbol];
+        });
+      }
+      renderAll();
+    }
+
+    // 一键预览调仓后持仓（保存原始快照，并立即激活顶部与底部的恢复按钮）
+    function previewRebalancedPortfolio() {
+      if (!isPreviewMode) {
+        originalHoldingsSnapshot = JSON.parse(JSON.stringify(portfolioData.holdings));
+      }
+      const m = computePortfolioMetrics();
+      const plan = calculateRebalancePlan(m);
+
+      portfolioData.holdings = portfolioData.holdings.map(h => {
+        const p = plan.find(x => x.symbol === h.symbol);
+        if (!p) return h;
+        const newShares = Math.max(0, Number((h.shares + p.deltaShares).toFixed(4)));
+        // 若为加仓，按当前现价平滑更新平均成本
+        let newAvgCost = h.avgCost;
+        if (p.deltaShares > 0 && newShares > 0) {
+          newAvgCost = ((h.shares * h.avgCost) + (p.deltaShares * p.price)) / newShares;
+        }
+        return {
+          ...h,
+          shares: newShares,
+          avgCost: Number(newAvgCost.toFixed(2))
+        };
+      });
+
+      isPreviewMode = true;
+      renderAll();
+    }
+
+    // 随时一键恢复原始持仓
+    function restoreOriginalPortfolio() {
+      if (originalHoldingsSnapshot) {
+        portfolioData.holdings = JSON.parse(JSON.stringify(originalHoldingsSnapshot));
+        originalHoldingsSnapshot = null;
+      } else {
+        portfolioData.holdings = JSON.parse(JSON.stringify(DEFAULT_PORTFOLIO_DATA.holdings));
+      }
+      isPreviewMode = false;
+      document.getElementById("rebalance-cash-input").value = "0";
+      renderAll();
+    }
+
+    // 将预览调仓正式保存为当前持仓
+    function commitPreviewPortfolio() {
+      originalHoldingsSnapshot = null;
+      isPreviewMode = false;
+      savePortfolioToLocal();
+      renderAll();
+    }
+
+    function updatePreviewUIState() {
+      const banner = document.getElementById("preview-banner");
+      const inlineBadge = document.getElementById("preview-badge-inline");
+      const statusPill = document.getElementById("rebalance-status-pill");
+      const restoreBtn = document.getElementById("btn-restore-preview");
+      const restoreText = document.getElementById("restore-btn-text");
+
+      if (isPreviewMode) {
+        banner.classList.remove("hidden");
+        inlineBadge.classList.remove("hidden");
+        statusPill.textContent = "⚡ 正在预览调仓效果";
+        statusPill.className = "text-[11px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40";
+        restoreBtn.className = "px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/25 transition flex items-center gap-1.5";
+        restoreText.textContent = "立即恢复调仓前持仓";
+      } else {
+        banner.classList.add("hidden");
+        inlineBadge.classList.add("hidden");
+        statusPill.textContent = "实时测算";
+        statusPill.className = "text-[11px] font-mono px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-400 border border-indigo-500/25";
+        restoreBtn.className = "px-3.5 py-2 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-elevated)] hover:border-amber-500/40 text-[var(--text-secondary)] hover:text-amber-300 font-semibold text-xs transition flex items-center gap-1.5";
+        restoreText.textContent = "重置为初始持仓";
+      }
+    }
+
+    /*************************************************************************
+     * 7. 单标的深度抽屉与加仓摊平模拟器
+     *************************************************************************/
+    function openHoldingDrawer(symbol) {
+      activeDrawerSymbol = symbol;
+      const m = computePortfolioMetrics();
+      const item = m.enriched.find(x => x.symbol === symbol);
+      if (!item) return;
+
+      document.getElementById("drawer-symbol").textContent = item.symbol;
+      document.getElementById("drawer-tag").textContent = item.role;
+      document.getElementById("drawer-name").textContent = item.name;
+      document.getElementById("drawer-price").textContent = `$${item.price.toFixed(2)} (${formatPct(item.dayChangePct)})`;
+
+      const pnlEl = document.getElementById("drawer-pnl");
+      pnlEl.textContent = `${formatMoney(item.totalPnl, true)} (${formatPct(item.totalPnlPct)})`;
+      pnlEl.className = `font-mono font-bold text-lg mt-0.5 tabular-nums ${item.totalPnl >= 0 ? "text-up" : "text-down"}`;
+
+      document.getElementById("drawer-edit-shares").value = item.shares;
+      document.getElementById("drawer-edit-cost").value = item.avgCost;
+      document.getElementById("drawer-edit-target").value = item.targetWeight;
+
+      document.getElementById("sim-buy-shares").value = 10;
+      document.getElementById("sim-buy-price").value = item.price.toFixed(2);
+      runAvgCostSimulator();
+
+      const backdrop = document.getElementById("holding-drawer-backdrop");
+      const drawer = document.getElementById("holding-drawer");
+      backdrop.classList.remove("hidden");
+      setTimeout(() => {
+        backdrop.classList.remove("opacity-0");
+        drawer.classList.remove("translate-x-full");
+      }, 10);
+    }
+
+    function closeHoldingDrawer() {
+      activeDrawerSymbol = null;
+      const backdrop = document.getElementById("holding-drawer-backdrop");
+      const drawer = document.getElementById("holding-drawer");
+      backdrop.classList.add("opacity-0");
+      drawer.classList.add("translate-x-full");
+      setTimeout(() => backdrop.classList.add("hidden"), 280);
+    }
+
+    function runAvgCostSimulator() {
+      if (!activeDrawerSymbol) return;
+      const h = portfolioData.holdings.find(x => x.symbol === activeDrawerSymbol);
+      const q = marketQuotes[activeDrawerSymbol] || { price: h.avgCost };
+      const addShares = parseFloat(document.getElementById("sim-buy-shares").value) || 0;
+      const buyPrice = parseFloat(document.getElementById("sim-buy-price").value) || q.price;
+
+      const neededCash = addShares * buyPrice;
+      const newShares = h.shares + addShares;
+      const newAvg = newShares > 0 ? ((h.shares * h.avgCost) + neededCash) / newShares : 0;
+      const newPnlPct = newAvg > 0 ? ((q.price - newAvg) / newAvg) * 100 : 0;
+
+      document.getElementById("sim-needed-cash").textContent = formatMoney(neededCash);
+      document.getElementById("sim-new-shares").textContent = `${newShares.toFixed(2)} 股`;
+      document.getElementById("sim-new-avg").textContent = `$${newAvg.toFixed(2)}`;
+      document.getElementById("sim-new-pnl-pct").textContent = formatPct(newPnlPct);
+    }
+
+    function saveDrawerHoldingEdit() {
+      if (!activeDrawerSymbol) return;
+      const h = portfolioData.holdings.find(x => x.symbol === activeDrawerSymbol);
+      if (h) {
+        h.shares = Math.max(0, parseFloat(document.getElementById("drawer-edit-shares").value) || 0);
+        h.avgCost = Math.max(0, parseFloat(document.getElementById("drawer-edit-cost").value) || 0);
+        h.targetWeight = Math.max(0, parseFloat(document.getElementById("drawer-edit-target").value) || 0);
+        savePortfolioToLocal();
+        renderAll();
+        closeHoldingDrawer();
+      }
+    }
+
+    /*************************************************************************
+     * 8. 排序、过滤、币种、涨跌色、隐私、主题与 JSON 导出
+     *************************************************************************/
+    function filterCategory(cat) {
+      activeCategory = cat;
+      ["ALL", "CORE", "DEFENSE", "SATELLITE"].forEach(c => {
+        const btn = document.getElementById(`cat-${c}`);
+        if (btn) {
+          btn.className = c === cat
+            ? "px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-medium transition"
+            : "px-2.5 py-1 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition";
+        }
+      });
+      renderAll();
+    }
+
+    function setSort(field) {
+      if (sortField === field) sortAsc = !sortAsc;
+      else {
+        sortField = field;
+        sortAsc = false;
+      }
+      renderAll();
+    }
+
+    function setCurrency(curr) {
+      currentCurrency = curr;
+      localStorage.setItem("pos_currency", curr);
+      ["USD", "CNY", "HKD"].forEach(c => {
+        const el = document.getElementById(`curr-${c}`);
+        el.className = c === curr
+          ? "px-2.5 py-1 rounded-md font-semibold bg-indigo-600 text-white transition"
+          : "px-2.5 py-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition";
+      });
+      renderAll();
+    }
+
+    function toggleColorScheme() {
+      isCnColor = !isCnColor;
+      localStorage.setItem("pos_cn_color", String(isCnColor));
+      applySavedPreferences();
+      renderAll();
+    }
+
+    function togglePrivacy() {
+      isPrivacyMode = !isPrivacyMode;
+      localStorage.setItem("pos_privacy", String(isPrivacyMode));
+      applyPrivacyBlur();
+    }
+
+    function applyPrivacyBlur() {
+      document.querySelectorAll(".privacy-target").forEach(el => {
+        if (isPrivacyMode) el.classList.add("privacy-blur");
+        else el.classList.remove("privacy-blur");
+      });
+    }
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      html.classList.toggle("dark");
+      localStorage.setItem("pos_theme", html.classList.contains("dark") ? "dark" : "light");
+    }
+
+    function applySavedPreferences() {
+      const savedTheme = localStorage.getItem("pos_theme");
+      if (savedTheme === "light") document.documentElement.classList.remove("dark");
+      else document.documentElement.classList.add("dark");
+
+      if (isCnColor) {
+        document.documentElement.classList.add("cn-color");
+        document.getElementById("scheme-label").textContent = "中式红涨";
+        document.getElementById("scheme-dot-up").className = "w-2 h-2 rounded-full bg-rose-500";
+        document.getElementById("scheme-dot-down").className = "w-2 h-2 rounded-full bg-emerald-500";
+      } else {
+        document.documentElement.classList.remove("cn-color");
+        document.getElementById("scheme-label").textContent = "美股绿涨";
+        document.getElementById("scheme-dot-up").className = "w-2 h-2 rounded-full bg-emerald-500";
+        document.getElementById("scheme-dot-down").className = "w-2 h-2 rounded-full bg-rose-500";
+      }
+      setCurrency(currentCurrency);
+    }
+
+    function savePortfolioToLocal() {
+      localStorage.setItem(PREVIEW_STORAGE_KEY, JSON.stringify(portfolioData));
+    }
+
+    function openConfigModal() {
+      document.getElementById("json-editor-textarea").value = JSON.stringify(portfolioData, null, 2);
+      document.getElementById("config-modal").classList.remove("hidden");
+      document.getElementById("config-modal").classList.add("flex");
+    }
+
+    function closeConfigModal() {
+      document.getElementById("config-modal").classList.add("hidden");
+      document.getElementById("config-modal").classList.remove("flex");
+    }
+
+    function applyJsonEditorChanges() {
+      try {
+        const parsed = JSON.parse(document.getElementById("json-editor-textarea").value);
+        if (Array.isArray(parsed.holdings)) {
+          portfolioData = parsed;
+          isPreviewMode = false;
+          originalHoldingsSnapshot = null;
+          savePortfolioToLocal();
+          closeConfigModal();
+          renderAll();
+        }
+      } catch (e) {
+        alert("JSON 格式有误，请检查括号或逗号是否正确。");
+      }
+    }
+
+    function resetToDefaultHoldings() {
+      portfolioData = JSON.parse(JSON.stringify(DEFAULT_PORTFOLIO_DATA));
+      isPreviewMode = false;
+      originalHoldingsSnapshot = null;
+      localStorage.removeItem(PREVIEW_STORAGE_KEY);
+      document.getElementById("json-editor-textarea").value = JSON.stringify(portfolioData, null, 2);
+      renderAll();
+    }
+
+    function downloadPortfolioJson() {
+      const blob = new Blob([JSON.stringify(portfolioData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "portfolio.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    window.addEventListener("DOMContentLoaded", initApp);
+  </script>
+</body>
+</html>
