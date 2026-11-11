@@ -1,0 +1,111 @@
+name: Update market data
+
+on:
+  workflow_dispatch:
+    inputs:
+      update_source:
+        description: 'Manual update or independent market scheduler'
+        type: choice
+        options:
+          - manual
+          - external_schedule
+        default: manual
+  push:
+    branches: [main]
+    paths:
+      - 'portfolio.json'
+      - 'update-market.js'
+      - 'scripts/market-session.mjs'
+      - '.github/workflows/market-data.yml'
+  schedule:
+    # Best-effort fallback for the independent Cloudflare scheduler.
+    # Includes 16:02 New York in summer/winter to publish the closing snapshot.
+    # GitHub may delay or drop cron events; these are not punctual guarantees.
+    - cron: '2,32 13-21 * * 1-5'
+
+concurrency:
+  group: market-data
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Check market session and snapshot freshness
+        id: market_session
+        env:
+          UPDATE_EVENT: ${{ github.event_name }}
+          UPDATE_SOURCE: ${{ inputs.update_source }}
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { getMarketSession } from './scripts/market-session.mjs';
+          const automatic = process.env.UPDATE_EVENT === 'schedule' || process.env.UPDATE_SOURCE === 'external_schedule';
+          const now = new Date();
+          const session = getMarketSession(now);
+          let shouldUpdate = !automatic || session.open;
+          let reason = automatic ? session.reason : 'manual/configuration update';
+          // Two schedulers can arrive in the same window. Reuse a valid recent
+          // snapshot, but never skip because of an incomplete or old snapshot.
+          if (automatic && shouldUpdate && !session.closingSnapshot) {
+            try {
+              const portfolio = JSON.parse(fs.readFileSync('portfolio.json', 'utf8').replace(/^\uFEFF/, ''));
+              const snapshot = JSON.parse(fs.readFileSync('data/market.json', 'utf8'));
+              const age = now.getTime() - Date.parse(snapshot.updatedAt);
+              const complete = portfolio.holdings.length > 0 && portfolio.holdings.every(item => {
+                const quote = snapshot.quotes?.[item.code];
+                const quoteAge = now.getTime() - Date.parse(quote?.fetchedAt);
+                return Number(quote?.price) > 0 && quoteAge >= 0 && quoteAge < 20 * 60 * 1000;
+              });
+              if (age >= 0 && age < 20 * 60 * 1000 && complete) {
+                shouldUpdate = false;
+                reason = 'complete snapshot already fetched within 20 minutes';
+              }
+            } catch { /* Missing/invalid snapshots must be regenerated. */ }
+          }
+          const message = `New York ${session.newYorkTime}: ${shouldUpdate ? 'UPDATE' : 'SKIP'} — ${reason}`;
+          console.log(message);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `update=${shouldUpdate}\n`);
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${message}\n`);
+          NODE
+      - name: Generate and publish snapshot
+        if: steps.market_session.outputs.update == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            node --check update-market.js
+            if ! node update-market.js; then
+              echo "Market data request failed on attempt ${attempt}; retrying"
+              sleep 20
+              continue
+            fi
+            if ! node -e "const fs=require('fs'); const portfolio=JSON.parse(fs.readFileSync('portfolio.json','utf8')); const data=JSON.parse(fs.readFileSync('data/market.json','utf8')); const missing=(portfolio.holdings||[]).filter(item=>!(Number(data.quotes?.[item.code]?.price)>0) || !data.quotes?.[item.code]?.fetchedAt); if (!data.updatedAt || missing.length) { console.error('Snapshot missing fresh holding quotes:', missing.map(item=>item.code).join(', ')); process.exit(1); }"; then
+              echo "Generated snapshot failed validation on attempt ${attempt}; retrying"
+              sleep 20
+              continue
+            fi
+            git add data/market.json
+            if git diff --cached --quiet; then
+              echo "Market snapshot unchanged"
+              exit 0
+            fi
+            git commit -m "chore: update market snapshot"
+            if git push origin HEAD:main; then
+              echo "Market snapshot committed; Pages will deploy after this workflow succeeds"
+              node -e 'console.log("Published market snapshot: " + require("./data/market.json").updatedAt)' >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "Remote changed during attempt ${attempt}; retrying"
+          done
+          exit 1
