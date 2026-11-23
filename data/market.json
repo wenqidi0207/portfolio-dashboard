@@ -1,14 +1,14 @@
 {
-  "updatedAt": "2026-11-23T20:32:23.787Z",
+  "updatedAt": "2026-11-23T21:02:26.437Z",
   "quotes": {
     "VTI": {
-      "price": 356.15,
-      "previousClose": 340.02,
-      "change": 16.129999999999995,
-      "changePct": 4.74,
+      "price": 356.1,
+      "previousClose": 355.49,
+      "change": 0.6100000000000136,
+      "changePct": 0.17,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-23T20:32:23.787Z"
+      "fetchedAt": "2026-11-23T21:02:26.437Z"
     },
     "VXUS": {
       "price": 85.985,
@@ -19,31 +19,31 @@
       "source": "Nasdaq"
     },
     "SGOV": {
-      "price": 100.6461,
-      "previousClose": 100.64,
-      "change": 0.006100000000003547,
-      "changePct": 0.01,
+      "price": 100.65,
+      "previousClose": 100.64500000000001,
+      "change": 0.0049999999999954525,
+      "changePct": 0,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-23T20:32:23.787Z"
+      "fetchedAt": "2026-11-23T21:02:26.437Z"
     },
     "QQQM": {
-      "price": 268.7101,
-      "previousClose": 251.23000000000002,
-      "change": 17.480099999999993,
-      "changePct": 6.96,
+      "price": 268.49,
+      "previousClose": 267.97,
+      "change": 0.5199999999999818,
+      "changePct": 0.19,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-23T20:32:23.787Z"
+      "fetchedAt": "2026-11-23T21:02:26.437Z"
     },
     "DRAM": {
-      "price": 39.632,
-      "previousClose": 33.36,
-      "change": 6.2719999999999985,
-      "changePct": 18.8,
+      "price": 39.6,
+      "previousClose": 39.59,
+      "change": 0.00999999999999801,
+      "changePct": 0.03,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-23T20:32:23.787Z"
+      "fetchedAt": "2026-11-23T21:02:26.437Z"
     },
     "TQQQ": {
       "price": 81.98,
@@ -54,49 +54,49 @@
       "source": "Nasdaq"
     },
     "NVDA": {
-      "price": 166.305,
-      "previousClose": 125.53,
-      "change": 40.775000000000006,
-      "changePct": 32.48,
+      "price": 164.51,
+      "previousClose": 165.04999999999998,
+      "change": -0.539999999999992,
+      "changePct": -0.33,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-23T20:32:23.787Z"
+      "fetchedAt": "2026-11-23T21:02:26.437Z"
     },
     "AAPL": {
-      "price": 351.0368,
-      "previousClose": 342.56,
-      "change": 8.476800000000026,
-      "changePct": 2.47,
+      "price": 349.76,
+      "previousClose": 349.08,
+      "change": 0.6800000000000068,
+      "changePct": 0.19,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-23T20:32:23.787Z"
+      "fetchedAt": "2026-11-23T21:02:26.437Z"
     },
     "MSFT": {
-      "price": 497.34,
-      "previousClose": 484.52,
-      "change": 12.819999999999993,
-      "changePct": 2.65,
+      "price": 492.75,
+      "previousClose": 492.5,
+      "change": 0.25,
+      "changePct": 0.05,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-23T20:32:23.787Z"
+      "fetchedAt": "2026-11-23T21:02:26.437Z"
     },
     "ORCL": {
-      "price": 113.94,
-      "previousClose": 101.19,
-      "change": 12.75,
-      "changePct": 12.6,
+      "price": 114.37,
+      "previousClose": 113.77000000000001,
+      "change": 0.5999999999999943,
+      "changePct": 0.53,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-23T20:32:23.787Z"
+      "fetchedAt": "2026-11-23T21:02:26.437Z"
     },
     "KO": {
-      "price": 95.885,
-      "previousClose": 96.99000000000001,
-      "change": -1.105000000000004,
-      "changePct": -1.14,
+      "price": 95.88,
+      "previousClose": 96.00999999999999,
+      "change": -0.12999999999999545,
+      "changePct": -0.14,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-23T20:32:23.787Z"
+      "fetchedAt": "2026-11-23T21:02:26.437Z"
     }
   },
   "history": {
