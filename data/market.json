@@ -1,14 +1,14 @@
 {
-  "updatedAt": "2026-11-25T20:32:22.776Z",
+  "updatedAt": "2026-11-25T21:02:24.294Z",
   "quotes": {
     "VTI": {
-      "price": 352.24,
-      "previousClose": 353.84000000000003,
-      "change": -1.6000000000000227,
-      "changePct": -0.45,
+      "price": 353.45,
+      "previousClose": 353.36,
+      "change": 0.08999999999997499,
+      "changePct": 0.03,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-25T20:32:22.776Z"
+      "fetchedAt": "2026-11-25T21:02:24.294Z"
     },
     "VXUS": {
       "price": 85.985,
@@ -19,31 +19,31 @@
       "source": "Nasdaq"
     },
     "SGOV": {
-      "price": 100.68,
-      "previousClose": 100.66000000000001,
-      "change": 0.01999999999999602,
-      "changePct": 0.02,
+      "price": 100.675,
+      "previousClose": 100.67999999999999,
+      "change": -0.0049999999999954525,
+      "changePct": 0,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-25T20:32:22.776Z"
+      "fetchedAt": "2026-11-25T21:02:24.294Z"
     },
     "QQQM": {
-      "price": 259.5,
-      "previousClose": 262.78,
-      "change": -3.2799999999999727,
-      "changePct": -1.25,
+      "price": 260.8,
+      "previousClose": 261.05,
+      "change": -0.25,
+      "changePct": -0.1,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-25T20:32:22.776Z"
+      "fetchedAt": "2026-11-25T21:02:24.294Z"
     },
     "DRAM": {
-      "price": 34.39,
-      "previousClose": 35.92,
-      "change": -1.5300000000000011,
-      "changePct": -4.26,
+      "price": 34.8664,
+      "previousClose": 34.85,
+      "change": 0.016399999999997306,
+      "changePct": 0.05,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-25T20:32:22.776Z"
+      "fetchedAt": "2026-11-25T21:02:24.294Z"
     },
     "TQQQ": {
       "price": 81.98,
@@ -54,49 +54,49 @@
       "source": "Nasdaq"
     },
     "NVDA": {
-      "price": 147.601,
-      "previousClose": 155.38,
-      "change": -7.778999999999996,
-      "changePct": -5.01,
+      "price": 149.3692,
+      "previousClose": 149.3,
+      "change": 0.06919999999999504,
+      "changePct": 0.05,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-25T20:32:22.776Z"
+      "fetchedAt": "2026-11-25T21:02:24.294Z"
     },
     "AAPL": {
-      "price": 354.1599,
-      "previousClose": 354.07,
-      "change": 0.08990000000000009,
-      "changePct": 0.03,
+      "price": 355.43,
+      "previousClose": 355.58,
+      "change": -0.14999999999997726,
+      "changePct": -0.04,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-25T20:32:22.776Z"
+      "fetchedAt": "2026-11-25T21:02:24.294Z"
     },
     "MSFT": {
-      "price": 489.37,
-      "previousClose": 496.13,
-      "change": -6.759999999999991,
-      "changePct": -1.36,
+      "price": 489.2075,
+      "previousClose": 489.93,
+      "change": -0.722500000000025,
+      "changePct": -0.15,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-25T20:32:22.776Z"
+      "fetchedAt": "2026-11-25T21:02:24.294Z"
     },
     "ORCL": {
-      "price": 103.8,
-      "previousClose": 109.5,
-      "change": -5.700000000000003,
-      "changePct": -5.21,
+      "price": 103.61,
+      "previousClose": 103.87,
+      "change": -0.2600000000000051,
+      "changePct": -0.25,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-25T20:32:22.776Z"
+      "fetchedAt": "2026-11-25T21:02:24.294Z"
     },
     "KO": {
-      "price": 98.065,
-      "previousClose": 97.62,
-      "change": 0.4449999999999932,
-      "changePct": 0.46,
+      "price": 97.99,
+      "previousClose": 97.64999999999999,
+      "change": 0.3400000000000034,
+      "changePct": 0.35,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-25T20:32:22.776Z"
+      "fetchedAt": "2026-11-25T21:02:24.294Z"
     }
   },
   "history": {
