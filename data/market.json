@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-26T16:02:29.025Z",
+  "updatedAt": "2026-11-26T16:32:33.639Z",
   "quotes": {
     "VTI": {
       "price": 353.36,
@@ -8,7 +8,7 @@
       "changePct": -0.14,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-26T16:02:29.025Z"
+      "fetchedAt": "2026-11-26T16:32:33.639Z"
     },
     "VXUS": {
       "price": 85.985,
@@ -25,7 +25,7 @@
       "changePct": 0.02,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-26T16:02:29.025Z"
+      "fetchedAt": "2026-11-26T16:32:33.639Z"
     },
     "QQQM": {
       "price": 261.05,
@@ -34,7 +34,7 @@
       "changePct": -0.66,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-26T16:02:29.025Z"
+      "fetchedAt": "2026-11-26T16:32:33.639Z"
     },
     "DRAM": {
       "price": 34.85,
@@ -43,7 +43,7 @@
       "changePct": -2.98,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-26T16:02:29.025Z"
+      "fetchedAt": "2026-11-26T16:32:33.639Z"
     },
     "TQQQ": {
       "price": 81.98,
@@ -60,7 +60,7 @@
       "changePct": -3.91,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-26T16:02:29.025Z"
+      "fetchedAt": "2026-11-26T16:32:33.639Z"
     },
     "AAPL": {
       "price": 355.58,
@@ -69,7 +69,7 @@
       "changePct": 0.43,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-26T16:02:29.025Z"
+      "fetchedAt": "2026-11-26T16:32:33.639Z"
     },
     "MSFT": {
       "price": 489.93,
@@ -78,7 +78,7 @@
       "changePct": -1.25,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-26T16:02:29.025Z"
+      "fetchedAt": "2026-11-26T16:32:33.639Z"
     },
     "ORCL": {
       "price": 103.87,
@@ -87,7 +87,7 @@
       "changePct": -5.14,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-26T16:02:29.025Z"
+      "fetchedAt": "2026-11-26T16:32:33.639Z"
     },
     "KO": {
       "price": 97.65,
@@ -96,7 +96,7 @@
       "changePct": 0.03,
       "changeAvailable": true,
       "source": "Nasdaq",
-      "fetchedAt": "2026-11-26T16:02:29.025Z"
+      "fetchedAt": "2026-11-26T16:32:33.639Z"
     }
   },
   "history": {
